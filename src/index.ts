@@ -1,49 +1,43 @@
 import { IMessageSDK } from '@photon-ai/imessage-kit'
+import type { Message } from '@photon-ai/imessage-kit'
 import closeWithGrace from 'close-with-grace'
 import { config } from './config.ts'
 import { evaluate } from './gate.ts'
-import { Memory } from './memory.ts'
-import { fromSDKMessage, GateAction } from './types.ts'
+import { Memory, detectFeedback } from './memory.ts'
+import { GateAction } from './types.ts'
 import type { ChatMessage } from './types.ts'
 import { constrain } from './voice.ts'
 
-// -- Message batcher --
-// Groups burst messages by chatId, fires callback after a quiet window
-
-interface BatchState {
-  messages: ChatMessage[]
-  timer: ReturnType<typeof setTimeout> | undefined
+function toInternal(msg: Message): ChatMessage | null {
+  if (!msg.text) return null
+  return { text: msg.text, sender: msg.sender, chatId: msg.chatId, timestamp: msg.date.getTime() }
 }
 
 function createBatcher(
   windowMs: number,
   onBatch: (chatId: string, messages: ChatMessage[]) => void | Promise<void>,
 ): (msg: ChatMessage) => void {
-  const pending = new Map<string, BatchState>()
+  const pending = new Map<string, { messages: ChatMessage[]; timer: ReturnType<typeof setTimeout> | undefined }>()
 
-  return (msg: ChatMessage) => {
-    const existing = pending.get(msg.chatId)
-
-    if (existing) {
-      clearTimeout(existing.timer)
-      existing.messages.push(msg)
+  return (msg) => {
+    const state = pending.get(msg.chatId)
+    if (state) {
+      clearTimeout(state.timer)
+      state.messages.push(msg)
     } else {
       pending.set(msg.chatId, { messages: [msg], timer: undefined })
     }
 
-    const state = pending.get(msg.chatId)!
-    state.timer = setTimeout(() => {
+    const entry = pending.get(msg.chatId)!
+    entry.timer = setTimeout(() => {
       pending.delete(msg.chatId)
-      onBatch(msg.chatId, state.messages)
+      onBatch(msg.chatId, entry.messages)
     }, windowMs)
   }
 }
 
-// -- Main --
-
 const memory = new Memory(config)
 const sdk = new IMessageSDK({ watcher: { pollInterval: 2000, excludeOwnMessages: true } })
-
 const log = (msg: string) => console.log(`[phila ${new Date().toISOString().slice(11, 19)}] ${msg}`)
 
 const feed = createBatcher(config.batchWindowMs, async (chatId, newMessages) => {
@@ -51,7 +45,7 @@ const feed = createBatcher(config.batchWindowMs, async (chatId, newMessages) => 
     const recent = memory.getRecentMessages(chatId, config.memoryWindowSize)
     const profile = memory.getGroupProfile(chatId)
 
-    const feedback = memory.detectFeedback(newMessages)
+    const feedback = detectFeedback(newMessages)
     if (feedback) {
       memory.applyFeedback(chatId, feedback)
       log(`feedback: ${feedback.type} in ${chatId.slice(0, 8)}`)
@@ -75,9 +69,8 @@ log('starting...')
 
 await sdk.startWatching({
   onGroupMessage: (msg) => {
-    const internal = fromSDKMessage(msg)
+    const internal = toInternal(msg)
     if (!internal) return
-
     memory.storeMessage(internal)
     feed(internal)
   },

@@ -1,25 +1,19 @@
 import type { PhilaConfig } from './types.ts'
 
-export interface OllamaMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
-
 interface OllamaResponse {
-  message: { role: string; content: string }
-  done: boolean
+  message: { content: string }
 }
 
-export async function chat(
-  messages: OllamaMessage[],
-  config: PhilaConfig,
-): Promise<string> {
+export async function chat(system: string, user: string, config: PhilaConfig): Promise<string> {
   const res = await fetch(`${config.ollamaUrl}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: config.model,
-      messages,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
       stream: false,
     }),
   })
@@ -29,6 +23,5 @@ export async function chat(
     throw new Error(`ollama ${res.status}: ${body}`)
   }
 
-  const data = (await res.json()) as OllamaResponse
-  return data.message.content
+  return ((await res.json()) as OllamaResponse).message.content
 }

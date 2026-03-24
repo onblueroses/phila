@@ -1,4 +1,3 @@
-// Debug script to see raw model output for specific scenarios
 import { chat } from '../src/ollama.ts'
 import { buildSystemPrompt } from '../src/gate.ts'
 import type { GroupProfile, PhilaConfig } from '../src/types.ts'
@@ -24,7 +23,7 @@ const cases = [
 ]
 
 for (const c of cases) {
-  const raw = await chat([{ role: 'system', content: system }, { role: 'user', content: c }], config)
+  const raw = await chat(system, c, config)
   console.log('INPUT:', c.replace(/\n/g, ' | '))
   console.log('RAW:', JSON.stringify(raw))
   console.log()

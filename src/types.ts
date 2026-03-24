@@ -1,9 +1,3 @@
-// Re-export the SDK's Message type under a namespace to avoid collision
-import type { Message as SDKMessage } from '@photon-ai/imessage-kit'
-
-export type { SDKMessage }
-
-// Internal representation - stripped to what phila needs
 export interface ChatMessage {
   text: string
   sender: string
@@ -47,15 +41,4 @@ export interface PhilaConfig {
   batchWindowMs: number
   memoryWindowSize: number
   dbPath: string
-}
-
-// Convert SDK message to our internal format at the boundary
-export function fromSDKMessage(msg: SDKMessage): ChatMessage | null {
-  if (!msg.text) return null
-  return {
-    text: msg.text,
-    sender: msg.sender,
-    chatId: msg.chatId,
-    timestamp: msg.date.getTime(),
-  }
 }

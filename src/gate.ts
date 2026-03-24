@@ -1,7 +1,8 @@
 import { chat } from './ollama.ts'
-import type { OllamaMessage } from './ollama.ts'
 import { GateAction } from './types.ts'
 import type { ChatMessage, GateDecision, GroupProfile, PhilaConfig } from './types.ts'
+
+const SILENT: GateDecision = { action: GateAction.SILENT }
 
 function buildSystemPrompt(profile: GroupProfile): string {
   let biasLine = ''
@@ -40,27 +41,17 @@ or
 {"action":"speak","reason":"why","response":"your message"}`
 }
 
-function formatConversation(messages: ChatMessage[]): string {
-  return messages
-    .map((m) => `${m.sender}: ${m.text}`)
-    .join('\n')
-}
-
 function parseDecision(raw: string): GateDecision {
-  // Strip markdown code fences if the model wraps its response
-  const cleaned = raw.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim()
+  const cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, '').trim()
 
   try {
     const parsed = JSON.parse(cleaned) as { action?: string; reason?: string; response?: string }
-
     if (parsed.action === GateAction.SPEAK && parsed.reason && parsed.response) {
       return { action: GateAction.SPEAK, reason: parsed.reason, response: parsed.response }
     }
-
-    return { action: GateAction.SILENT }
+    return SILENT
   } catch {
-    // Parse failure = silence. This is the safe default.
-    return { action: GateAction.SILENT }
+    return SILENT
   }
 }
 
@@ -69,17 +60,9 @@ export async function evaluate(
   profile: GroupProfile,
   config: PhilaConfig,
 ): Promise<GateDecision> {
-  const systemPrompt = buildSystemPrompt(profile)
-  const conversation = formatConversation(messages)
-
-  const ollamaMessages: OllamaMessage[] = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: conversation },
-  ]
-
-  const raw = await chat(ollamaMessages, config)
+  const conversation = messages.map((m) => `${m.sender}: ${m.text}`).join('\n')
+  const raw = await chat(buildSystemPrompt(profile), conversation, config)
   return parseDecision(raw)
 }
 
-// Exported for testing
 export { buildSystemPrompt, parseDecision }

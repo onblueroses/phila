@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import * as assert from 'node:assert/strict'
-import { Memory } from '../src/memory.ts'
+import { Memory, detectFeedback } from '../src/memory.ts'
 import type { PhilaConfig, ChatMessage } from '../src/types.ts'
 import { FeedbackType } from '../src/types.ts'
 
@@ -44,7 +44,6 @@ describe('Memory', () => {
 
     const recent = mem.getRecentMessages('chat1', 3)
     assert.equal(recent.length, 3)
-    // Should be the 3 most recent, in chronological order
     assert.equal(recent[0].text, 'msg 7')
     assert.equal(recent[2].text, 'msg 9')
   })
@@ -65,13 +64,10 @@ describe('Memory', () => {
 
   it('updates and persists group profile', () => {
     mem.updateGroupProfile('chat1', { speakBias: -0.1 })
-    const profile = mem.getGroupProfile('chat1')
-    assert.equal(profile.speakBias, -0.1)
+    assert.equal(mem.getGroupProfile('chat1').speakBias, -0.1)
 
-    // Update again - should upsert
     mem.updateGroupProfile('chat1', { speakBias: -0.15 })
-    const updated = mem.getGroupProfile('chat1')
-    assert.equal(updated.speakBias, -0.15)
+    assert.equal(mem.getGroupProfile('chat1').speakBias, -0.15)
   })
 
   it('stores feedback records', () => {
@@ -81,79 +77,82 @@ describe('Memory', () => {
       timestamp: Date.now(),
     })
   })
+})
 
-  describe('social learning', () => {
-    it('detects positive feedback mentioning phila', () => {
-      const msgs: ChatMessage[] = [
-        { chatId: 'c', sender: 'alice', text: 'thanks phila', timestamp: 1000 },
-      ]
-      const signal = mem.detectFeedback(msgs)
-      assert.ok(signal)
-      assert.equal(signal.type, FeedbackType.POSITIVE)
-    })
+describe('detectFeedback', () => {
+  it('detects positive feedback mentioning phila', () => {
+    const signal = detectFeedback([
+      { chatId: 'c', sender: 'alice', text: 'thanks phila', timestamp: 1000 },
+    ])
+    assert.ok(signal)
+    assert.equal(signal.type, FeedbackType.POSITIVE)
+  })
 
-    it('detects negative feedback mentioning phila', () => {
-      const msgs: ChatMessage[] = [
-        { chatId: 'c', sender: 'bob', text: 'shut up phila', timestamp: 1000 },
-      ]
-      const signal = mem.detectFeedback(msgs)
-      assert.ok(signal)
-      assert.equal(signal.type, FeedbackType.NEGATIVE)
-    })
+  it('detects negative feedback mentioning phila', () => {
+    const signal = detectFeedback([
+      { chatId: 'c', sender: 'bob', text: 'shut up phila', timestamp: 1000 },
+    ])
+    assert.ok(signal)
+    assert.equal(signal.type, FeedbackType.NEGATIVE)
+  })
 
-    it('ignores feedback that does not mention phila', () => {
-      // "lol" or "stop" in unrelated conversation should not trigger
-      const msgs: ChatMessage[] = [
-        { chatId: 'c', sender: 'alice', text: 'lol thats hilarious', timestamp: 1000 },
-        { chatId: 'c', sender: 'bob', text: 'stop youre killing me', timestamp: 2000 },
-      ]
-      assert.equal(mem.detectFeedback(msgs), null)
-    })
+  it('ignores feedback without phila', () => {
+    const signal = detectFeedback([
+      { chatId: 'c', sender: 'alice', text: 'lol thats hilarious', timestamp: 1000 },
+      { chatId: 'c', sender: 'bob', text: 'stop youre killing me', timestamp: 2000 },
+    ])
+    assert.equal(signal, null)
+  })
 
-    it('returns null when no feedback present', () => {
-      const msgs: ChatMessage[] = [
-        { chatId: 'c', sender: 'alice', text: 'anyone want tacos?', timestamp: 1000 },
-      ]
-      assert.equal(mem.detectFeedback(msgs), null)
-    })
+  it('returns null when no feedback present', () => {
+    assert.equal(
+      detectFeedback([{ chatId: 'c', sender: 'alice', text: 'anyone want tacos?', timestamp: 1000 }]),
+      null,
+    )
+  })
+})
 
-    it('applies positive feedback (+0.02)', () => {
-      mem.applyFeedback('chat1', { type: FeedbackType.POSITIVE, context: 'thanks', timestamp: 1000 })
-      const profile = mem.getGroupProfile('chat1')
-      assert.equal(profile.speakBias, 0.02)
-    })
+describe('social learning', () => {
+  let mem: Memory
 
-    it('applies negative feedback (-0.05) - asymmetric', () => {
-      mem.applyFeedback('chat1', { type: FeedbackType.NEGATIVE, context: 'shut up', timestamp: 1000 })
-      const profile = mem.getGroupProfile('chat1')
-      assert.equal(profile.speakBias, -0.05)
-    })
+  beforeEach(() => {
+    mem = new Memory(testConfig)
+  })
 
-    it('clamps bias at lower bound (-0.3)', () => {
-      // Drive bias down past the clamp
-      for (let i = 0; i < 10; i++) {
-        mem.applyFeedback('chat1', { type: FeedbackType.NEGATIVE, context: 'stop', timestamp: i })
-      }
-      const profile = mem.getGroupProfile('chat1')
-      assert.equal(profile.speakBias, -0.3)
-    })
+  afterEach(() => {
+    mem.close()
+  })
 
-    it('clamps bias at upper bound (0.1)', () => {
-      for (let i = 0; i < 10; i++) {
-        mem.applyFeedback('chat1', { type: FeedbackType.POSITIVE, context: 'good', timestamp: i })
-      }
-      const profile = mem.getGroupProfile('chat1')
-      assert.equal(profile.speakBias, 0.1)
-    })
+  it('applies positive feedback (+0.02)', () => {
+    mem.applyFeedback('chat1', { type: FeedbackType.POSITIVE, context: 'thanks', timestamp: 1000 })
+    assert.equal(mem.getGroupProfile('chat1').speakBias, 0.02)
+  })
 
-    it('recovers from negative with positive feedback', () => {
-      mem.applyFeedback('chat1', { type: FeedbackType.NEGATIVE, context: 'stop', timestamp: 1 })
-      assert.equal(mem.getGroupProfile('chat1').speakBias, -0.05)
+  it('applies negative feedback (-0.05) - asymmetric', () => {
+    mem.applyFeedback('chat1', { type: FeedbackType.NEGATIVE, context: 'shut up', timestamp: 1000 })
+    assert.equal(mem.getGroupProfile('chat1').speakBias, -0.05)
+  })
 
-      mem.applyFeedback('chat1', { type: FeedbackType.POSITIVE, context: 'thanks', timestamp: 2 })
-      // -0.05 + 0.02 = -0.03
-      const bias = mem.getGroupProfile('chat1').speakBias
-      assert.ok(Math.abs(bias - -0.03) < 0.001, `expected -0.03, got ${bias}`)
-    })
+  it('clamps bias at lower bound (-0.3)', () => {
+    for (let i = 0; i < 10; i++) {
+      mem.applyFeedback('chat1', { type: FeedbackType.NEGATIVE, context: 'stop', timestamp: i })
+    }
+    assert.equal(mem.getGroupProfile('chat1').speakBias, -0.3)
+  })
+
+  it('clamps bias at upper bound (0.1)', () => {
+    for (let i = 0; i < 10; i++) {
+      mem.applyFeedback('chat1', { type: FeedbackType.POSITIVE, context: 'good', timestamp: i })
+    }
+    assert.equal(mem.getGroupProfile('chat1').speakBias, 0.1)
+  })
+
+  it('recovers from negative with positive feedback', () => {
+    mem.applyFeedback('chat1', { type: FeedbackType.NEGATIVE, context: 'stop', timestamp: 1 })
+    assert.equal(mem.getGroupProfile('chat1').speakBias, -0.05)
+
+    mem.applyFeedback('chat1', { type: FeedbackType.POSITIVE, context: 'thanks', timestamp: 2 })
+    const bias = mem.getGroupProfile('chat1').speakBias
+    assert.ok(Math.abs(bias - -0.03) < 0.001, `expected -0.03, got ${bias}`)
   })
 })
