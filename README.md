@@ -16,7 +16,7 @@ The question I keep coming back to: when should an agent shut up?
 
 Phila is a group chat participant, not an assistant. Its default state is silence. It speaks roughly 5% of the time - and even that might be too much.
 
-The core is a "speak gate" - it evaluates every batch of messages and almost always returns SILENT. It only speaks when it has something genuinely useful:
+The core is a "speak gate" - it evaluates every batch of messages and almost always returns SILENT. It only speaks when it has something useful to add:
 
 - A factual claim in the conversation is wrong, and phila knows the right answer
 - Someone asked a question and nobody answered
@@ -42,7 +42,7 @@ All stored locally in SQLite. No cloud, no syncing. The learning stays on your m
 
 Phila runs a local language model through Ollama. Messages never leave your device. No API calls to OpenAI, no cloud, no telemetry.
 
-This thing sits in your most personal conversations, reading messages from your friends. Trust can't come from a privacy policy. It has to come from the architecture. Local inference is slower and less capable than cloud APIs. Worth it.
+This thing sits in your most personal conversations, reading messages from your friends. Trust has to come from the architecture, not a privacy policy. Local inference is slower and less capable than cloud APIs. Worth it.
 
 ## the voice
 
