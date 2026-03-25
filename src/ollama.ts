@@ -16,7 +16,7 @@ export async function chat(system: string, user: string, config: PhilaConfig): P
         { role: 'user', content: user },
       ],
       stream: false,
-      options: { temperature: 0.1, num_predict: 128, top_p: 0.5 },
+      options: { temperature: 0.1, num_predict: 64, top_p: 0.5 },
     }),
   })
 
