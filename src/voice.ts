@@ -7,6 +7,7 @@ export function constrain(raw: string): string {
   }
 
   text = text.replace(/^[\s]*(?:[-*•]|\d+\.)\s+/gm, '')
+  text = text.replace(/\b(great question|i'?d be happy to help|happy to help|glad you asked|absolutely)[!.]?\s*/gi, '')
 
   const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean)
   if (sentences.length > 2) {

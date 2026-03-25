@@ -53,4 +53,10 @@ describe('voice', () => {
   it('handles empty string', () => {
     assert.equal(constrain(''), '')
   })
+
+  it('strips AI-speak phrases', () => {
+    assert.equal(constrain('Great question! The answer is 42'), 'the answer is 42')
+    assert.equal(constrain("I'd be happy to help. The capital is paris"), 'the capital is paris')
+    assert.equal(constrain('Absolutely! It was built in 1889'), 'it was built in 1889')
+  })
 })

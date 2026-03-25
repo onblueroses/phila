@@ -47,6 +47,21 @@ describe('gate', () => {
       const result = parseDecision('{"action":"speak"}')
       assert.equal(result.action, GateAction.SILENT)
     })
+
+    it('extracts JSON from surrounding prose', () => {
+      const raw = 'Here is my response:\n{"action":"silent"}\nI chose silence.'
+      const result = parseDecision(raw)
+      assert.equal(result.action, GateAction.SILENT)
+    })
+
+    it('extracts SPEAK JSON from prose wrapper', () => {
+      const raw = 'Based on the conversation: {"action":"speak","reason":"wrong fact","response":"paris is in france"}'
+      const result = parseDecision(raw)
+      assert.equal(result.action, GateAction.SPEAK)
+      if (result.action === GateAction.SPEAK) {
+        assert.equal(result.response, 'paris is in france')
+      }
+    })
   })
 
   describe('buildSystemPrompt', () => {

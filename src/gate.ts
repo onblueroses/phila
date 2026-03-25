@@ -42,7 +42,12 @@ or
 }
 
 export function parseDecision(raw: string): GateDecision {
-  const cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, '').trim()
+  // Strip markdown fences, then extract first JSON object if surrounded by prose
+  let cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, '').trim()
+  if (!cleaned.startsWith('{')) {
+    const match = cleaned.match(/\{[^}]+\}/)
+    if (match) cleaned = match[0]
+  }
 
   try {
     const parsed = JSON.parse(cleaned) as { action?: string; reason?: string; response?: string }
@@ -60,7 +65,16 @@ export async function evaluate(
   profile: GroupProfile,
   config: PhilaConfig,
 ): Promise<GateDecision> {
-  const conversation = messages.map((m) => `${m.sender}: ${m.text}`).join('\n')
+  // Anonymize senders to reduce context noise for the model.
+  // It only needs to distinguish speakers, not know real names.
+  const labels = new Map<string, string>()
+  const label = (name: string) => {
+    if (!labels.has(name)) labels.set(name, `person${labels.size + 1}`)
+    return labels.get(name)!
+  }
+  const conversation = messages
+    .map((m) => `${label(m.sender)}: ${m.text}`)
+    .join('\n')
   const raw = await chat(buildSystemPrompt(profile), conversation, config)
   return parseDecision(raw)
 }

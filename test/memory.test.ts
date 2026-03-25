@@ -110,6 +110,30 @@ describe('detectFeedback', () => {
       null,
     )
   })
+
+  it('ignores "thanks" without phila in same message', () => {
+    const signal = detectFeedback([
+      { chatId: 'c', sender: 'alice', text: 'thanks for the pizza bob', timestamp: 1000 },
+    ])
+    assert.equal(signal, null)
+  })
+
+  it('prioritizes negative over positive when both match', () => {
+    const signal = detectFeedback([
+      { chatId: 'c', sender: 'alice', text: 'phila shut up, nobody asked thanks', timestamp: 1000 },
+    ])
+    assert.ok(signal)
+    assert.equal(signal.type, FeedbackType.NEGATIVE)
+  })
+
+  it('scans from newest message first', () => {
+    const signal = detectFeedback([
+      { chatId: 'c', sender: 'alice', text: 'thanks phila', timestamp: 1000 },
+      { chatId: 'c', sender: 'bob', text: 'phila shut up', timestamp: 2000 },
+    ])
+    assert.ok(signal)
+    assert.equal(signal.type, FeedbackType.NEGATIVE)
+  })
 })
 
 describe('social learning', () => {
