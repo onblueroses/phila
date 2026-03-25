@@ -4,7 +4,7 @@ import type { ChatMessage, GateDecision, GroupProfile, PhilaConfig } from './typ
 
 const SILENT: GateDecision = { action: GateAction.SILENT }
 
-function buildSystemPrompt(profile: GroupProfile): string {
+export function buildSystemPrompt(profile: GroupProfile): string {
   let biasLine = ''
   if (profile.speakBias < -0.1) {
     biasLine = '\nthis group prefers you stay extra quiet. only speak for rules 1 and 2.\n'
@@ -41,7 +41,7 @@ or
 {"action":"speak","reason":"why","response":"your message"}`
 }
 
-function parseDecision(raw: string): GateDecision {
+export function parseDecision(raw: string): GateDecision {
   const cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, '').trim()
 
   try {
@@ -65,4 +65,3 @@ export async function evaluate(
   return parseDecision(raw)
 }
 
-export { buildSystemPrompt, parseDecision }

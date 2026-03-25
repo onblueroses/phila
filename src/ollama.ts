@@ -8,6 +8,7 @@ export async function chat(system: string, user: string, config: PhilaConfig): P
   const res = await fetch(`${config.ollamaUrl}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(30_000),
     body: JSON.stringify({
       model: config.model,
       messages: [

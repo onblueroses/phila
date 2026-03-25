@@ -20,15 +20,15 @@ function createBatcher(
   const pending = new Map<string, { messages: ChatMessage[]; timer: ReturnType<typeof setTimeout> | undefined }>()
 
   return (msg) => {
-    const state = pending.get(msg.chatId)
-    if (state) {
-      clearTimeout(state.timer)
-      state.messages.push(msg)
+    let entry = pending.get(msg.chatId)
+    if (entry) {
+      clearTimeout(entry.timer)
+      entry.messages.push(msg)
     } else {
-      pending.set(msg.chatId, { messages: [msg], timer: undefined })
+      entry = { messages: [msg], timer: undefined }
+      pending.set(msg.chatId, entry)
     }
 
-    const entry = pending.get(msg.chatId)!
     entry.timer = setTimeout(() => {
       pending.delete(msg.chatId)
       onBatch(msg.chatId, entry.messages)

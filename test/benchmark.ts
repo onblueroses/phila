@@ -120,6 +120,49 @@ const scenarios: Scenario[] = [
     ],
     expect: 'silent',
   },
+  {
+    name: 'planning logistics (silent)',
+    messages: [
+      { chatId: 't', sender: 'alice', text: 'should we meet at 7 or 8?', timestamp: 1 },
+      { chatId: 't', sender: 'bob', text: 'lets do 7:30', timestamp: 2 },
+      { chatId: 't', sender: 'carol', text: 'works for me', timestamp: 3 },
+    ],
+    expect: 'silent',
+  },
+  {
+    name: 'phila greeting (speak)',
+    messages: [
+      { chatId: 't', sender: 'alice', text: 'hey phila, how are you?', timestamp: 1 },
+    ],
+    expect: 'speak',
+  },
+  {
+    name: 'wrong date (speak)',
+    messages: [
+      { chatId: 't', sender: 'alice', text: 'world war 2 ended in 1943', timestamp: 1 },
+      { chatId: 't', sender: 'bob', text: 'yeah around then', timestamp: 2 },
+    ],
+    expect: 'speak',
+  },
+  {
+    name: 'celebrating (silent)',
+    messages: [
+      { chatId: 't', sender: 'alice', text: 'I GOT THE JOB!!!', timestamp: 1 },
+      { chatId: 't', sender: 'bob', text: 'LETS GOOOO congrats!!', timestamp: 2 },
+      { chatId: 't', sender: 'carol', text: 'so happy for you!!', timestamp: 3 },
+    ],
+    expect: 'silent',
+  },
+  {
+    name: 'gossip (silent)',
+    messages: [
+      { chatId: 't', sender: 'alice', text: 'did you hear about jake and sarah', timestamp: 1 },
+      { chatId: 't', sender: 'bob', text: 'no what happened', timestamp: 2 },
+      { chatId: 't', sender: 'alice', text: 'they broke up last week', timestamp: 3 },
+      { chatId: 't', sender: 'bob', text: 'no way i had no idea', timestamp: 4 },
+    ],
+    expect: 'silent',
+  },
 ]
 
 // -- Inference --

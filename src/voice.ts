@@ -6,7 +6,7 @@ export function constrain(raw: string): string {
     text = text.slice(1, -1)
   }
 
-  text = text.replace(/^[\s]*[-*•]\s+/gm, '').replace(/^[\s]*\d+\.\s+/gm, '')
+  text = text.replace(/^[\s]*(?:[-*•]|\d+\.)\s+/gm, '')
 
   const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean)
   if (sentences.length > 2) {
