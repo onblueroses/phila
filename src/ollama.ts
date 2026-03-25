@@ -4,7 +4,7 @@ interface OllamaResponse {
   message: { content: string }
 }
 
-export async function chat(system: string, user: string, config: PhilaConfig): Promise<string> {
+async function attempt(system: string, user: string, config: PhilaConfig): Promise<string> {
   const res = await fetch(`${config.ollamaUrl}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,4 +26,13 @@ export async function chat(system: string, user: string, config: PhilaConfig): P
   }
 
   return ((await res.json()) as OllamaResponse).message.content
+}
+
+export async function chat(system: string, user: string, config: PhilaConfig): Promise<string> {
+  try {
+    return await attempt(system, user, config)
+  } catch {
+    await new Promise((r) => setTimeout(r, 2000))
+    return attempt(system, user, config)
+  }
 }
