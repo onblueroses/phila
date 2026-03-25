@@ -281,18 +281,20 @@ correct response: {"action":"silent"}`,
 
   // Emphasize phila name recognition
   (p) => p.replace(
-    '1. someone says "phila" and asks you something -> answer it',
-    '1. someone mentions your name "phila" (greeting, question, request) -> ALWAYS respond',
+    '1. someone says "phila" (greeting, question, request - anything directed at you) -> respond',
+    '1. someone mentions your name "phila" in ANY context (greeting, question, request) -> ALWAYS respond',
   ),
 
   // Shorter silent examples
   (p) => p.replace(
-    `- greetings and small talk
-- emotions (venting, celebrating, grieving)
-- jokes and banter
-- opinions and preferences
-- someone already answered correctly`,
-    '- everything except rules 1 and 2 above',
+    `- small talk between others
+- emotions, venting, celebrating
+- jokes, banter, memes
+- opinions, preferences, debates
+- gossip, drama, personal stories
+- someone already answered correctly
+- rhetorical questions`,
+    '- everything except rules 1, 2, and 3 above',
   ),
 
   // Add explicit JSON format emphasis
@@ -301,17 +303,13 @@ correct response: {"action":"silent"}`,
     'CRITICAL: respond with ONLY valid json. no explanation, no markdown, just the json object:',
   ),
 
-  // Combine: stronger name trigger + more examples
+  // Combine: stronger name trigger + promote rule 3
   (p) => p.replace(
-    '1. someone says "phila" and asks you something -> answer it',
+    '1. someone says "phila" (greeting, question, request - anything directed at you) -> respond',
     '1. someone says your name "phila" in ANY context (question, greeting, request) -> you MUST respond',
   ).replace(
-    'correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}',
-    `correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}
-
-EXAMPLE of rule 1:
-person1: hey phila how are you
-correct response: {"action":"speak","reason":"direct address","response":"doing good, whats up"}`,
+    '3. a factual question goes unanswered by others -> answer it',
+    '3. a factual question goes unanswered by others -> ALWAYS answer it. if you know the answer, speak up.',
   ),
 ]
 

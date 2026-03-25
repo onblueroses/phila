@@ -167,17 +167,19 @@ correct response: {"action":"silent"}`,
 
   // Variant: shorter prompt (fewer silent examples)
   variants.push(basePrompt.replace(
-    `- greetings and small talk
-- emotions (venting, celebrating, grieving)
-- jokes and banter
-- opinions and preferences
-- someone already answered correctly`,
-    '- everything that is not rules 1 or 2 above',
+    `- small talk between others
+- emotions, venting, celebrating
+- jokes, banter, memes
+- opinions, preferences, debates
+- gossip, drama, personal stories
+- someone already answered correctly
+- rhetorical questions`,
+    '- everything that is not rules 1, 2, or 3 above',
   ))
 
   // Variant: explicit "phila" trigger emphasis
   variants.push(basePrompt.replace(
-    '1. someone says "phila" and asks you something -> answer it',
+    '1. someone says "phila" (greeting, question, request - anything directed at you) -> respond',
     '1. someone mentions your name "phila" in ANY way (greeting, question, request) -> respond to them',
   ))
 
