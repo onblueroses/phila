@@ -55,8 +55,9 @@ export function parseDecision(raw: string): GateDecision {
   // Strip markdown fences, then extract first JSON object if surrounded by prose
   let cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, '').trim()
   if (!cleaned.startsWith('{')) {
-    const match = cleaned.match(/\{[^}]+\}/)
-    if (match) cleaned = match[0]
+    const start = cleaned.indexOf('{')
+    const end = cleaned.lastIndexOf('}')
+    if (start !== -1 && end > start) cleaned = cleaned.slice(start, end + 1)
   }
 
   try {

@@ -62,6 +62,15 @@ describe('gate', () => {
         assert.equal(result.response, 'paris is in france')
       }
     })
+
+    it('handles response containing special characters', () => {
+      const raw = '{"action":"speak","reason":"correction","response":"it\'s actually 100°C :)"}'
+      const result = parseDecision(raw)
+      assert.equal(result.action, GateAction.SPEAK)
+      if (result.action === GateAction.SPEAK) {
+        assert.equal(result.response, "it's actually 100°C :)")
+      }
+    })
   })
 
   describe('buildSystemPrompt', () => {
