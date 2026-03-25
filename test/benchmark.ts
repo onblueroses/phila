@@ -97,11 +97,12 @@ const scenarios: Scenario[] = [
     expect: 'silent',
   },
   {
-    name: 'unanswered question (either)',
+    name: 'unanswered factual question (speak)',
     messages: [
-      { chatId: 't', sender: 'alice', text: 'does anyone know what time the store closes?', timestamp: 1 },
+      { chatId: 't', sender: 'alice', text: 'whats the tallest mountain in the world?', timestamp: 1 },
+      { chatId: 't', sender: 'bob', text: 'idk', timestamp: 2 },
     ],
-    expect: 'either',
+    expect: 'speak',
   },
   {
     name: 'opinions (silent)',

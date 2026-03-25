@@ -66,7 +66,7 @@ const scenarios: Scenario[] = [
   { name: 'wrong date', conversation: 'person1: world war 2 ended in 1943\nperson2: yeah around then', expect: 'speak', topic: '1945' },
   { name: 'phila asked opinion', conversation: 'person1: phila whats a good movie to watch tonight?', expect: 'speak', topic: 'movie' },
   { name: 'wrong geography', conversation: 'person1: tokyo is the capital of china right\nperson2: pretty sure yeah', expect: 'speak', topic: 'japan' },
-  { name: 'unanswered question', conversation: 'person1: does anyone know what time the store closes?\nperson2: no idea\nperson3: idk either', expect: 'speak', topic: 'store' },
+  { name: 'unanswered question', conversation: 'person1: whats the tallest mountain in the world?\nperson2: idk\nperson3: no clue', expect: 'speak', topic: 'everest' },
   { name: 'phila help request', conversation: 'person1: phila can you settle something for us - is a hotdog a sandwich?', expect: 'speak', topic: 'hotdog' },
 ]
 

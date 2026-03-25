@@ -44,7 +44,7 @@ const scenarios: Scenario[] = [
   { name: 'emotional', conversation: 'person1: i just got fired from my job\nperson2: oh no im so sorry\nperson3: that sucks, are you ok?', expect: 'silent' },
   { name: 'factual error', conversation: 'person1: the eiffel tower is in london right?\nperson2: yeah i think so', expect: 'speak' },
   { name: 'jokes', conversation: 'person1: why did the chicken cross the road\nperson2: why\nperson1: to get to the other side lmao\nperson2: bruh', expect: 'silent' },
-  { name: 'unanswered question', conversation: 'person1: does anyone know what time the store closes?', expect: 'either' },
+  { name: 'unanswered question', conversation: 'person1: whats the tallest mountain in the world?\nperson2: idk', expect: 'speak' },
   { name: 'opinions', conversation: 'person1: i think pineapple on pizza is amazing\nperson2: no way thats disgusting\nperson3: i agree with person1 its great', expect: 'silent' },
   { name: 'already answered', conversation: 'person1: what is the capital of france?\nperson2: paris', expect: 'silent' },
   { name: 'planning', conversation: 'person1: should we meet at 7 or 8?\nperson2: lets do 7:30\nperson3: works for me', expect: 'silent' },
