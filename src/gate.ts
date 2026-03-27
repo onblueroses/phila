@@ -1,20 +1,38 @@
 import { chat } from './ollama.ts'
 import { GateAction } from './types.ts'
-import type { ChatMessage, GateDecision, GroupProfile, PhilaConfig } from './types.ts'
+import type { ChatMessage, ConversationContext, GateDecision, GroupProfile, PhilaConfig } from './types.ts'
 
 const SILENT: GateDecision = { action: GateAction.SILENT }
 
-export function buildSystemPrompt(profile: GroupProfile): string {
+export function buildSystemPrompt(profile: GroupProfile, ctx?: ConversationContext): string {
   let biasLine = ''
-  if (profile.speakBias < -0.1) {
-    biasLine = '\nthis group prefers you stay extra quiet. only speak for rules 1 and 2.\n'
-  } else if (profile.speakBias > 0.05) {
-    biasLine = '\nthis group appreciates your input. speak up when you can help.\n'
+  const b = profile.speakBias
+  if (b <= -0.15) {
+    biasLine = '\nthis group strongly prefers you stay silent. only speak when directly addressed.\n'
+  } else if (b <= -0.05) {
+    biasLine = '\nthis group prefers you stay quiet. only speak for rules 1 and 2.\n'
+  } else if (b > 0.07) {
+    biasLine = '\nthis group appreciates your contributions. feel comfortable sharing when relevant.\n'
+  } else if (b > 0.03) {
+    biasLine = '\nthis group is open to your input. speak up when you can help.\n'
+  }
+
+  let contextLines = ''
+  if (ctx) {
+    if (ctx.correctionHint) {
+      contextLines += '\nnote: someone may have already corrected an error in this conversation. check before correcting.\n'
+    }
+    if (ctx.messagesPerMinute != null && ctx.messagesPerMinute > 5) {
+      contextLines += '\nconversation is very active right now. be extra cautious about speaking.\n'
+    }
+    if (ctx.latestMessageHour != null && (ctx.latestMessageHour >= 23 || ctx.latestMessageHour < 7)) {
+      contextLines += "\nit's late at night. only speak if directly addressed (rule 1).\n"
+    }
   }
 
   return `you are phila, a member of a group chat. your name is phila.
 your default is silence - you only speak when it matters.
-${biasLine}
+${biasLine}${contextLines}
 ALWAYS SPEAK (these override silence):
 1. someone says "phila" (greeting, question, request - anything directed at you) -> respond
 2. someone states a wrong fact and nobody corrects them -> correct it
@@ -71,22 +89,48 @@ export function parseDecision(raw: string): GateDecision {
   }
 }
 
+const CORRECTION_PATTERN = /\b(actually|nope|that'?s wrong|that'?s not right|no it'?s|it'?s actually|correction)\b/i
+
+export function detectCorrection(messages: ChatMessage[]): boolean {
+  for (let i = 1; i < messages.length; i++) {
+    if (CORRECTION_PATTERN.test(messages[i].text) && messages[i].sender !== messages[i - 1].sender) {
+      return true
+    }
+  }
+  return false
+}
+
+export function computeMomentum(messages: ChatMessage[]): number | null {
+  if (messages.length < 2) return null
+  const spanMs = messages[messages.length - 1].timestamp - messages[0].timestamp
+  if (spanMs <= 0) return null
+  return (messages.length / spanMs) * 60_000
+}
+
+export function extractHour(timestamp: number): number {
+  return new Date(timestamp).getHours()
+}
+
+export function buildConversation(messages: ChatMessage[]): string {
+  const labels = new Map<string, string>()
+  const label = (name: string) => {
+    if (name === 'phila') return 'you'
+    if (!labels.has(name)) labels.set(name, `person${labels.size + 1}`)
+    return labels.get(name)!
+  }
+  return messages
+    .map((m) => `${label(m.sender)}: ${m.text}`)
+    .join('\n')
+}
+
 export async function evaluate(
   messages: ChatMessage[],
   profile: GroupProfile,
   config: PhilaConfig,
+  ctx?: ConversationContext,
 ): Promise<GateDecision> {
-  // Anonymize senders to reduce context noise for the model.
-  // It only needs to distinguish speakers, not know real names.
-  const labels = new Map<string, string>()
-  const label = (name: string) => {
-    if (!labels.has(name)) labels.set(name, `person${labels.size + 1}`)
-    return labels.get(name)!
-  }
-  const conversation = messages
-    .map((m) => `${label(m.sender)}: ${m.text}`)
-    .join('\n')
-  const raw = await chat(buildSystemPrompt(profile), conversation, config)
+  const conversation = buildConversation(messages)
+  const raw = await chat(buildSystemPrompt(profile, ctx), conversation, config)
   return parseDecision(raw)
 }
 

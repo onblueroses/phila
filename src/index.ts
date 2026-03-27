@@ -2,10 +2,10 @@ import { IMessageSDK } from '@photon-ai/imessage-kit'
 import type { Message } from '@photon-ai/imessage-kit'
 import closeWithGrace from 'close-with-grace'
 import { config } from './config.ts'
-import { evaluate } from './gate.ts'
+import { evaluate, detectCorrection, computeMomentum, extractHour } from './gate.ts'
 import { Memory, detectFeedback } from './memory.ts'
 import { GateAction } from './types.ts'
-import type { ChatMessage } from './types.ts'
+import type { ChatMessage, ConversationContext } from './types.ts'
 import { constrain } from './voice.ts'
 
 function toInternal(msg: Message): ChatMessage | null {
@@ -51,12 +51,20 @@ const feed = createBatcher(config.batchWindowMs, async (chatId, newMessages) => 
       log(`feedback: ${feedback.type} in ${chatId.slice(0, 8)}`)
     }
 
-    const decision = await evaluate(recent, profile, config)
+    const lastTs = newMessages[newMessages.length - 1].timestamp
+    const ctx: ConversationContext = {
+      correctionHint: detectCorrection(recent),
+      messagesPerMinute: computeMomentum(recent),
+      latestMessageHour: extractHour(lastTs),
+    }
+
+    const decision = await evaluate(recent, profile, config, ctx)
 
     if (decision.action === GateAction.SPEAK) {
       const response = constrain(decision.response)
       log(`speak (${decision.reason}) in ${chatId.slice(0, 8)}: ${response}`)
       await sdk.send(chatId, response)
+      memory.storeMessage({ chatId, sender: 'phila', text: response, timestamp: Date.now() })
     } else {
       log(`silent in ${chatId.slice(0, 8)} (${newMessages.length} msgs)`)
     }

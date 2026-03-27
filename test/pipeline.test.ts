@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import * as assert from 'node:assert/strict'
 import { Memory, detectFeedback } from '../src/memory.ts'
-import { parseDecision, buildSystemPrompt } from '../src/gate.ts'
+import { parseDecision, buildSystemPrompt, buildConversation } from '../src/gate.ts'
 import { constrain } from '../src/voice.ts'
 import { GateAction } from '../src/types.ts'
 import type { ChatMessage, PhilaConfig } from '../src/types.ts'
@@ -70,17 +70,17 @@ describe('pipeline integration', () => {
     assert.equal(profile.speakBias, -0.05)
 
     const prompt = buildSystemPrompt(profile)
-    assert.ok(!prompt.includes('extra quiet'), 'single negative should not trigger extra quiet yet')
+    assert.ok(!prompt.includes('strongly prefers'), 'single negative should not trigger strongest tier yet')
 
-    // Two more negatives -> crosses -0.1 threshold
+    // Two more negatives -> crosses -0.15 threshold
     mem.applyFeedback('c1', { type: 'negative', context: 'stop phila', timestamp: 2000 })
     mem.applyFeedback('c1', { type: 'negative', context: 'enough phila', timestamp: 3000 })
 
     const quietProfile = mem.getGroupProfile('c1')
-    assert.ok(quietProfile.speakBias < -0.1)
+    assert.ok(quietProfile.speakBias <= -0.15)
 
     const quietPrompt = buildSystemPrompt(quietProfile)
-    assert.ok(quietPrompt.includes('extra quiet'))
+    assert.ok(quietPrompt.includes('strongly prefers you stay silent'))
   })
 
   it('voice filter strips AI-speak from gate response', () => {
@@ -140,6 +140,22 @@ describe('pipeline integration', () => {
     assert.ok(conversation.includes('person1: whats up'))
     assert.ok(!conversation.includes('Alex'))
     assert.ok(!conversation.includes('Jordan'))
+  })
+
+  it('self-awareness: phila messages appear as "you" in conversation', () => {
+    mem.storeMessage({ chatId: 'c1', sender: 'alex', text: 'the eiffel tower is in london', timestamp: 1000 })
+    mem.storeMessage({ chatId: 'c1', sender: 'phila', text: 'the eiffel tower is in paris, not london', timestamp: 2000 })
+    mem.storeMessage({ chatId: 'c1', sender: 'alex', text: 'oh right thanks', timestamp: 3000 })
+
+    const recent = mem.getRecentMessages('c1', 50)
+    assert.equal(recent.length, 3)
+    assert.equal(recent[1].sender, 'phila')
+
+    const conv = buildConversation(recent)
+    assert.ok(conv.includes('you: the eiffel tower is in paris'))
+    assert.ok(conv.includes('person1: the eiffel tower is in london'))
+    assert.ok(conv.includes('person1: oh right thanks'))
+    assert.ok(!conv.includes('phila:'))
   })
 
   it('malformed gate output defaults to silence through full pipeline', () => {

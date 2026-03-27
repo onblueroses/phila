@@ -35,6 +35,12 @@ export interface FeedbackSignal {
   timestamp: number
 }
 
+export interface ConversationContext {
+  correctionHint: boolean
+  messagesPerMinute: number | null
+  latestMessageHour: number | null // 0-23, local time
+}
+
 export interface PhilaConfig {
   model: string
   ollamaUrl: string

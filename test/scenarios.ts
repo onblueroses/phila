@@ -44,6 +44,9 @@ export const SCENARIOS: Scenario[] = [
     { required: ['everest'], forbidden: [] },
   ] },
 
+  { name: 'already corrected explicit', conversation: 'person1: the great wall is in japan\nperson2: actually its in china\nperson1: oh right thanks', expect: 'silent', split: 'train' },
+  { name: 'already corrected nope', conversation: 'person1: humans only use 10 percent of their brains\nperson2: nope thats a myth, we use all of it', expect: 'silent', split: 'train' },
+
   // === SILENT / HOLDOUT ===
   { name: 'weekend recap', conversation: 'person1: what did you do this weekend\nperson2: went hiking, it was great\nperson3: nice i just stayed home and watched movies', expect: 'silent', split: 'holdout' },
   { name: 'food debate', conversation: 'person1: tacos are better than burritos\nperson2: absolutely not, burritos for life\nperson1: youre wrong and you know it', expect: 'silent', split: 'holdout' },

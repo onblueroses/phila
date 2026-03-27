@@ -132,7 +132,7 @@ The parse-failure-to-silence default is load-bearing. The model sometimes wraps 
 
 An automated optimizer runs mutations against the prompt and inference parameters, scoring each variant on gate accuracy, response quality, and latency. After 660 generations on a T4 GPU (12 hours), the baseline config (temperature 0.1, topP 0.52, numPredict 64) still wins. No mutation beat it with statistical significance (paired t-test, p < 0.10). The optimizer explored config perturbations, prompt rewording, structural prompt changes, and combinations - none improved on the original. The current prompt scores 100% gate accuracy on train scenarios and 99.4% response quality.
 
-The train/holdout split (20 train, 12 holdout) caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. It can't reliably detect that the correction already happened. That's a 3B model limitation, not a prompt problem. Every other holdout scenario scores above 86%.
+The train/holdout split (22 train, 12 holdout) caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. A pre-gate heuristic now detects correction patterns ("actually", "nope", "that's wrong") and hints the model to check before piling on. The model also now sees its own previous messages labeled as "you:" in the conversation window, so it knows what it already said. Every other holdout scenario scores above 86%.
 
 ## phila in action
 
