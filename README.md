@@ -120,13 +120,71 @@ npm start
 
 Silence is easy. Talking at the right time is hard.
 
-Running llama3.2 (3B) against twenty-three test scenarios, it nails every silence case on the first try - small talk, emotions, jokes, opinions, already-answered questions. Never over-talks. The struggle is the opposite: getting a model that's been told "your default is silence" to override that default when it sees a factual error.
+Running llama3.2 (3B) against the test scenarios, it nails every silence case on the first try - small talk, emotions, jokes, opinions, already-answered questions. Never over-talks. The struggle is the opposite: getting a model that's been told "your default is silence" to override that default when it sees a factual error.
 
 The error correction case broke four prompt iterations. A 3B model doesn't have enough reasoning to both detect a wrong fact and decide to speak. What finally worked: a concrete example in the system prompt showing exactly what a factual error looks like and how to respond. It now catches "the eiffel tower is in london" but misses subtler errors like "the boiling point of water is 50 degrees." Model size limitation, not a prompt problem.
 
 Simplifying the prompt made things worse. My instinct was to trim it down. But smaller models need more structure, not less. Priority ordering ("ALWAYS SPEAK for these, STAY SILENT for everything else") outperformed percentage-based framing ("stay silent 95% of the time"). Clear rules beat vibes.
 
+The third speak rule - answering unanswered questions - was the hardest to get right. A 3B model needs to recognize that "idk" means the question is still open. Abstract instructions didn't work. A concrete example in the prompt ("person1: whats the tallest mountain? / person2: idk / correct response: speak") was what made it click. Small models learn from examples, not descriptions.
+
 The parse-failure-to-silence default is load-bearing. The model sometimes wraps JSON in markdown fences, occasionally outputs malformed responses. Treating any unparseable output as silence means the worst failure mode is being too quiet, never too loud. For something sitting in your group chats, that's the right direction to fail.
+
+An automated optimizer runs mutations against the prompt and inference parameters, scoring each variant on gate accuracy, response quality, and latency. After 660 generations on a T4 GPU (12 hours), the baseline config (temperature 0.1, topP 0.52, numPredict 64) still wins. No mutation beat it with statistical significance (paired t-test, p < 0.10). The optimizer explored config perturbations, prompt rewording, structural prompt changes, and combinations - none improved on the original. The current prompt scores 100% gate accuracy on train scenarios and 99.4% response quality.
+
+The train/holdout split (20 train, 12 holdout) caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. It can't reliably detect that the correction already happened. That's a 3B model limitation, not a prompt problem. Every other holdout scenario scores above 86%.
+
+## phila in action
+
+**stays silent through normal conversation:**
+```
+alex: anyone watching the game tonight
+jordan: yeah coming over at 7
+alex: nice bring chips
+jordan: 🫡
+                                        → phila: (silent)
+```
+
+**speaks up when someone's wrong:**
+```
+alex: the great wall of china is in japan right
+jordan: yeah i think so
+                                        → phila: the great wall is in china, not japan
+```
+
+**answers questions nobody else did:**
+```
+alex: whats the tallest mountain in the world
+jordan: idk
+                                        → phila: mount everest, 8849 meters
+```
+
+**responds when addressed directly:**
+```
+jordan: hey phila what year did we land on the moon
+                                        → phila: 1969, apollo 11
+```
+
+**stays out of opinions and emotions:**
+```
+alex: i think the new star wars movies are terrible
+jordan: worst take of all time
+alex: fight me
+jordan: the originals aren't even that good
+alex: blocked
+                                        → phila: (silent)
+```
+
+**learns from feedback:**
+```
+jordan: phila shut up nobody asked
+                        → speak bias: -0.05 (quieter in this group)
+
+...later...
+
+alex: thanks phila that was helpful
+                        → speak bias: +0.02 (slightly more willing)
+```
 
 ## open questions
 

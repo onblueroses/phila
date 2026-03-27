@@ -6,4 +6,5 @@ test/checkpoint.json
 test/optimize-results*.json
 test/sweep-results.json
 test/best-prompt.txt
+test/kaggle-kernel/
 *.log
