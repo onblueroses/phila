@@ -10,6 +10,7 @@ const testConfig: PhilaConfig = {
   batchWindowMs: 3000,
   memoryWindowSize: 50,
   dbPath: ':memory:',
+  pruneAfterDays: 7,
 }
 
 describe('Memory', () => {
@@ -76,6 +77,31 @@ describe('Memory', () => {
       context: 'told to shut up',
       timestamp: Date.now(),
     })
+  })
+
+  it('prunes messages older than cutoff', () => {
+    const now = Date.now()
+    const eightDaysAgo = now - 8 * 24 * 60 * 60 * 1000
+    const threeDaysAgo = now - 3 * 24 * 60 * 60 * 1000
+
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'old msg', timestamp: eightDaysAgo })
+    mem.storeMessage({ chatId: 'chat1', sender: 'bob', text: 'recent msg', timestamp: threeDaysAgo })
+
+    const deleted = mem.pruneOldMessages(now)
+    assert.equal(deleted, 1)
+    const remaining = mem.getRecentMessages('chat1', 10)
+    assert.equal(remaining.length, 1)
+    assert.equal(remaining[0].text, 'recent msg')
+  })
+
+  it('prune keeps all messages within window', () => {
+    const now = Date.now()
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'a', timestamp: now - 1000 })
+    mem.storeMessage({ chatId: 'chat1', sender: 'bob', text: 'b', timestamp: now })
+
+    const deleted = mem.pruneOldMessages(now)
+    assert.equal(deleted, 0)
+    assert.equal(mem.getRecentMessages('chat1', 10).length, 2)
   })
 })
 

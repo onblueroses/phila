@@ -6,4 +6,5 @@ export const config: Readonly<PhilaConfig> = Object.freeze({
   batchWindowMs: Number(process.env['PHILA_BATCH_WINDOW']) || 3000,
   memoryWindowSize: Number(process.env['PHILA_MEMORY_WINDOW']) || 50,
   dbPath: process.env['PHILA_DB_PATH'] ?? 'phila.db',
+  pruneAfterDays: Number(process.env['PHILA_PRUNE_DAYS']) || 7,
 })

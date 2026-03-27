@@ -93,8 +93,11 @@ const CORRECTION_PATTERN = /\b(actually|nope|that'?s wrong|that'?s not right|no 
 
 export function detectCorrection(messages: ChatMessage[]): boolean {
   for (let i = 1; i < messages.length; i++) {
-    if (CORRECTION_PATTERN.test(messages[i].text) && messages[i].sender !== messages[i - 1].sender) {
-      return true
+    if (!CORRECTION_PATTERN.test(messages[i].text)) continue
+    // Look back up to 3 messages for the claim being corrected
+    const lookback = Math.max(0, i - 3)
+    for (let j = i - 1; j >= lookback; j--) {
+      if (messages[j].sender !== messages[i].sender) return true
     }
   }
   return false

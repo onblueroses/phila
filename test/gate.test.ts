@@ -193,6 +193,33 @@ describe('gate', () => {
     it('returns false for single message', () => {
       assert.equal(detectCorrection([msg('alex', 'actually thats interesting', 1000)]), false)
     })
+
+    it('detects correction with 1-message gap', () => {
+      const msgs = [
+        msg('alex', 'the eiffel tower is in london', 1000),
+        msg('sam', 'lol yeah', 2000),
+        msg('jordan', 'actually its in paris', 3000),
+      ]
+      assert.equal(detectCorrection(msgs), true)
+    })
+
+    it('detects correction with 2-message gap', () => {
+      const msgs = [
+        msg('alex', 'the sun is a planet', 1000),
+        msg('sam', 'cool', 2000),
+        msg('pat', 'haha', 3000),
+        msg('jordan', 'nope its a star', 4000),
+      ]
+      assert.equal(detectCorrection(msgs), true)
+    })
+
+    it('returns false when only same-sender within lookback', () => {
+      const msgs = [
+        msg('jordan', 'the tower is in london', 1000),
+        msg('jordan', 'actually wait no', 2000),
+      ]
+      assert.equal(detectCorrection(msgs), false)
+    })
   })
 
   describe('computeMomentum', () => {

@@ -8,6 +8,7 @@ const config: PhilaConfig = {
   batchWindowMs: 3000,
   memoryWindowSize: 50,
   dbPath: ':memory:',
+  pruneAfterDays: 7,
 }
 
 const profile: GroupProfile = { chatId: 'test', speakBias: 0.0, updatedAt: Date.now() }

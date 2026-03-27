@@ -54,13 +54,17 @@ describe('voice', () => {
     assert.equal(constrain(''), '')
   })
 
-  it('strips AI-speak phrases', () => {
+  it('strips AI-speak phrases at sentence start', () => {
     assert.equal(constrain('Great question! The answer is 42'), 'the answer is 42')
     assert.equal(constrain("I'd be happy to help. The capital is paris"), 'the capital is paris')
     assert.equal(constrain('Absolutely! It was built in 1889'), 'it was built in 1889')
     assert.equal(constrain("Here's what I know: it was 1969"), 'it was 1969')
     assert.equal(constrain("I should note that it's actually in france"), "it's actually in france")
     assert.equal(constrain("It's worth mentioning that the answer is no"), 'the answer is no')
+  })
+
+  it('preserves AI-speak words when mid-sentence', () => {
+    assert.equal(constrain("i asked what he found about gravity"), "i asked what he found about gravity")
   })
 
   it('strips markdown bold/italic', () => {

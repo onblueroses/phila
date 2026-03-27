@@ -47,4 +47,5 @@ export interface PhilaConfig {
   batchWindowMs: number
   memoryWindowSize: number
   dbPath: string
+  pruneAfterDays: number
 }

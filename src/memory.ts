@@ -53,6 +53,9 @@ export class Memory {
   private selectProfile: Database.Statement
   private upsertProfile: Database.Statement
   private insertFeedback: Database.Statement
+  private deleteOld: Database.Statement
+  private pruneIntervalMs: number
+  private lastPruneAt = 0
 
   constructor(config: PhilaConfig) {
     this.db = new Database(config.dbPath)
@@ -75,10 +78,29 @@ export class Memory {
     this.insertFeedback = this.db.prepare(
       'INSERT INTO feedback (chat_id, type, context, timestamp) VALUES (?, ?, ?, ?)',
     )
+    this.deleteOld = this.db.prepare(
+      'DELETE FROM messages WHERE timestamp < ?',
+    )
+    this.pruneIntervalMs = config.pruneAfterDays * 24 * 60 * 60 * 1000
   }
 
   storeMessage(msg: ChatMessage): void {
     this.insertMsg.run(msg.chatId, msg.sender, msg.text, msg.timestamp)
+    this.maybePrune(msg.timestamp)
+  }
+
+  pruneOldMessages(now: number): number {
+    const cutoff = now - this.pruneIntervalMs
+    const result = this.deleteOld.run(cutoff)
+    this.lastPruneAt = now
+    return result.changes
+  }
+
+  private maybePrune(now: number): void {
+    // Run at most once per hour
+    if (now - this.lastPruneAt > 3_600_000) {
+      this.pruneOldMessages(now)
+    }
   }
 
   getRecentMessages(chatId: string, limit: number): ChatMessage[] {

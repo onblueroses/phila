@@ -15,6 +15,7 @@ const testConfig: PhilaConfig = {
   batchWindowMs: 3000,
   memoryWindowSize: 50,
   dbPath: ':memory:',
+  pruneAfterDays: 7,
 }
 
 describe('pipeline integration', () => {
