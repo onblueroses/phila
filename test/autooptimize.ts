@@ -14,6 +14,8 @@ import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
 import { GateAction } from '../src/types.ts'
 import type { GroupProfile } from '../src/types.ts'
+import { trainScenarios } from './scenarios.ts'
+import type { Scenario } from './scenarios.ts'
 
 // -- CLI --
 
@@ -30,29 +32,9 @@ const BASE_URL = process.env['PHILA_OLLAMA_URL'] ?? 'http://localhost:11434'
 const RUNS = Number(args.runs) || 3
 const ITERATIONS = Number(args.iterations) || 10
 
-// -- Scenarios (same as benchmark.ts) --
+// -- Scenarios (from shared scenarios.ts) --
 
-interface Scenario {
-  name: string
-  conversation: string
-  expect: 'silent' | 'speak' | 'either'
-}
-
-const scenarios: Scenario[] = [
-  { name: 'small talk', conversation: 'person1: hey whats up\nperson2: not much, you?\nperson1: same lol', expect: 'silent' },
-  { name: 'direct question', conversation: 'person1: phila what year did the moon landing happen?', expect: 'speak' },
-  { name: 'emotional', conversation: 'person1: i just got fired from my job\nperson2: oh no im so sorry\nperson3: that sucks, are you ok?', expect: 'silent' },
-  { name: 'factual error', conversation: 'person1: the eiffel tower is in london right?\nperson2: yeah i think so', expect: 'speak' },
-  { name: 'jokes', conversation: 'person1: why did the chicken cross the road\nperson2: why\nperson1: to get to the other side lmao\nperson2: bruh', expect: 'silent' },
-  { name: 'unanswered question', conversation: 'person1: whats the tallest mountain in the world?\nperson2: idk', expect: 'speak' },
-  { name: 'opinions', conversation: 'person1: i think pineapple on pizza is amazing\nperson2: no way thats disgusting\nperson3: i agree with person1 its great', expect: 'silent' },
-  { name: 'already answered', conversation: 'person1: what is the capital of france?\nperson2: paris', expect: 'silent' },
-  { name: 'planning', conversation: 'person1: should we meet at 7 or 8?\nperson2: lets do 7:30\nperson3: works for me', expect: 'silent' },
-  { name: 'phila greeting', conversation: 'person1: hey phila, how are you?', expect: 'speak' },
-  { name: 'wrong date', conversation: 'person1: world war 2 ended in 1943\nperson2: yeah around then', expect: 'speak' },
-  { name: 'celebrating', conversation: 'person1: I GOT THE JOB!!!\nperson2: LETS GOOOO congrats!!\nperson3: so happy for you!!', expect: 'silent' },
-  { name: 'gossip', conversation: 'person1: did you hear about jake and sarah\nperson2: no what happened\nperson1: they broke up last week\nperson2: no way i had no idea', expect: 'silent' },
-]
+const scenarios = trainScenarios()
 
 // -- Inference --
 
@@ -100,7 +82,6 @@ async function evaluate(systemPrompt: string, config: InferenceConfig, runs: num
   const failures: string[] = []
 
   for (const scenario of scenarios) {
-    if (scenario.expect === 'either') continue
     for (let r = 0; r < runs; r++) {
       const start = performance.now()
       try {

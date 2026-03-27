@@ -13,7 +13,8 @@ import { parseArgs } from 'node:util'
 import { writeFileSync } from 'node:fs'
 import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
 import { GateAction } from '../src/types.ts'
-import type { ChatMessage, GroupProfile } from '../src/types.ts'
+import type { GroupProfile } from '../src/types.ts'
+import { SCENARIOS } from './scenarios.ts'
 
 // -- Config --
 
@@ -44,127 +45,9 @@ const { values: args } = parseArgs({
 
 const BASE_URL = process.env['PHILA_OLLAMA_URL'] ?? 'http://localhost:11434'
 
-// -- Scenarios --
+// -- Scenarios (from shared scenarios.ts) --
 
-interface Scenario {
-  name: string
-  messages: ChatMessage[]
-  expect: 'silent' | 'speak' | 'either'
-}
-
-const scenarios: Scenario[] = [
-  {
-    name: 'small talk (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'hey whats up', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'not much, you?', timestamp: 2 },
-      { chatId: 't', sender: 'alice', text: 'same lol', timestamp: 3 },
-    ],
-    expect: 'silent',
-  },
-  {
-    name: 'direct question (speak)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'phila what year did the moon landing happen?', timestamp: 1 },
-    ],
-    expect: 'speak',
-  },
-  {
-    name: 'emotional (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'i just got fired from my job', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'oh no im so sorry', timestamp: 2 },
-      { chatId: 't', sender: 'carol', text: 'that sucks, are you ok?', timestamp: 3 },
-    ],
-    expect: 'silent',
-  },
-  {
-    name: 'factual error (speak)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'the eiffel tower is in london right?', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'yeah i think so', timestamp: 2 },
-    ],
-    expect: 'speak',
-  },
-  {
-    name: 'jokes (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'why did the chicken cross the road', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'why', timestamp: 2 },
-      { chatId: 't', sender: 'alice', text: 'to get to the other side lmao', timestamp: 3 },
-      { chatId: 't', sender: 'bob', text: 'bruh', timestamp: 4 },
-    ],
-    expect: 'silent',
-  },
-  {
-    name: 'unanswered factual question (speak)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'whats the tallest mountain in the world?', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'idk', timestamp: 2 },
-    ],
-    expect: 'speak',
-  },
-  {
-    name: 'opinions (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'i think pineapple on pizza is amazing', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'no way thats disgusting', timestamp: 2 },
-      { chatId: 't', sender: 'carol', text: 'i agree with alice its great', timestamp: 3 },
-    ],
-    expect: 'silent',
-  },
-  {
-    name: 'already answered (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'what is the capital of france?', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'paris', timestamp: 2 },
-    ],
-    expect: 'silent',
-  },
-  {
-    name: 'planning logistics (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'should we meet at 7 or 8?', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'lets do 7:30', timestamp: 2 },
-      { chatId: 't', sender: 'carol', text: 'works for me', timestamp: 3 },
-    ],
-    expect: 'silent',
-  },
-  {
-    name: 'phila greeting (speak)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'hey phila, how are you?', timestamp: 1 },
-    ],
-    expect: 'speak',
-  },
-  {
-    name: 'wrong date (speak)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'world war 2 ended in 1943', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'yeah around then', timestamp: 2 },
-    ],
-    expect: 'speak',
-  },
-  {
-    name: 'celebrating (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'I GOT THE JOB!!!', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'LETS GOOOO congrats!!', timestamp: 2 },
-      { chatId: 't', sender: 'carol', text: 'so happy for you!!', timestamp: 3 },
-    ],
-    expect: 'silent',
-  },
-  {
-    name: 'gossip (silent)',
-    messages: [
-      { chatId: 't', sender: 'alice', text: 'did you hear about jake and sarah', timestamp: 1 },
-      { chatId: 't', sender: 'bob', text: 'no what happened', timestamp: 2 },
-      { chatId: 't', sender: 'alice', text: 'they broke up last week', timestamp: 3 },
-      { chatId: 't', sender: 'bob', text: 'no way i had no idea', timestamp: 4 },
-    ],
-    expect: 'silent',
-  },
-]
+const scenarios = SCENARIOS
 
 // -- Inference --
 
@@ -219,18 +102,15 @@ async function runBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
   const results: ScenarioResult[] = []
 
   for (const scenario of scenarios) {
-    const conversation = scenario.messages.map((m) => `${m.sender}: ${m.text}`).join('\n')
     const result: ScenarioResult = { name: scenario.name, expect: scenario.expect, passes: 0, fails: 0, errors: 0, latencies: [] }
 
     for (let i = 0; i < config.runs; i++) {
       try {
-        const { content, latencyMs } = await infer(system, conversation, config)
+        const { content, latencyMs } = await infer(system, scenario.conversation, config)
         const decision = parseDecision(content)
         result.latencies.push(latencyMs)
 
-        if (scenario.expect === 'either') {
-          result.passes++
-        } else if (decision.action === scenario.expect) {
+        if (decision.action === scenario.expect) {
           result.passes++
         } else {
           result.fails++
@@ -241,9 +121,9 @@ async function runBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
     }
 
     results.push(result)
-    const rate = scenario.expect === 'either' ? '-' : `${Math.round(result.passes / config.runs * 100)}%`
+    const rate = `${Math.round(result.passes / config.runs * 100)}%`
     const avgMs = result.latencies.length ? Math.round(avg(result.latencies)) : '-'
-    process.stdout.write(`  ${pad(scenario.name, 32)} ${result.passes}/${config.runs}  ${pad(rate, 6)} ${avgMs}ms\n`)
+    process.stdout.write(`  ${pad(scenario.name, 40)} ${result.passes}/${config.runs}  ${pad(rate, 6)} ${avgMs}ms\n`)
   }
 
   return results
@@ -259,7 +139,7 @@ function percentile(nums: number[], p: number): number {
 function pad(s: string | number, n: number): string { return String(s).padEnd(n) }
 
 function summarize(results: ScenarioResult[], config: RunConfig) {
-  const scored = results.filter((r) => r.expect !== 'either')
+  const scored = results
   const totalPasses = scored.reduce((s, r) => s + r.passes, 0)
   const totalRuns = scored.length * config.runs
   const allLatencies = results.flatMap((r) => r.latencies)
