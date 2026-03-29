@@ -17,6 +17,7 @@ sources = {
     'src/gate.ts': read('src/gate.ts'),
     'test/scenarios.ts': read('test/scenarios.ts'),
     'test/scorer.ts': read('test/scorer.ts'),
+    'test/cross-validation.ts': read('test/cross-validation.ts'),
     'test/continuous-optimize.ts': read('test/continuous-optimize.ts'),
 }
 
@@ -99,10 +100,10 @@ for root, dirs, files in os.walk(WORKDIR):
         size = os.path.getsize(path)
         print(f"  {{os.path.relpath(path, WORKDIR)}} ({{size}} bytes)")
 
-print("=== Running optimizer: 5 runs x infinite generations (until timeout) ===")
+print("=== Running optimizer: 3 runs x infinite generations (until timeout) ===")
 os.chdir(WORKDIR)
 result = run(
-    "node --experimental-strip-types test/continuous-optimize.ts --runs 5 --generations 0",
+    "node --experimental-strip-types test/continuous-optimize.ts --runs 3 --generations 0 --no-cv",
     check=False,
 )
 print(f"Optimizer exited with code {{result.returncode}}")

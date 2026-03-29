@@ -15,12 +15,13 @@
 import { parseArgs } from 'node:util'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
-import { constrain } from '../src/voice.ts'
 import { GateAction } from '../src/types.ts'
 import type { GroupProfile } from '../src/types.ts'
 import { trainScenarios, holdoutScenarios } from './scenarios.ts'
 import type { Scenario } from './scenarios.ts'
 import { scoreResponse, compositeWeights } from './scorer.ts'
+import { crossValidate } from './cross-validation.ts'
+import type { CVResult } from './cross-validation.ts'
 
 // -- CLI --
 
@@ -29,6 +30,8 @@ const { values: args } = parseArgs({
     runs: { type: 'string', default: '5' },
     generations: { type: 'string', default: '0' },
     checkpoint: { type: 'string', default: 'test/checkpoint.json' },
+    'cv-interval': { type: 'string', default: '10' },
+    'no-cv': { type: 'boolean', default: false },
   },
 })
 
@@ -36,6 +39,8 @@ const BASE_URL = process.env['PHILA_OLLAMA_URL'] ?? 'http://localhost:11434'
 const RUNS = Number(args.runs) || 5
 const MAX_GENERATIONS = Number(args.generations) || 0 // 0 = infinite
 const CHECKPOINT_PATH = args.checkpoint!
+const CV_INTERVAL = Number(args['cv-interval']) || 10
+const CV_ENABLED = !args['no-cv']
 
 // -- Scenarios --
 
@@ -49,6 +54,10 @@ interface InferenceConfig {
   temperature: number
   numPredict: number
   topP: number
+  repeatPenalty?: number
+  mirostat?: number
+  mirostatTau?: number
+  mirostatEta?: number
 }
 
 async function infer(system: string, user: string, config: InferenceConfig): Promise<string> {
@@ -63,7 +72,15 @@ async function infer(system: string, user: string, config: InferenceConfig): Pro
         { role: 'user', content: user },
       ],
       stream: false,
-      options: { temperature: config.temperature, num_predict: config.numPredict, top_p: config.topP },
+      options: {
+        temperature: config.temperature,
+        num_predict: config.numPredict,
+        top_p: config.topP,
+        ...(config.repeatPenalty != null ? { repeat_penalty: config.repeatPenalty } : {}),
+        ...(config.mirostat != null ? { mirostat: config.mirostat } : {}),
+        ...(config.mirostatTau != null ? { mirostat_tau: config.mirostatTau } : {}),
+        ...(config.mirostatEta != null ? { mirostat_eta: config.mirostatEta } : {}),
+      },
     }),
   })
   if (!res.ok) throw new Error(`ollama ${res.status}`)
@@ -289,38 +306,116 @@ function detectRewardHacking(
   return { hacking: false, reason: '' }
 }
 
-// -- Mutation --
+// -- Mutation Dimension Registry --
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v))
 }
 
-function mutateConfig(base: InferenceConfig, models: string[]): InferenceConfig {
-  const config = { ...base }
-  const dim = Math.random()
-
-  if (dim < 0.35) {
-    config.temperature = clamp(config.temperature + (Math.random() - 0.5) * 0.15, 0, 0.5)
-    config.temperature = Math.round(config.temperature * 100) / 100
-  } else if (dim < 0.6) {
-    config.topP = clamp(config.topP + (Math.random() - 0.5) * 0.3, 0.1, 1.0)
-    config.topP = Math.round(config.topP * 100) / 100
-  } else if (dim < 0.8) {
-    const deltas = [-32, -16, 16, 32, 64]
-    config.numPredict = clamp(config.numPredict + deltas[Math.floor(Math.random() * deltas.length)]!, 32, 256)
-  } else if (models.length > 1) {
-    const others = models.filter((m) => m !== config.model)
-    if (others.length) config.model = others[Math.floor(Math.random() * others.length)]!
-  }
-
-  return config
+function roundTo(v: number, decimals: number): number {
+  const f = 10 ** decimals
+  return Math.round(v * f) / f
 }
 
-const PROMPT_MUTATIONS: ((prompt: string) => string)[] = [
-  // Extra examples for edge cases
-  (p) => p.replace(
-    'correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}',
-    `correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]!
+}
+
+interface TrialState {
+  config: InferenceConfig
+  prompt: string
+  mutationLabels: string[]
+}
+
+interface MutationDimension {
+  name: string
+  weight: number // relative selection probability
+  apply: (state: TrialState, ctx: MutationContext) => void
+}
+
+interface MutationContext {
+  basePrompt: string
+  models: string[]
+}
+
+// -- Param Dimensions --
+
+const PARAM_DIMENSIONS: MutationDimension[] = [
+  {
+    name: 'temperature',
+    weight: 3,
+    apply(state) {
+      state.config.temperature = roundTo(clamp(state.config.temperature + (Math.random() - 0.5) * 0.15, 0, 0.5), 2)
+      state.mutationLabels.push(`t=${state.config.temperature}`)
+    },
+  },
+  {
+    name: 'topP',
+    weight: 2,
+    apply(state) {
+      state.config.topP = roundTo(clamp(state.config.topP + (Math.random() - 0.5) * 0.3, 0.1, 1.0), 2)
+      state.mutationLabels.push(`tp=${state.config.topP}`)
+    },
+  },
+  {
+    name: 'numPredict',
+    weight: 2,
+    apply(state) {
+      const deltas = [-32, -16, 16, 32, 64]
+      state.config.numPredict = clamp(state.config.numPredict + pickRandom(deltas), 32, 256)
+      state.mutationLabels.push(`np=${state.config.numPredict}`)
+    },
+  },
+  {
+    name: 'repeatPenalty',
+    weight: 1,
+    apply(state) {
+      state.config.repeatPenalty = roundTo(0.9 + Math.random() * 0.4, 2) // 0.9-1.3
+      state.mutationLabels.push(`rp=${state.config.repeatPenalty}`)
+    },
+  },
+  {
+    name: 'mirostat',
+    weight: 1,
+    apply(state) {
+      // mirostat 0=off, 1=v1, 2=v2
+      const mode = pickRandom([0, 1, 2])
+      state.config.mirostat = mode
+      if (mode > 0) {
+        state.config.mirostatTau = roundTo(2.0 + (Math.random() - 0.5) * 3.0, 1) // 0.5-3.5
+        state.config.mirostatEta = roundTo(0.05 + Math.random() * 0.2, 2) // 0.05-0.25
+        state.mutationLabels.push(`miro=${mode} tau=${state.config.mirostatTau} eta=${state.config.mirostatEta}`)
+      } else {
+        state.config.mirostat = undefined
+        state.config.mirostatTau = undefined
+        state.config.mirostatEta = undefined
+        state.mutationLabels.push('miro=off')
+      }
+    },
+  },
+  {
+    name: 'model',
+    weight: 1,
+    apply(state, ctx) {
+      const others = ctx.models.filter((m) => m !== state.config.model)
+      if (others.length) {
+        state.config.model = pickRandom(others)
+        state.mutationLabels.push(`m=${state.config.model}`)
+      }
+    },
+  },
+]
+
+// -- Prompt Dimensions --
+
+const PROMPT_DIMENSIONS: MutationDimension[] = [
+  {
+    name: 'extra-examples',
+    weight: 2,
+    apply(state) {
+      state.prompt = state.prompt.replace(
+        'correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}',
+        `correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}
 
 EXAMPLE of rule 1 - direct address:
 person1: hey phila, whats the tallest mountain?
@@ -330,101 +425,178 @@ EXAMPLE of staying silent:
 person1: i had such a bad day
 person2: oh no what happened
 correct response: {"action":"silent"}`,
-  ),
-
-  // Stronger silence default
-  (p) => p.replace(
-    'your default is silence - you only speak when it matters.',
-    'your default is ABSOLUTE silence. you almost never speak. only rules 1 and 2 override this.',
-  ),
-
-  // Emphasize phila name detection
-  (p) => p.replace(
-    '1. someone says "phila" (greeting, question, request - anything directed at you) -> respond',
-    '1. someone mentions your name "phila" in ANY context (greeting, question, request) -> ALWAYS respond',
-  ),
-
-  // Compressed silence list
-  (p) => p.replace(
-    `- small talk between others
+      )
+      state.mutationLabels.push('extra-examples')
+    },
+  },
+  {
+    name: 'silence-emphasis',
+    weight: 2,
+    apply(state) {
+      const variants = [
+        'your default is ABSOLUTE silence. you almost never speak. only rules 1 and 2 override this.',
+        'your default is silence. you speak ONLY for rules 1, 2, and 3. nothing else. ever.',
+        'SILENCE is your natural state. speaking requires explicit justification via rules 1-3.',
+      ]
+      state.prompt = state.prompt.replace(
+        'your default is silence - you only speak when it matters.',
+        pickRandom(variants),
+      )
+      state.mutationLabels.push('silence-emphasis')
+    },
+  },
+  {
+    name: 'phila-detection',
+    weight: 2,
+    apply(state) {
+      const variants = [
+        '1. someone mentions your name "phila" in ANY context (greeting, question, request) -> ALWAYS respond',
+        '1. someone says your name "phila" in ANY context (question, greeting, request) -> you MUST respond',
+        '1. your name "phila" appears in ANY message -> respond to whoever said it',
+      ]
+      state.prompt = state.prompt.replace(
+        '1. someone says "phila" (greeting, question, request - anything directed at you) -> respond',
+        pickRandom(variants),
+      )
+      state.mutationLabels.push('phila-detection')
+    },
+  },
+  {
+    name: 'compressed-silence',
+    weight: 1,
+    apply(state) {
+      const variants = [
+        '- everything except rules 1, 2, and 3 above',
+        `- anything that isnt rules 1/2/3
+- especially: small talk, emotions, jokes, opinions, gossip, rhetorical questions
+- if someone already answered correctly: stay silent`,
+      ]
+      state.prompt = state.prompt.replace(
+        `- small talk between others
 - emotions, venting, celebrating
 - jokes, banter, memes
 - opinions, preferences, debates
 - gossip, drama, personal stories
 - someone already answered correctly
 - rhetorical questions`,
-    '- everything except rules 1, 2, and 3 above',
-  ),
-
-  // Stricter JSON output instruction
-  (p) => p.replace(
-    'respond with ONLY json, no other text:',
-    'CRITICAL: respond with ONLY valid json. no explanation, no markdown, just the json object:',
-  ),
-
-  // Stronger speak triggers
-  (p) => p.replace(
-    '1. someone says "phila" (greeting, question, request - anything directed at you) -> respond',
-    '1. someone says your name "phila" in ANY context (question, greeting, request) -> you MUST respond',
-  ).replace(
-    '3. a factual question goes unanswered by others -> answer it',
-    '3. a factual question goes unanswered by others -> ALWAYS answer it. if you know the answer, speak up.',
-  ),
-
-  // Response style emphasis - keep it short and casual
-  (p) => p.replace(
-    'style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "happy to help".',
-    'style: lowercase, BRIEF (under 60 chars ideal), casual like texting a friend. never say "great question", "happy to help", "certainly", or anything an AI assistant would say. sound human.',
-  ),
-
-  // Add explicit correction format example
-  (p) => p.replace(
-    'correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}',
-    'correct response: {"action":"speak","reason":"wrong fact","response":"nah the great wall is in china not japan"}',
-  ),
-
-  // Reorder rules to emphasize factual correction
-  (p) => p.replace(
-    `ALWAYS SPEAK (these override silence):
+        pickRandom(variants),
+      )
+      state.mutationLabels.push('compressed-silence')
+    },
+  },
+  {
+    name: 'json-format',
+    weight: 1,
+    apply(state) {
+      const variants = [
+        'CRITICAL: respond with ONLY valid json. no explanation, no markdown, just the json object:',
+        'OUTPUT: exactly one json object, nothing else. no text before or after:',
+      ]
+      state.prompt = state.prompt.replace(
+        'respond with ONLY json, no other text:',
+        pickRandom(variants),
+      )
+      state.mutationLabels.push('json-format')
+    },
+  },
+  {
+    name: 'speak-triggers',
+    weight: 2,
+    apply(state) {
+      state.prompt = state.prompt.replace(
+        '3. a factual question goes unanswered by others -> answer it',
+        '3. a factual question goes unanswered by others -> ALWAYS answer it. if you know the answer, speak up.',
+      )
+      state.mutationLabels.push('speak-triggers')
+    },
+  },
+  {
+    name: 'response-style',
+    weight: 2,
+    apply(state) {
+      const variants = [
+        'style: lowercase, BRIEF (under 60 chars ideal), casual like texting a friend. never say "great question", "happy to help", "certainly", or anything an AI assistant would say. sound human.',
+        'style: lowercase, max 1 sentence, like a group chat message. no formal language ever.',
+        'style: lowercase, short, casual. respond like a friend texting. no AI-sounding phrases.',
+      ]
+      state.prompt = state.prompt.replace(
+        'style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "happy to help".',
+        pickRandom(variants),
+      )
+      state.mutationLabels.push('response-style')
+    },
+  },
+  {
+    name: 'correction-format',
+    weight: 1,
+    apply(state) {
+      state.prompt = state.prompt.replace(
+        'correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}',
+        'correct response: {"action":"speak","reason":"wrong fact","response":"nah the great wall is in china not japan"}',
+      )
+      state.mutationLabels.push('correction-format')
+    },
+  },
+  {
+    name: 'rule-ordering',
+    weight: 1,
+    apply(state) {
+      state.prompt = state.prompt.replace(
+        `ALWAYS SPEAK (these override silence):
 1. someone says "phila" (greeting, question, request - anything directed at you) -> respond
 2. someone states a wrong fact and nobody corrects them -> correct it
 3. a factual question goes unanswered by others -> answer it`,
-    `ALWAYS SPEAK (these override silence):
+        `ALWAYS SPEAK (these override silence):
 1. someone states a WRONG FACT and nobody corrects them -> you MUST correct it briefly
 2. someone says "phila" (greeting, question, request - anything directed at you) -> respond
 3. a factual question goes unanswered by others -> answer it`,
-  ),
-
-  // Combine: casual style + compressed silence + stronger triggers
-  (p) => p.replace(
-    'style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "happy to help".',
-    'style: lowercase, max 1 sentence, like a group chat message. no formal language ever.',
-  ).replace(
-    `- small talk between others
-- emotions, venting, celebrating
-- jokes, banter, memes
-- opinions, preferences, debates
-- gossip, drama, personal stories
-- someone already answered correctly
-- rhetorical questions`,
-    `- anything that isnt rules 1/2/3
-- especially: small talk, emotions, jokes, opinions, gossip, rhetorical questions
-- if someone already answered correctly: stay silent`,
-  ),
+      )
+      state.mutationLabels.push('rule-ordering')
+    },
+  },
 ]
 
-function mutatePrompt(basePrompt: string): string {
-  // 70% single mutation, 30% combine two non-overlapping mutations
-  if (Math.random() < 0.3) {
-    const indices = Array.from({ length: PROMPT_MUTATIONS.length }, (_, i) => i)
-    const i = indices.splice(Math.floor(Math.random() * indices.length), 1)[0]!
-    const j = indices[Math.floor(Math.random() * indices.length)]!
-    let result = PROMPT_MUTATIONS[i]!(basePrompt)
-    const second = PROMPT_MUTATIONS[j]!(result)
-    if (second !== result) result = second // only apply if it actually changed something
-    return result
+// -- Dimension Selection --
+
+const ALL_DIMENSIONS = [...PARAM_DIMENSIONS, ...PROMPT_DIMENSIONS]
+
+function selectDimension(dims: MutationDimension[]): MutationDimension {
+  const totalWeight = dims.reduce((s, d) => s + d.weight, 0)
+  let roll = Math.random() * totalWeight
+  for (const dim of dims) {
+    roll -= dim.weight
+    if (roll <= 0) return dim
   }
-  return PROMPT_MUTATIONS[Math.floor(Math.random() * PROMPT_MUTATIONS.length)]!(basePrompt)
+  return dims[dims.length - 1]!
+}
+
+function mutate(baseConfig: InferenceConfig, basePrompt: string, models: string[]): TrialState {
+  const state: TrialState = {
+    config: { ...baseConfig },
+    prompt: basePrompt,
+    mutationLabels: [],
+  }
+  const ctx: MutationContext = { basePrompt, models }
+
+  // 50% param-only, 30% prompt-only, 20% both
+  const roll = Math.random()
+  if (roll < 0.5) {
+    selectDimension(PARAM_DIMENSIONS).apply(state, ctx)
+  } else if (roll < 0.8) {
+    selectDimension(PROMPT_DIMENSIONS).apply(state, ctx)
+    // 30% chance of stacking a second prompt mutation
+    if (Math.random() < 0.3) {
+      const second = selectDimension(PROMPT_DIMENSIONS)
+      const before = state.prompt
+      second.apply(state, ctx)
+      if (state.prompt === before) state.mutationLabels.pop() // no-op, remove label
+    }
+  } else {
+    selectDimension(PARAM_DIMENSIONS).apply(state, ctx)
+    selectDimension(PROMPT_DIMENSIONS).apply(state, ctx)
+  }
+
+  return state
 }
 
 // -- Available Models --
@@ -449,6 +621,7 @@ interface Checkpoint {
   holdoutScores: number[]
   hackingState: HackingState
   history: GenerationResult[]
+  cvResults: CVResult[]
   startedAt: string
   lastUpdated: string
 }
@@ -499,6 +672,7 @@ async function main() {
   console.log(`scoring: auto-rebalancing (gate>=99%: 40/45/15, else: 70/20/10)`)
   console.log(`significance: paired t-test, p < ${T_TEST_THRESHOLD}`)
   console.log(`checkpoint: ${CHECKPOINT_PATH}`)
+  console.log(`cross-validation: ${CV_ENABLED ? `every ${CV_INTERVAL} generations (k=5)` : 'disabled'}`)
   console.log()
 
   // Load or create checkpoint
@@ -511,7 +685,7 @@ async function main() {
   if (cp) {
     console.log(`resuming from generation ${cp.generation}, best score: ${(cp.bestScore * 100).toFixed(1)}%`)
     bestConfig = cp.bestConfig
-    bestPrompt = cp.bestPromptIndex !== null ? mutatePrompt(basePrompt) : basePrompt
+    bestPrompt = basePrompt // prompt mutations are applied fresh each generation
     generation = cp.generation
   } else {
     bestConfig = { model: 'llama3.2', temperature: 0.1, numPredict: 64, topP: 0.52 }
@@ -548,6 +722,7 @@ async function main() {
         holdoutResult: holdoutBaseline,
         kept: true,
       }],
+      cvResults: [],
       startedAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     }
@@ -559,23 +734,11 @@ async function main() {
   while (running && (MAX_GENERATIONS === 0 || generation < MAX_GENERATIONS)) {
     generation++
 
-    // Decide mutation type: 50% config, 40% prompt, 10% both
-    const roll = Math.random()
-    let trialPrompt = bestPrompt
-    let trialConfig = bestConfig
-    let mutationType: string
-
-    if (roll < 0.5) {
-      trialConfig = mutateConfig(bestConfig, models)
-      mutationType = `config: t=${trialConfig.temperature} tp=${trialConfig.topP} np=${trialConfig.numPredict} m=${trialConfig.model}`
-    } else if (roll < 0.9) {
-      trialPrompt = mutatePrompt(basePrompt)
-      mutationType = 'prompt mutation'
-    } else {
-      trialConfig = mutateConfig(bestConfig, models)
-      trialPrompt = mutatePrompt(basePrompt)
-      mutationType = `both: t=${trialConfig.temperature} tp=${trialConfig.topP} np=${trialConfig.numPredict}`
-    }
+    // Select and apply mutations via dimension registry
+    const trial = mutate(bestConfig, basePrompt, models)
+    const trialConfig = trial.config
+    const trialPrompt = trial.prompt
+    const mutationType = trial.mutationLabels.join(' + ') || 'no-op'
 
     console.log(`--- gen ${generation} [${mutationType}] ---`)
 
@@ -638,6 +801,25 @@ async function main() {
     }
 
     console.log()
+
+    // Periodic cross-validation checkpoint
+    if (CV_ENABLED && generation % CV_INTERVAL === 0) {
+      console.log(`--- cross-validation (gen ${generation}) ---`)
+      try {
+        const cvResult = await crossValidate(bestPrompt, bestConfig, train, 5, RUNS, BASE_URL)
+        console.log(`  CV mean: ${(cvResult.mean * 100).toFixed(1)}% +/- ${(cvResult.std * 100).toFixed(1)}%`)
+        console.log(`  95% CI: [${(cvResult.ci95[0] * 100).toFixed(1)}%, ${(cvResult.ci95[1] * 100).toFixed(1)}%]`)
+        if (cvResult.flakyScenarios.length) {
+          console.log(`  flaky: ${cvResult.flakyScenarios.map((f) => f.name).join(', ')}`)
+        }
+        cp.cvResults = cp.cvResults ?? []
+        cp.cvResults.push(cvResult)
+        saveCheckpoint(cp)
+      } catch (e) {
+        console.log(`  CV ERROR: ${e instanceof Error ? e.message : e}`)
+      }
+      console.log()
+    }
 
     if (generation % 10 === 0) {
       const newModels = await getAvailableModels()
