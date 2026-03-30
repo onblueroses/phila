@@ -639,7 +639,13 @@ interface GenerationResult {
 function loadCheckpoint(): Checkpoint | null {
   if (!existsSync(CHECKPOINT_PATH)) return null
   try {
-    return JSON.parse(readFileSync(CHECKPOINT_PATH, 'utf-8')) as Checkpoint
+    const cp = JSON.parse(readFileSync(CHECKPOINT_PATH, 'utf-8')) as Checkpoint
+    // Backward compat: old checkpoints may lack newer fields
+    cp.cvResults = cp.cvResults ?? []
+    cp.holdoutScores = cp.holdoutScores ?? []
+    cp.hackingState = cp.hackingState ?? { holdoutPeak: 0, holdoutPeakGen: 0, gapHistory: [] }
+    cp.history = cp.history ?? []
+    return cp
   } catch {
     return null
   }
