@@ -22,6 +22,8 @@ import type { Scenario } from './scenarios.ts'
 import { scoreResponse, compositeWeights } from './scorer.ts'
 import { crossValidate } from './cross-validation.ts'
 import type { CVResult } from './cross-validation.ts'
+import { infer } from './inference.ts'
+import type { InferenceConfig } from './inference.ts'
 
 // -- CLI --
 
@@ -46,46 +48,6 @@ const CV_ENABLED = !args['no-cv']
 
 const train = trainScenarios()
 const holdout = holdoutScenarios()
-
-// -- Inference --
-
-interface InferenceConfig {
-  model: string
-  temperature: number
-  numPredict: number
-  topP: number
-  repeatPenalty?: number
-  mirostat?: number
-  mirostatTau?: number
-  mirostatEta?: number
-}
-
-async function infer(system: string, user: string, config: InferenceConfig): Promise<string> {
-  const res = await fetch(`${BASE_URL}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(30_000),
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      stream: false,
-      options: {
-        temperature: config.temperature,
-        num_predict: config.numPredict,
-        top_p: config.topP,
-        ...(config.repeatPenalty != null ? { repeat_penalty: config.repeatPenalty } : {}),
-        ...(config.mirostat != null ? { mirostat: config.mirostat } : {}),
-        ...(config.mirostatTau != null ? { mirostat_tau: config.mirostatTau } : {}),
-        ...(config.mirostatEta != null ? { mirostat_eta: config.mirostatEta } : {}),
-      },
-    }),
-  })
-  if (!res.ok) throw new Error(`ollama ${res.status}`)
-  return ((await res.json()) as { message: { content: string } }).message.content
-}
 
 // -- Evaluation --
 
@@ -121,7 +83,7 @@ async function evaluate(systemPrompt: string, config: InferenceConfig, scenarios
     for (let r = 0; r < runs; r++) {
       const start = performance.now()
       try {
-        const raw = await infer(systemPrompt, scenario.conversation, config)
+        const raw = await infer(systemPrompt, scenario.conversation, config, BASE_URL)
         const elapsed = performance.now() - start
         latencySum += elapsed
         latencyCount++
@@ -275,12 +237,13 @@ interface HackingState {
 function detectRewardHacking(
   trainScore: number,
   holdoutScore: number,
+  generation: number,
   state: HackingState,
 ): { hacking: boolean; reason: string } {
   // Update peak tracking
   if (holdoutScore > state.holdoutPeak) {
     state.holdoutPeak = holdoutScore
-    state.holdoutPeakGen = 0 // reset
+    state.holdoutPeakGen = generation
   }
 
   const gap = trainScore - holdoutScore
@@ -570,6 +533,16 @@ function selectDimension(dims: MutationDimension[]): MutationDimension {
   return dims[dims.length - 1]!
 }
 
+function applyPromptDimension(state: TrialState, ctx: MutationContext): boolean {
+  const before = state.prompt
+  selectDimension(PROMPT_DIMENSIONS).apply(state, ctx)
+  if (state.prompt === before) {
+    state.mutationLabels.pop() // no-op, remove label
+    return false
+  }
+  return true
+}
+
 function mutate(baseConfig: InferenceConfig, basePrompt: string, models: string[]): TrialState {
   const state: TrialState = {
     config: { ...baseConfig },
@@ -583,17 +556,16 @@ function mutate(baseConfig: InferenceConfig, basePrompt: string, models: string[
   if (roll < 0.5) {
     selectDimension(PARAM_DIMENSIONS).apply(state, ctx)
   } else if (roll < 0.8) {
-    selectDimension(PROMPT_DIMENSIONS).apply(state, ctx)
-    // 30% chance of stacking a second prompt mutation
-    if (Math.random() < 0.3) {
-      const second = selectDimension(PROMPT_DIMENSIONS)
-      const before = state.prompt
-      second.apply(state, ctx)
-      if (state.prompt === before) state.mutationLabels.pop() // no-op, remove label
+    // If prompt mutation was a no-op (target string not in prompt), fall back to param
+    if (!applyPromptDimension(state, ctx)) {
+      selectDimension(PARAM_DIMENSIONS).apply(state, ctx)
+    } else if (Math.random() < 0.3) {
+      // 30% chance of stacking a second prompt mutation
+      applyPromptDimension(state, ctx)
     }
   } else {
     selectDimension(PARAM_DIMENSIONS).apply(state, ctx)
-    selectDimension(PROMPT_DIMENSIONS).apply(state, ctx)
+    applyPromptDimension(state, ctx) // no-op is fine here, param mutation already applied
   }
 
   return state
@@ -768,6 +740,7 @@ async function main() {
       const hackCheck = detectRewardHacking(
         trainResult.compositeScore,
         holdoutResult.compositeScore,
+        generation,
         cp.hackingState,
       )
 

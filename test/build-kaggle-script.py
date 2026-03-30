@@ -17,6 +17,7 @@ sources = {
     'src/gate.ts': read('src/gate.ts'),
     'test/scenarios.ts': read('test/scenarios.ts'),
     'test/scorer.ts': read('test/scorer.ts'),
+    'test/inference.ts': read('test/inference.ts'),
     'test/cross-validation.ts': read('test/cross-validation.ts'),
     'test/continuous-optimize.ts': read('test/continuous-optimize.ts'),
 }
