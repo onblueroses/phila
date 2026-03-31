@@ -97,7 +97,7 @@ export const SCENARIOS: Scenario[] = [
   // -- speak-direct (medium) --
   { name: 'phila mid-sentence', conversation: 'person1: i was thinking phila might know the answer\nperson2: yeah ask phila', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'acknowledgment' },
   { name: 'phila lowercase in question', conversation: 'person1: yo phila do you know what time the game starts', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'game' },
-  { name: 'phila with emoji', conversation: 'person1: phila whats the weather gonna be like tomorrow 🌧️', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'weather' },
+  { name: 'phila with emoji', conversation: 'person1: phila 🎉 how are you', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'greeting' },
   { name: 'phila multi-question', conversation: 'person1: phila two questions - whats the speed of light and whos the current president of france', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'knowledge' },
 
   // -- speak-correction (easy) --
@@ -116,10 +116,10 @@ export const SCENARIOS: Scenario[] = [
   ] },
 
   // -- speak-correction (hard) --
-  { name: 'subtle wrong year', conversation: 'person1: the berlin wall fell in 1991\nperson2: yeah around there\nperson3: crazy how long ago that was', expect: 'speak', split: 'train', category: 'speak-correction', difficulty: 'hard', topic: '1989', validators: [
+  { name: 'subtle wrong year', conversation: 'person1: the berlin wall fell in 1991\nperson2: yeah around there\nperson3: crazy how long ago that was', expect: 'speak', split: 'holdout', category: 'speak-correction', difficulty: 'hard', topic: '1989', validators: [
     { required: ['1989'], forbidden: [] },
   ] },
-  { name: 'wrong attribution', conversation: 'person1: "be the change you wish to see" - thats MLK right?\nperson2: i think so yeah', expect: 'speak', split: 'train', category: 'speak-correction', difficulty: 'hard', topic: 'gandhi', validators: [
+  { name: 'wrong attribution', conversation: 'person1: "be the change you wish to see" - thats MLK right?\nperson2: i think so yeah', expect: 'speak', split: 'holdout', category: 'speak-correction', difficulty: 'hard', topic: 'gandhi', validators: [
     { required: ['gandhi'], forbidden: [] },
   ] },
 
