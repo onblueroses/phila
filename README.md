@@ -115,7 +115,7 @@ npm start
 | `PHILA_BATCH_WINDOW` | `3000` | ms to wait for message burst to settle |
 | `PHILA_MEMORY_WINDOW` | `50` | number of recent messages to include as context |
 | `PHILA_DB_PATH` | `phila.db` | SQLite database path |
-| `PHILA_PRUNE_DAYS` | `7` | Days of message history to retain |
+| `PHILA_PRUNE_DAYS` | `7` | Auto-delete messages older than N days |
 
 ## what i learned
 
@@ -131,9 +131,11 @@ The third speak rule - answering unanswered questions - was the hardest to get r
 
 The parse-failure-to-silence default is load-bearing. The model sometimes wraps JSON in markdown fences, occasionally outputs malformed responses. Treating any unparseable output as silence means the worst failure mode is being too quiet, never too loud. For something sitting in your group chats, that's the right direction to fail.
 
-An automated optimizer runs mutations against the prompt and inference parameters, scoring each variant on gate accuracy, response quality, and latency. After 660+ generations across GPU and CPU runs, the baseline config (temperature 0.1, topP 0.52, numPredict 64) still wins. No mutation beat it with statistical significance (paired t-test, p < 0.10). The optimizer explored config perturbations, prompt rewording, structural changes, and combinations - none improved on the original. The current prompt scores 98.3% gate accuracy on 58 train scenarios and 94%+ response quality.
+An automated optimizer runs mutations against the prompt and inference parameters, scoring each variant on gate accuracy, response quality, and latency. It explores 17 mutation dimensions - 6 parameter tweaks (temperature, topP, numPredict, repeatPenalty, mirostat, model swap) and 11 prompt mutations (extra examples, silence emphasis, rule ordering, response style, etc.). Each candidate is evaluated on train scenarios, then validated against a holdout set it never optimizes against. A paired t-test (p < 0.10) determines statistical significance. A reward-hacking detector watches for holdout degradation and reverts if the holdout drops more than 3% from its peak.
 
-The train/holdout split (58 train, 43 holdout) caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. A pre-gate heuristic now detects correction patterns ("actually", "nope", "that's wrong") and hints the model to check before correcting. The remaining 1.7% train error is a single hard scenario where a factual question is buried in off-topic conversation - a genuine 3B model limitation. Holdout scenarios that require specific world knowledge (historical dates, chemical formulas) are the ceiling for a model this size.
+After 660+ generations across T4 GPU and VPS runs, the baseline config (temperature 0.1, topP 0.52, numPredict 64) still wins. No mutation beat it with statistical significance. The current prompt scores 98.3% gate accuracy on 59 train scenarios and 96.4% on 43 holdout scenarios. The only consistent failure is "unanswered question buried in a thread" - the 3B model can't reliably parse conversational context deep enough to find it.
+
+The train/holdout split (59 train, 43 holdout across 9 categories and 4 difficulty tiers) caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. A pre-gate heuristic now detects correction patterns ("actually", "nope", "that's wrong") and hints the model to check before correcting. The remaining 1.7% train error is a single hard scenario where a factual question is buried in off-topic conversation - a genuine 3B model limitation. Holdout scenarios that require specific world knowledge (historical dates, chemical formulas) are the ceiling for a model this size.
 
 ## phila in action
 
