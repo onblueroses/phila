@@ -420,7 +420,7 @@ correct response: {"action":"silent"}`,
         '1. your name "phila" appears in ANY message -> respond to whoever said it',
       ]
       state.prompt = state.prompt.replace(
-        '1. someone says "phila" (greeting, question, request - anything directed at you) -> respond',
+        '1. someone says "phila" anywhere in a message (greeting, question, request) -> respond. even if combined with emoji or punctuation.',
         pickRandom(variants),
       )
       state.mutationLabels.push('phila-detection')
