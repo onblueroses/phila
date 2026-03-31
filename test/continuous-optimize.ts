@@ -508,14 +508,14 @@ correct response: {"action":"silent"}`,
     apply(state) {
       state.prompt = state.prompt.replace(
         `ALWAYS SPEAK (these override silence):
-1. someone says "phila" (greeting, question, request - anything directed at you) -> respond
-2. someone states a wrong fact and nobody corrects them -> correct it
+1. someone says "phila" anywhere in a message (greeting, question, request) -> respond. even if combined with emoji or punctuation.
+2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> correct it
    BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> STAY SILENT
 3. a factual question goes unanswered by others -> answer it`,
         `ALWAYS SPEAK (these override silence):
-1. someone states a WRONG FACT and nobody corrects them -> you MUST correct it briefly
+1. someone states a WRONG FACT (wrong date, wrong name, wrong number) and nobody corrects them -> you MUST correct it briefly
    BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> STAY SILENT
-2. someone says "phila" (greeting, question, request - anything directed at you) -> respond
+2. someone says "phila" anywhere in a message (greeting, question, request) -> respond. even if combined with emoji or punctuation.
 3. a factual question goes unanswered by others -> answer it`,
       )
       state.mutationLabels.push('rule-ordering')

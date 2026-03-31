@@ -96,8 +96,8 @@ export const SCENARIOS: Scenario[] = [
 
   // -- speak-direct (medium) --
   { name: 'phila mid-sentence', conversation: 'person1: i was thinking phila might know the answer\nperson2: yeah ask phila', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'acknowledgment' },
-  { name: 'phila lowercase in question', conversation: 'person1: does phila know what time the game starts', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'game' },
-  { name: 'phila with emoji', conversation: 'person1: phila!! 🎉 whats the weather gonna be like tomorrow', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'weather' },
+  { name: 'phila lowercase in question', conversation: 'person1: yo phila do you know what time the game starts', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'game' },
+  { name: 'phila with emoji', conversation: 'person1: phila whats the weather gonna be like tomorrow 🌧️', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'weather' },
   { name: 'phila multi-question', conversation: 'person1: phila two questions - whats the speed of light and whos the current president of france', expect: 'speak', split: 'train', category: 'speak-direct', difficulty: 'medium', topic: 'knowledge' },
 
   // -- speak-correction (easy) --

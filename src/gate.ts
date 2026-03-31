@@ -34,8 +34,8 @@ export function buildSystemPrompt(profile: GroupProfile, ctx?: ConversationConte
 your default is silence - you only speak when it matters.
 ${biasLine}${contextLines}
 ALWAYS SPEAK (these override silence):
-1. someone says "phila" (greeting, question, request - anything directed at you) -> respond
-2. someone states a wrong fact and nobody corrects them -> correct it
+1. someone says "phila" anywhere in a message (greeting, question, request) -> respond. even if combined with emoji or punctuation.
+2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> correct it
    BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> STAY SILENT
 3. a factual question goes unanswered by others -> answer it
 
