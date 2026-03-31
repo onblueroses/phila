@@ -96,7 +96,7 @@ group chat message arrives
 ollama pull llama3.2
 
 # clone and install
-git clone <repo-url> && cd phila
+git clone https://github.com/onblueroses/phila.git && cd phila
 npm install
 
 # grant Full Disk Access to your terminal
@@ -115,6 +115,7 @@ npm start
 | `PHILA_BATCH_WINDOW` | `3000` | ms to wait for message burst to settle |
 | `PHILA_MEMORY_WINDOW` | `50` | number of recent messages to include as context |
 | `PHILA_DB_PATH` | `phila.db` | SQLite database path |
+| `PHILA_PRUNE_DAYS` | `7` | Days of message history to retain |
 
 ## what i learned
 

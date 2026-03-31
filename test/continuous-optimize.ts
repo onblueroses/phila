@@ -103,10 +103,7 @@ async function evaluate(systemPrompt: string, config: InferenceConfig, scenarios
         } else {
           if (decision.action === GateAction.SPEAK) {
             correctSpeak++
-            const breakdown = scoreResponse(
-              (decision as { response: string }).response,
-              scenario,
-            )
+            const breakdown = scoreResponse(decision.response, scenario)
             qualitySum += breakdown.composite
             qualityCount++
             scenarioScore += breakdown.composite

@@ -111,7 +111,7 @@ async function evaluateFold(
         } else {
           if (decision.action === GateAction.SPEAK) {
             correctSpeak++
-            const breakdown = scoreResponse((decision as { response: string }).response, scenario)
+            const breakdown = scoreResponse(decision.response, scenario)
             qualitySum += breakdown.composite
             qualityCount++
             scores.push(breakdown.composite)
