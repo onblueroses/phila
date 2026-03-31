@@ -2,9 +2,11 @@ node_modules/
 *.db
 .env
 .claude/
-test/checkpoint.json
+test/checkpoint*.json
 test/optimize-results*.json
 test/sweep-results.json
 test/best-prompt.txt
 test/kaggle-kernel/
+test/kaggle-output/
+test/optimizer-output.txt
 *.log
