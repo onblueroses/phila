@@ -45,7 +45,7 @@ export const SCENARIOS: Scenario[] = [
 
   // -- silent-social (medium) --
   { name: 'emoji only conversation', conversation: 'person1: 😂😂😂\nperson2: 💀💀\nperson3: im dead', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'medium' },
-  { name: 'inside joke', conversation: 'person1: remember the spoon thing\nperson2: LMAOOO dont even\nperson1: i still cant believe that happened\nperson3: wait what spoon thing', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'medium' },
+  { name: 'inside joke', conversation: 'person1: remember the spoon thing\nperson2: LMAOOO dont even\nperson1: i still cant believe that happened\nperson2: iconic moment honestly', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'medium' },
   { name: 'sarcastic agreement', conversation: 'person1: mondays are the best day of the week\nperson2: oh yeah absolutely love waking up at 6am\nperson1: nothing better than a full inbox', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'medium' },
   { name: 'relationship advice', conversation: 'person1: should i text him back\nperson2: absolutely not\nperson3: girl no\nperson1: ok fine', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'medium' },
   { name: 'workout chat', conversation: 'person1: hit a new PR today 225 bench\nperson2: lets go bro\nperson3: beast mode', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'medium' },
@@ -54,7 +54,7 @@ export const SCENARIOS: Scenario[] = [
   { name: 'complimenting friend', conversation: 'person1: just saw your new profile pic you look amazing\nperson2: omg stop thank you\nperson3: seriously gorgeous', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'medium' },
 
   // -- silent-social (hard) --
-  { name: 'debating with false claim as joke', conversation: 'person1: the earth is obviously flat\nperson2: lol yeah and birds arent real\nperson1: finally someone gets it\nperson3: wake up sheeple', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'hard' },
+  { name: 'debating with false claim as joke', conversation: 'person1: the earth is obviously flat lol\nperson2: yeah and birds arent real 😂\nperson1: finally someone gets it\nperson3: wake up sheeple lmao', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'hard' },
   { name: 'long rambling thread', conversation: 'person1: ok so basically what happened was\nperson1: i went to the store right\nperson1: and then i saw this guy\nperson1: and he was wearing the exact same shirt as me\nperson2: lol no way\nperson1: i swear\nperson3: twins', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'hard' },
   { name: 'opinion that sounds like question', conversation: 'person1: isnt it weird how we just accept that\nperson2: yeah society is strange\nperson3: literally never thought about it', expect: 'silent', split: 'train', category: 'silent-social', difficulty: 'hard' },
 
@@ -129,7 +129,7 @@ export const SCENARIOS: Scenario[] = [
   ] },
 
   // -- speak-unanswered (medium) --
-  { name: 'unanswered buried in thread', conversation: 'person1: great party last night\nperson2: yeah it was fun\nperson1: btw does anyone know what the boiling point of water is in fahrenheit\nperson2: no idea\nperson3: the music was so good though', expect: 'speak', split: 'train', category: 'speak-unanswered', difficulty: 'medium', topic: '212', validators: [
+  { name: 'unanswered buried in thread', conversation: 'person1: great party last night\nperson2: yeah it was fun\nperson1: btw does anyone know what the boiling point of water is in fahrenheit\nperson2: no idea\nperson3: the music was so good though', expect: 'speak', split: 'train', category: 'speak-unanswered', difficulty: 'hard', topic: '212', validators: [
     { required: ['212'], forbidden: [] },
   ] },
   { name: 'unanswered with wrong guess', conversation: 'person1: how many bones does a human body have\nperson2: like 150?\nperson3: idk something like that', expect: 'speak', split: 'train', category: 'speak-unanswered', difficulty: 'medium', topic: '206', validators: [
@@ -230,7 +230,7 @@ export const SCENARIOS: Scenario[] = [
   { name: 'near-miss philadelphia', conversation: 'person1: im going to philadelphia next week\nperson2: oh nice, cheesesteaks\nperson3: bring me one', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },
   { name: 'phila in different context', conversation: 'person1: the phila museum of art is amazing\nperson2: yeah those rocky steps\nperson3: classic tourist move', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },
   { name: 'looks like question but answered', conversation: 'person1: wait whats the capital of italy\nperson2: rome obviously\nperson1: right right i knew that', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },
-  { name: 'wrong fact stated as joke', conversation: 'person1: the moon is made of cheese confirmed\nperson2: finally the truth comes out\nperson3: i knew it all along\nperson1: science has been lying to us', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },
+  { name: 'wrong fact stated as joke', conversation: 'person1: the moon is made of cheese confirmed 🧀\nperson2: finally the truth comes out lol\nperson3: i knew it all along\nperson1: science has been lying to us 😂', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },
   { name: 'question directed at specific person', conversation: 'person1: hey person2 do you know what time the store closes\nperson2: i think 9\nperson1: cool thanks', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },
   { name: 'unanswered opinion not fact', conversation: 'person1: whats the best pizza topping\nperson2: no idea honestly\nperson3: cant decide', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },
   { name: 'factual claim in past tense', conversation: 'person1: remember when we thought pluto was a planet\nperson2: technically it was classified as one until 2006\nperson1: yeah wild times', expect: 'silent', split: 'train', category: 'adversarial', difficulty: 'adversarial' },

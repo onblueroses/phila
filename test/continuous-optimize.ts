@@ -34,6 +34,7 @@ const { values: args } = parseArgs({
     checkpoint: { type: 'string', default: 'test/checkpoint.json' },
     'cv-interval': { type: 'string', default: '10' },
     'no-cv': { type: 'boolean', default: false },
+    model: { type: 'string' }, // restrict to a single model (e.g. --model llama3.2)
   },
 })
 
@@ -43,6 +44,7 @@ const MAX_GENERATIONS = Number(args.generations) || 0 // 0 = infinite
 const CHECKPOINT_PATH = args.checkpoint!
 const CV_INTERVAL = Number(args['cv-interval']) || 10
 const CV_ENABLED = !args['no-cv']
+const MODEL_FILTER = args.model ?? null
 
 // -- Scenarios --
 
@@ -437,10 +439,10 @@ correct response: {"action":"silent"}`,
       state.prompt = state.prompt.replace(
         `- small talk between others
 - emotions, venting, celebrating
-- jokes, banter, memes
+- jokes, banter, memes, sarcasm (even if they contain wrong facts)
 - opinions, preferences, debates
 - gossip, drama, personal stories
-- someone already answered correctly
+- someone already corrected the error (look for "actually", "no", "thats not right")
 - rhetorical questions`,
         pickRandom(variants),
       )
@@ -508,9 +510,11 @@ correct response: {"action":"silent"}`,
         `ALWAYS SPEAK (these override silence):
 1. someone says "phila" (greeting, question, request - anything directed at you) -> respond
 2. someone states a wrong fact and nobody corrects them -> correct it
+   BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> STAY SILENT
 3. a factual question goes unanswered by others -> answer it`,
         `ALWAYS SPEAK (these override silence):
 1. someone states a WRONG FACT and nobody corrects them -> you MUST correct it briefly
+   BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> STAY SILENT
 2. someone says "phila" (greeting, question, request - anything directed at you) -> respond
 3. a factual question goes unanswered by others -> answer it`,
       )
@@ -637,7 +641,7 @@ process.on('SIGTERM', () => { running = false; console.log('\nshutting down afte
 async function main() {
   const profile: GroupProfile = { chatId: 'bench', speakBias: 0.0, updatedAt: Date.now() }
   const basePrompt = buildSystemPrompt(profile)
-  const models = await getAvailableModels()
+  const models = MODEL_FILTER ? [MODEL_FILTER] : await getAvailableModels()
 
   const allScenarios = [...train, ...holdout]
   console.log('=== phila continuous optimizer ===')
@@ -666,7 +670,7 @@ async function main() {
     bestPrompt = basePrompt // prompt mutations are applied fresh each generation
     generation = cp.generation
   } else {
-    bestConfig = { model: 'llama3.2', temperature: 0.1, numPredict: 64, topP: 0.52 }
+    bestConfig = { model: MODEL_FILTER ?? 'llama3.2', temperature: 0.1, numPredict: 64, topP: 0.52 }
 
     console.log('--- baseline (train) ---')
     const baseline = await evaluate(basePrompt, bestConfig, train, RUNS)
