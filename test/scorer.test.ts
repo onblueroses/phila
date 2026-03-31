@@ -1,5 +1,5 @@
 import { describe, it } from 'node:test'
-import assert from 'node:assert/strict'
+import * as assert from 'node:assert/strict'
 import {
   scoreTopicAccuracy,
   scoreCasualness,
@@ -12,7 +12,7 @@ import {
 import type { Scenario } from './scenarios.ts'
 
 function scenario(overrides: Partial<Scenario> = {}): Scenario {
-  return { name: 'test', conversation: '', expect: 'speak', split: 'train', ...overrides }
+  return { name: 'test', conversation: '', expect: 'speak' as const, split: 'train' as const, category: 'silent-social' as const, difficulty: 'easy' as const, ...overrides }
 }
 
 describe('scoreTopicAccuracy', () => {

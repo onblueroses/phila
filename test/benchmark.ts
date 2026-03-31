@@ -33,9 +33,9 @@ const { values: args } = parseArgs({
   options: {
     runs: { type: 'string', default: '5' },
     model: { type: 'string', default: 'llama3.2' },
-    temperature: { type: 'string', default: '0.7' },
-    'num-predict': { type: 'string', default: '256' },
-    'top-p': { type: 'string', default: '0.9' },
+    temperature: { type: 'string', default: '0.1' },
+    'num-predict': { type: 'string', default: '64' },
+    'top-p': { type: 'string', default: '0.52' },
     seed: { type: 'string' },
     sweep: { type: 'boolean', default: false },
     'model-sweep': { type: 'boolean', default: false },
