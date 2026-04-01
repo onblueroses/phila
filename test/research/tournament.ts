@@ -9,6 +9,7 @@ import { buildSystemPrompt } from '../../src/gate.ts'
 import { evaluate, pairedTTest, detectRewardHacking, T_TEST_THRESHOLD } from '../eval-shared.ts'
 import type { EvalResult, HackingState } from '../eval-shared.ts'
 import { trainScenarios, holdoutScenarios } from '../scenarios.ts'
+import type { Scenario } from '../scenarios.ts'
 import type { InferenceConfig } from '../inference.ts'
 
 // -- Types --
@@ -41,10 +42,22 @@ interface WinnerResult {
   hackingCheck: { hacking: boolean; reason: string }
 }
 
+interface ScenarioDistribution {
+  name: string
+  category: string
+  expect: 'silent' | 'speak'
+  mean: number
+  stddev: number
+  min: number
+  max: number
+  runs: number
+}
+
 interface OutputFile {
   baseline: { compositeScore: number; gateScore: number; responseQuality: number }
   tournament: TournamentEntry[]
   winner: WinnerResult
+  qualityDive?: ScenarioDistribution[]
   timestamp: string
 }
 
@@ -66,6 +79,7 @@ const { values } = parseArgs({
     runs: { type: 'string', default: '3' },
     model: { type: 'string', default: 'llama3.2' },
     out: { type: 'string' },
+    'quality-dive': { type: 'boolean', default: false },
   },
   strict: true,
 })
@@ -247,7 +261,41 @@ const output: OutputFile = {
   timestamp: new Date().toISOString(),
 }
 
-writeFileSync(outPath, JSON.stringify(output, null, 2))
+// -- Quality dive (optional): per-scenario score distributions on speak train scenarios --
+
+let qualityDive: ScenarioDistribution[] | undefined
+
+if (values['quality-dive']) {
+  const QUALITY_RUNS = 10
+  const speakScenarios: Scenario[] = train.filter((s) => s.expect === 'speak')
+  console.log(`\nQuality dive: ${speakScenarios.length} speak scenarios x ${QUALITY_RUNS} runs each...`)
+
+  qualityDive = []
+  for (const scenario of speakScenarios) {
+    // Run the single scenario multiple times to collect a score distribution
+    const scores: number[] = []
+    for (let i = 0; i < QUALITY_RUNS; i++) {
+      const r: EvalResult = await evaluate(championPrompt, config, [scenario], 1, baseUrl)
+      scores.push(r.compositeScore)
+    }
+    const mean = scores.reduce((a, b) => a + b, 0) / scores.length
+    const variance = scores.reduce((a, b) => a + (b - mean) ** 2, 0) / scores.length
+    const distribution: ScenarioDistribution = {
+      name: scenario.name,
+      category: scenario.category,
+      expect: scenario.expect,
+      mean,
+      stddev: Math.sqrt(variance),
+      min: Math.min(...scores),
+      max: Math.max(...scores),
+      runs: QUALITY_RUNS,
+    }
+    qualityDive.push(distribution)
+    console.log(`  [${scenario.name}] mean=${mean.toFixed(4)} stddev=${distribution.stddev.toFixed(4)} min=${distribution.min.toFixed(4)} max=${distribution.max.toFixed(4)}`)
+  }
+}
+
+writeFileSync(outPath, JSON.stringify({ ...output, qualityDive }, null, 2))
 console.log(`\nResults written to ${outPath}`)
 
 // Write winning prompt text for direct use in future benchmark/optimize runs
