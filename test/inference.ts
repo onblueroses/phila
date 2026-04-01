@@ -9,6 +9,7 @@ export interface InferenceConfig {
   mirostat?: number
   mirostatTau?: number
   mirostatEta?: number
+  seed?: number | null
 }
 
 export async function infer(system: string, user: string, config: InferenceConfig, ollamaUrl: string): Promise<string> {
@@ -31,6 +32,7 @@ export async function infer(system: string, user: string, config: InferenceConfi
         ...(config.mirostat != null ? { mirostat: config.mirostat } : {}),
         ...(config.mirostatTau != null ? { mirostat_tau: config.mirostatTau } : {}),
         ...(config.mirostatEta != null ? { mirostat_eta: config.mirostatEta } : {}),
+        ...(config.seed != null ? { seed: config.seed } : {}),
       },
     }),
   })

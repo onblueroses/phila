@@ -12,21 +12,17 @@
 import { parseArgs } from 'node:util'
 import { writeFileSync } from 'node:fs'
 import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
-import { GateAction } from '../src/types.ts'
 import type { GroupProfile } from '../src/types.ts'
 import { SCENARIOS } from './scenarios.ts'
+import { infer } from './inference.ts'
+import type { InferenceConfig } from './inference.ts'
 
 // -- Config --
 
-interface RunConfig {
+interface RunConfig extends InferenceConfig {
   label: string
-  model: string
   ollamaUrl: string
   runs: number
-  temperature: number
-  numPredict: number
-  topP: number
-  seed: number | null
 }
 
 const { values: args } = parseArgs({
@@ -45,44 +41,16 @@ const { values: args } = parseArgs({
 
 const BASE_URL = process.env['PHILA_OLLAMA_URL'] ?? 'http://localhost:11434'
 
-// -- Scenarios (from shared scenarios.ts) --
+// -- Timed inference wrapper --
 
-const scenarios = SCENARIOS
-
-// -- Inference --
-
-async function infer(
+async function inferTimed(
   system: string,
   user: string,
   config: RunConfig,
 ): Promise<{ content: string; latencyMs: number }> {
   const start = performance.now()
-
-  const body: Record<string, unknown> = {
-    model: config.model,
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-    stream: false,
-    options: {
-      temperature: config.temperature,
-      num_predict: config.numPredict,
-      top_p: config.topP,
-      ...(config.seed !== null ? { seed: config.seed } : {}),
-    },
-  }
-
-  const res = await fetch(`${config.ollamaUrl}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-
-  const latencyMs = Math.round(performance.now() - start)
-
-  if (!res.ok) throw new Error(`ollama ${res.status}: ${await res.text().catch(() => '')}`)
-  return { content: ((await res.json()) as { message: { content: string } }).message.content, latencyMs }
+  const content = await infer(system, user, config, config.ollamaUrl)
+  return { content, latencyMs: Math.round(performance.now() - start) }
 }
 
 // -- Benchmark runner --
@@ -101,12 +69,12 @@ async function runBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
   const system = buildSystemPrompt(profile)
   const results: ScenarioResult[] = []
 
-  for (const scenario of scenarios) {
+  for (const scenario of SCENARIOS) {
     const result: ScenarioResult = { name: scenario.name, expect: scenario.expect, passes: 0, fails: 0, errors: 0, latencies: [] }
 
     for (let i = 0; i < config.runs; i++) {
       try {
-        const { content, latencyMs } = await infer(system, scenario.conversation, config)
+        const { content, latencyMs } = await inferTimed(system, scenario.conversation, config)
         const decision = parseDecision(content)
         result.latencies.push(latencyMs)
 
@@ -139,9 +107,8 @@ function percentile(nums: number[], p: number): number {
 function pad(s: string | number, n: number): string { return String(s).padEnd(n) }
 
 function summarize(results: ScenarioResult[], config: RunConfig) {
-  const scored = results
-  const totalPasses = scored.reduce((s, r) => s + r.passes, 0)
-  const totalRuns = scored.length * config.runs
+  const totalPasses = results.reduce((s, r) => s + r.passes, 0)
+  const totalRuns = results.length * config.runs
   const allLatencies = results.flatMap((r) => r.latencies)
 
   const accuracy = totalRuns ? Math.round(totalPasses / totalRuns * 1000) / 10 : 0
@@ -167,10 +134,19 @@ const PARAM_SWEEP: Omit<RunConfig, 'model' | 'ollamaUrl' | 'runs' | 'seed'>[] = 
 
 // -- Main --
 
+function parseNum(raw: string | undefined, fallback: number): number {
+  if (raw === undefined) return fallback
+  const n = Number(raw)
+  return Number.isNaN(n) ? fallback : n
+}
+
 async function main() {
   const model = args.model ?? 'llama3.2'
   const runs = Number(args.runs) || 5
   const seed = args.seed !== undefined ? Number(args.seed) : null
+  const temperature = parseNum(args.temperature, 0.1)
+  const numPredict = parseNum(args['num-predict'], 64)
+  const topP = parseNum(args['top-p'], 0.52)
 
   if (args.sweep) {
     console.log(`=== parameter sweep === model: ${model} | runs: ${runs}`)
@@ -204,9 +180,7 @@ async function main() {
     for (const m of models) {
       const config: RunConfig = {
         label: m, model: m, ollamaUrl: BASE_URL, runs, seed,
-        temperature: Number(args.temperature) || 0.7,
-        numPredict: Number(args['num-predict']) || 256,
-        topP: Number(args['top-p']) || 0.9,
+        temperature, numPredict, topP,
       }
       console.log(`\n--- ${m} ---`)
       const results = await runBenchmark(config)
@@ -215,14 +189,8 @@ async function main() {
     }
   } else {
     const config: RunConfig = {
-      label: 'single',
-      model,
-      ollamaUrl: BASE_URL,
-      runs,
-      seed,
-      temperature: Number(args.temperature) || 0.7,
-      numPredict: Number(args['num-predict']) || 256,
-      topP: Number(args['top-p']) || 0.9,
+      label: 'single', model, ollamaUrl: BASE_URL, runs, seed,
+      temperature, numPredict, topP,
     }
 
     console.log(`=== phila benchmark ===`)
