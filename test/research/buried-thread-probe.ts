@@ -57,7 +57,7 @@ Return ONLY the JSON array, no markdown fences.`
   try {
     const out = execFileSync('claude', ['--print', prompt], {
       encoding: 'utf8',
-      timeout: 60_000,
+      timeout: 120_000,
       env: { ...process.env, CLAUDECODE: '' },
     })
     const cleaned = out
