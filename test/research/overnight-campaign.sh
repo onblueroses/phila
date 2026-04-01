@@ -15,6 +15,8 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 REPORTS_DIR="$PROJECT_DIR/test/research-reports"
 STATE_FILE="$SCRIPT_DIR/overnight-state.json"
 NODE="node --experimental-strip-types"
+# Unset CLAUDECODE so claude --print calls work when launched from inside a Claude Code session
+unset CLAUDECODE
 
 # Time and budget limits
 MAX_HOURS=13
@@ -36,14 +38,14 @@ CAMPAIGN_START=$(date +%s)
 trap 'echo ""; echo "SIGINT: stopping after current phase..."; RUNNING=false' INT TERM
 
 function elapsed_hours() {
-  echo "scale=2; ($(date +%s) - $CAMPAIGN_START) / 3600" | bc
+  awk "BEGIN { printf \"%.2f\", ($(date +%s) - $CAMPAIGN_START) / 3600 }"
 }
 
 function check_budget() {
-  local hours
-  hours=$(elapsed_hours)
-  if (( $(echo "$hours >= $MAX_HOURS" | bc -l) )); then
-    echo "Budget: ${hours}h elapsed >= ${MAX_HOURS}h limit. Stopping."
+  local secs=$(( $(date +%s) - CAMPAIGN_START ))
+  local limit_secs=$(( MAX_HOURS * 3600 ))
+  if [ "$secs" -ge "$limit_secs" ]; then
+    echo "Budget: $(elapsed_hours)h elapsed >= ${MAX_HOURS}h limit. Stopping."
     RUNNING=false
     return 1
   fi
