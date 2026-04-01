@@ -190,6 +190,14 @@ while $RUNNING && [ "$ROUND" -lt "$MAX_ROUNDS" ]; do
       --round "$ROUND" \
       --out "$REPORT_OUT" \
       2>&1 || echo "  [ERROR] report generation failed"
+
+    # Append round report to FINDINGS.md
+    FINDINGS_FILE="$SCRIPT_DIR/FINDINGS.md"
+    if [ -f "$REPORT_OUT" ]; then
+      printf '\n---\n\n## Overnight Round %s — %s\n\n' "$ROUND_LABEL" "$(date '+%Y-%m-%d')" >> "$FINDINGS_FILE"
+      cat "$REPORT_OUT" >> "$FINDINGS_FILE"
+      echo "  Appended to FINDINGS.md"
+    fi
     echo ""
   fi
 
