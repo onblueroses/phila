@@ -8,7 +8,7 @@
 import { execFileSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { buildSystemPrompt } from '../../src/gate.ts'
-import { scoreResponse, compositeWeights } from '../scorer.ts'
+import { scoreResponse } from '../scorer.ts'
 import { parseDecision } from '../../src/gate.ts'
 import { infer } from '../inference.ts'
 import type { InferenceConfig } from '../inference.ts'
@@ -106,7 +106,7 @@ async function evalOne(
         category: 'speak-unanswered' as const,
         difficulty: 'hard' as const,
       }
-      const score = scoreResponse(response, scenarioForScoring, compositeWeights())
+      const score = scoreResponse(response, scenarioForScoring)
       totalScore += score.composite
     } catch {
       // count as fail
@@ -262,10 +262,7 @@ for (const f of failures) {
   lines.push(`\`\`\``)
   lines.push(f.conversation)
   lines.push(`\`\`\``)
-  const modelScores = MODELS.map((m) => {
-    const r = f.results.find((r) => r.model === m && r.variant === 'baseline')
-    return `${m}: FAIL`
-  }).join(', ')
+  const modelScores = MODELS.map((m) => `${m}: FAIL`).join(', ')
   lines.push(modelScores)
   lines.push(``)
 }
