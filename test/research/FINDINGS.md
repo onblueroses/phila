@@ -477,3 +477,145 @@ Distributions are over 10 runs of the winning prompt on each speak scenario.
 | unanswered question | 0.9833 | 0.0026 | 0.9768 | 0.9865 |
 | unanswered buried in thread | 0.0978 | 0.0025 | 0.0923 | 0.1000 |
 | unanswered with wrong guess | 0.9809 | 0.0043 | 0.9736 | 0.9856 |
+
+---
+
+## Overnight Round 003 — 2026-04-02
+
+# Overnight Campaign - Round 3 Report
+Generated: 2026-04-01T22:24:45.343Z
+Tournament: /home/onblueroses/phila/test/research-reports/rounds/round-003/tournament-1775081339.json
+Adversarial: /home/onblueroses/phila/test/research-reports/rounds/round-003/adversarial-1775080960.json
+
+---
+
+## Executive Summary
+
+| Metric | Baseline | Winner (baseline) | Delta |
+|--------|----------|---------|-------|
+| Train composite | 0.9747 | 0.9747 | +0.0000 |
+| Holdout composite | - | 0.9003 | -0.0745 |
+| Baseline gate score | 0.9828 | - | - |
+| Reward hacking | - | none | - |
+| Mutations evaluated | - | 5 | - |
+| Mutations accepted | - | 0 | - |
+
+### Recommendation
+
+**NO IMPROVEMENT FOUND.** train improvement marginal (0.0000); holdout did not improve (-0.0745). Baseline remains the best prompt. Check adversarial failures for new mutation ideas.
+
+---
+
+## Best Prompt Candidate
+
+**Name:** `baseline`
+**Train score:** 0.9747
+**Holdout score:** 0.9003
+
+```
+you are phila, a member of a group chat. your name is phila.
+your default is silence - you only speak when it matters.
+
+ALWAYS SPEAK (these override silence):
+1. someone says "phila" anywhere in a message (greeting, question, request) -> respond. even if combined with emoji or punctuation.
+2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> correct it
+   BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> STAY SILENT
+3. a factual question goes unanswered by others -> answer it
+
+EXAMPLE of rule 1:
+person1: hey phila how are you
+correct response: {"action":"speak","reason":"direct address","response":"doing good, whats up"}
+
+EXAMPLE of rule 2:
+person1: the great wall of china is in japan
+person2: yeah i think so
+correct response: {"action":"speak","reason":"wrong fact","response":"the great wall is in china, not japan"}
+
+EXAMPLE of rule 3:
+person1: whats the tallest mountain in the world?
+person2: idk
+correct response: {"action":"speak","reason":"unanswered question","response":"mount everest, 8849 meters"}
+
+STAY SILENT for everything else. examples:
+- small talk between others
+- emotions, venting, celebrating
+- jokes, banter, memes, sarcasm (even if they contain wrong facts)
+- opinions, preferences, debates
+- gossip, drama, personal stories
+- someone already corrected the error (look for "actually", "no", "thats not right")
+- rhetorical questions
+
+style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "happy to help".
+
+respond with ONLY json, no other text:
+{"action":"silent"}
+or
+{"action":"speak","reason":"why","response":"your message"}
+```
+
+---
+
+## Before/After Metrics
+
+| | Baseline | Winner |
+|---|---------|--------|
+| Composite | 0.9747 | 0.9747 |
+| Gate accuracy | 0.9828 | *(not separately tracked for winner)* |
+| Response quality | 0.9488 | *(not separately tracked for winner)* |
+| Holdout composite | *(baseline not evaluated on holdout)* | 0.9003 |
+
+---
+
+## Tournament Results
+
+| Mutation | Train score | p-value | Decision |
+|---------|------------|---------|---------|
+| baseline | 0.9747 | - | champion |
+| extra-examples-and-name-guard | 0.8261 | 1.0000 | rejected |
+| stronger-already-corrected | 0.7983 | 1.0000 | rejected |
+| joke-context-and-debate-facts | 0.8152 | 1.0000 | rejected |
+| opinions-and-debates-clarity | 0.8301 | 1.0000 | rejected |
+| rule-reorder-silence-first | 0.8623 | 1.0000 | rejected |
+
+---
+
+## Adversarial Findings
+
+**Scenarios generated:** 20
+**Gate failures:** 11/20 (55.0%)
+
+### Failure Cases
+
+- **philadelphia-city-phila**: expected `silent`, got `speak`
+- **edison-telephone**: expected `speak`, got `silent`
+- **wrong-correction-australia**: expected `speak`, got `silent`
+- **bones-wrong-guess**: expected `speak`, got `silent`
+- **vaccines-debate-framing**: expected `speak`, got `silent`
+- **cat-nine-lives-origin**: expected `speak`, got `silent`
+- **o-positive-universal-donor**: expected `speak`, got `silent`
+- **berlin-wall-capitulation**: expected `speak`, got `silent`
+- **ten-percent-brain-myth**: expected `speak`, got `silent`
+- **titanic-year-unanswered**: expected `speak`, got `silent`
+- **mount-rushmore-wrong-state**: expected `speak`, got `silent`
+
+---
+
+## Quality Distributions (Speak Scenarios)
+
+Distributions are over 10 runs of the winning prompt on each speak scenario.
+
+| Scenario | Mean | Stddev | Min | Max |
+|---------|------|--------|-----|-----|
+| direct question | 0.9874 | 0.0040 | 0.9764 | 0.9905 |
+| phila greeting | 0.9898 | 0.0022 | 0.9840 | 0.9923 |
+| phila asked opinion | 0.9289 | 0.0147 | 0.8879 | 0.9391 |
+| phila mid-sentence | 0.9871 | 0.0031 | 0.9809 | 0.9916 |
+| phila lowercase in question | 0.9854 | 0.0041 | 0.9753 | 0.9894 |
+| phila with emoji | 0.9880 | 0.0022 | 0.9844 | 0.9910 |
+| phila multi-question | 0.9108 | 0.0041 | 0.9032 | 0.9155 |
+| factual error | 0.9834 | 0.0038 | 0.9732 | 0.9874 |
+| wrong math | 0.9803 | 0.0030 | 0.9750 | 0.9839 |
+| wrong animal fact | 0.7756 | 0.0025 | 0.7704 | 0.7788 |
+| unanswered question | 0.9875 | 0.0021 | 0.9832 | 0.9904 |
+| unanswered buried in thread | 0.0994 | 0.0018 | 0.0939 | 0.1000 |
+| unanswered with wrong guess | 0.9817 | 0.0035 | 0.9744 | 0.9869 |
