@@ -1,0 +1,4 @@
+# Research reports are generated per-cycle and not committed.
+# Review via SSH: tmux attach -t phila-research, window 2 (watcher)
+*
+!.gitignore

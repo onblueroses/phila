@@ -13,3 +13,5 @@ test/kaggle-kernel/
 test/kaggle-output/
 test/optimizer-output.txt
 .ruff_cache/
+test/research/state.json
+test/research/scenarios-research.ts
