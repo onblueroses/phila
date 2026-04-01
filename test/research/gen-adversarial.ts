@@ -102,9 +102,12 @@ function callClaude(prompt: string): string {
 }
 
 function stripOuterFences(raw: string): string {
-  // Remove only the leading and trailing markdown fence lines.
-  // A global replace would corrupt backtick sequences inside JSON string values.
-  return raw.replace(/^```(?:json)?\s*\n?/m, '').replace(/\n?```\s*$/m, '').trim()
+  // Strip only the first and last lines if they are fence markers.
+  // Using line-split avoids the multiline-flag hazard where /m makes $ match interior lines.
+  const lines = raw.split('\n')
+  const start = /^```(?:json)?\s*$/.test(lines[0]?.trim() ?? '') ? 1 : 0
+  const end = /^```\s*$/.test(lines[lines.length - 1]?.trim() ?? '') ? lines.length - 1 : lines.length
+  return lines.slice(start, end).join('\n').trim()
 }
 
 function parseGeneratedScenarios(raw: string): GeneratedScenario[] {
