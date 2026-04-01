@@ -33,13 +33,13 @@ else
   echo "starting fresh"
 fi
 
-# Get available models
-MODELS=$(curl -s "${PHILA_OLLAMA_URL:-http://localhost:11434}/api/tags" | jq -r '.models[].name' | tr '\n' ',' | sed 's/,$//')
-echo "models: $MODELS"
 echo "reports: $REPORTS_DIR"
 echo ""
 
 while $RUNNING; do
+  # Refresh model list each cycle (picks up newly pulled models)
+  MODELS=$(curl -s "${PHILA_OLLAMA_URL:-http://localhost:11434}/api/tags" | jq -r '.models[].name' | tr '\n' ',' | sed 's/,$//')
+  echo "models: $MODELS"
   CYCLE=$((CYCLE + 1))
   CYCLE_START=$(date +%s)
   echo "=========================================="
