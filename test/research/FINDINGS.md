@@ -756,3 +756,8 @@ Distributions are over 10 runs of the winning prompt on each speak scenario.
 | unanswered question | 0.9860 | 0.0029 | 0.9799 | 0.9897 |
 | unanswered buried in thread | 0.0992 | 0.0023 | 0.0925 | 0.1000 |
 | unanswered with wrong guess | 0.9818 | 0.0026 | 0.9781 | 0.9861 |
+
+---
+
+## qwen2.5:7b Campaign (8 rounds, 40 adversarial, 8 mutations/round)
+
