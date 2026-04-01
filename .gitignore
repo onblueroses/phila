@@ -15,3 +15,6 @@ test/optimizer-output.txt
 .ruff_cache/
 test/research/state.json
 test/research/scenarios-research.ts
+test/research/overnight-state.json
+test/research-reports/candidates/
+test/research-reports/rounds/
