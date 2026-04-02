@@ -929,3 +929,44 @@ person2: just wait till you're in the terminal
 person3: great something to look forward to
 ```
 llama3.2: FAIL, qwen2.5:3b: FAIL, gemma2:2b: FAIL, phi3:mini: FAIL
+
+---
+
+## Fine-tuning Results — 2026-04-02
+
+**Method:** QLoRA (4-bit base + fp16 adapters), Unsloth 2026.3.18, llama3.2:3b base model, r=16, lora_alpha=16, 3 epochs, lr=2e-4.
+**Training data:** 755 examples (173 buried-thread targeted, 524 general, 58 seed). Generated via claude --print.
+**Hardware:** Vast.ai RTX 4090 (Iceland, $0.375/hr). Training runtime: 189s. Final train loss: 0.2572.
+**Export:** Unsloth `save_pretrained_gguf()` → q4_k_m, 1.9GB. Imported to Ollama as `phila-ft`.
+**Benchmark:** 101 scenarios × 3 runs, same params as baseline (temperature=0.1, top_p=0.52, num_predict=64).
+
+### Before / After
+
+| Metric | llama3.2 (baseline) | phila-ft (fine-tuned) | Delta |
+|--------|--------------------|-----------------------|-------|
+| Overall gate accuracy | 94.1% | **96.7%** | **+2.6%** |
+| buried-thread | ~0% (all fail) | **100%** | **+100pp** |
+| silent-social | 100% | 100% | 0 |
+| phila-trigger | 100% | 97.9% | -2.1% |
+| speak-unanswered | 83.3% | 88.5% | +5.2% |
+| False-speaks | 0 | 0 | 0 |
+
+### Scenario-Level Wins and Regressions
+
+**Wins:**
+- `unanswered buried in thread`: 0% → 100% (was the core target)
+- Overall accuracy: 94.1% → 96.7%
+
+**Regressions (new failures):**
+- `unanswered question`: was passing, now 0/3 — model over-silences on standalone factual questions
+- `unanswered history`: 0/3 — same pattern
+- `wrong fact but clearly sarcastic`: 0/3 — model corrects sarcasm (was 50% baseline, now worse)
+- `near-miss philo not phila`: 2/3 — slight regression in near-miss detection
+
+### Conclusion
+
+**buried-thread weakness fixed.** Fine-tuning achieved the primary goal: the buried-thread category went from 0% to 100%. The model now detects when a factual question is buried in an active conversation.
+
+Overall gate accuracy improved (+2.6%), but there are targeted regressions in standalone unanswered questions and sarcasm detection. The false-speak rate remains 0 — the model is not trigger-happy, it errs toward silence in the regression cases.
+
+**Recommendation:** phila-ft is an improvement over llama3.2 as the gate model. The regressions are narrower and less impactful than the buried-thread fix. Deploy as default gate model and run continuous-optimize to attempt to fix the unanswered-question regressions.
