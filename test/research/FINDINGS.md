@@ -761,3 +761,49 @@ Distributions are over 10 runs of the winning prompt on each speak scenario.
 
 ## qwen2.5:7b Campaign (8 rounds, 40 adversarial, 8 mutations/round)
 
+
+---
+
+## Model Comparison — 2026-04-02
+
+# Model Comparison Report
+Generated: 2026-04-02T10:00:41.285Z
+Baseline prompt: gate.ts buildSystemPrompt()
+Runs per scenario: 3
+
+## Summary
+
+| Model | Train composite | Holdout composite | Gate (train) | Quality (train) | Silent% | Speak% | Duration |
+|-------|----------------|------------------|-------------|----------------|---------|--------|----------|
+| llama3.2 | 0.4695 (best) | 0.0000 | 0.5977 | 0.0000 | 100.0% | 0.0% | 6251s |
+| phi3:mini | 0.2986 -0.1709 | 0.4061 | 0.1587 | 0.9379 | 43.3% | 13.9% | 4348s |
+| qwen2.5:3b | 0.0000 -0.4695 | 0.0000 | 0.0000 | 0.0000 | 0.0% | 0.0% | 9090s |
+| qwen2.5:7b | 0.0000 -0.4695 | 0.0163 | 0.0000 | 0.0000 | 0.0% | 0.0% | 9071s |
+| gemma2:2b | 0.0000 -0.4695 | 0.0000 | 0.0000 | 0.0000 | 0.0% | 0.0% | 9090s |
+
+## Detailed Metrics
+
+| Model | Composite | Gate | Quality | Latency | Avg Latency | Correct Silent | Correct Speak | False Speak | False Silent |
+|-------|-----------|------|---------|---------|-------------|----------------|---------------|-------------|--------------|
+| llama3.2 | 0.4695 | 0.5977 | 0.0000 | 0.5113 | 2699ms | 104 | 0 | 0 | 70 |
+| phi3:mini | 0.2986 | 0.1587 | 0.9379 | 0.0000 | 6533ms | 13 | 20 | 17 | 124 |
+| qwen2.5:3b | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 10000ms | 0 | 0 | 0 | 174 |
+| qwen2.5:7b | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 10000ms | 0 | 0 | 0 | 174 |
+| gemma2:2b | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 10000ms | 0 | 0 | 0 | 174 |
+
+## Train/Holdout Gap
+
+| Model | Train | Holdout | Gap |
+|-------|-------|---------|-----|
+| llama3.2 | 0.4695 | 0.0000 | +0.4695 |
+| phi3:mini | 0.2986 | 0.4061 | -0.1074 |
+| qwen2.5:3b | 0.0000 | 0.0000 | +0.0000 |
+| qwen2.5:7b | 0.0000 | 0.0163 | -0.0163 |
+| gemma2:2b | 0.0000 | 0.0000 | +0.0000 |
+
+## Winner Analysis
+
+**Best train:** llama3.2 (0.4695)
+**Best holdout:** phi3:mini (0.4061)
+
+> Train and holdout winners differ - check for overfitting to the train scenario distribution.
