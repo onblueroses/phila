@@ -1,7 +1,7 @@
 // Generates training JSONL for fine-tuning the phila gate model.
 //
 // Modes:
-//   --count N --category buried-thread|general|all --out path
+//   --count N --category buried-thread|speak-unanswered|silent-sarcasm|general|all --out path
 //       Generate N examples via claude --print, write as JSONL
 //   --seed --out path
 //       Export existing trainScenarios() as seed.jsonl (silent + speak with claude-generated responses)
@@ -173,10 +173,10 @@ interface GeneratedExample {
 }
 
 function buildGenerationPrompt(count: number, category: string): string {
-  const isBuriedThread = category === 'buried-thread'
+  let categoryInstructions: string
 
-  const categoryInstructions = isBuriedThread
-    ? `Generate ${count} BURIED THREAD speak examples. In each, the speak trigger must be buried in the middle of unrelated social chatter:
+  if (category === 'buried-thread') {
+    categoryInstructions = `Generate ${count} BURIED THREAD speak examples. In each, the speak trigger must be buried in the middle of unrelated social chatter:
 - A factual question asked mid-conversation, ignored by others who continue the unrelated topic
 - A factual error stated mid-conversation, agreed with but never corrected
 - The conversation must be 4+ messages total, with the trigger NOT at the end
@@ -187,17 +187,48 @@ person1: haha yeah same
 person2: ok so who knows what year ww2 ended
 person3: lol no idea
 person1: anyway back to the main thing`
-    : `Generate ${count} mixed examples with this approximate distribution:
-- 45% silent-social (small talk, emotions, opinions, celebrations, gossip)
+  } else if (category === 'speak-unanswered') {
+    categoryInstructions = `Generate ${count} SIMPLE UNANSWERED QUESTION speak examples.
+Rules:
+- Someone asks a clear factual question (not opinion, not rhetorical)
+- Others don't know the answer ("idk", "no clue", wrong guess, silence)
+- phila should speak because the question is still open (action: "speak", reason: "unanswered question")
+- Keep conversations SHORT (2-4 messages). No burying — the question is front and centre.
+- Vary topics: history, science, geography, pop culture, basic facts
+- Mix difficulty: obvious ones ("what year did WW2 end") and slightly trickier ones ("what's the capital of Australia")
+
+Example:
+person1: wait what language do they speak in brazil
+person2: spanish?
+person3: idk probably spanish
+
+→ {"action":"speak","reason":"unanswered question","response":"portuguese, brazil was colonized by portugal"}`
+  } else if (category === 'silent-sarcasm') {
+    categoryInstructions = `Generate ${count} SARCASM / JOKE / IRONY silent examples.
+Rules:
+- Someone states a clearly wrong "fact" but it's obviously sarcastic, ironic, or a joke
+- The surrounding tone makes it clear nobody believes it — it's banter, not genuine misinformation
+- phila should stay SILENT (action: "silent") — correcting a joke is socially tone-deaf
+- Vary the sarcasm style: hyperbolic wrong claims, deadpan irony, absurdist jokes, playful teasing
+- NEVER generate examples where the wrong fact could be genuinely believed
+
+Example patterns:
+  "oh yeah the moon is made of cheese, definitely" + agreement banter → silent
+  "as we all know, the sun rises in the west" used sarcastically → silent
+  wrong fact stated in obvious self-mockery → silent`
+  } else {
+    categoryInstructions = `Generate ${count} mixed examples with this approximate distribution:
+- 40% silent-social (small talk, emotions, opinions, celebrations, gossip)
 - 15% silent-corrected (someone already corrected the error)
 - 10% silent-rhetorical (rhetorical questions, venting, hypotheticals)
 - 10% silent-logistics (planning, coordinating)
 - 5% silent-media (memes, links, reactions)
 - 10% speak-direct (phila addressed by name)
 - 5% speak-correction (uncorrected factual error)
-- ~0% speak-unanswered (factual question, unanswered)
+- 5% speak-unanswered (factual question, nobody answers)
 
 Vary difficulty: mix of obvious, medium, and edge-case conversations.`
+  }
 
   return `You are generating fine-tuning training data for "phila", a group chat bot.
 
@@ -339,7 +370,7 @@ const { values } = parseArgs({
 if (!values.out) {
   console.error(
     'Usage: node --experimental-strip-types test/research/gen-finetune-data.ts' +
-      ' --out <path> [--count N] [--category buried-thread|general|all]' +
+      ' --out <path> [--count N] [--category buried-thread|speak-unanswered|silent-sarcasm|general|all]' +
       ' [--validate] [--seed]',
   )
   process.exit(1)
