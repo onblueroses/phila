@@ -18,7 +18,7 @@ const RUNS = 5
 const OUT = `test/research-reports/buried-thread-probe-${Date.now()}.md`
 
 // -- Models to test --
-const MODELS = ['llama3.2', 'qwen2.5:3b', 'qwen2.5:7b', 'gemma2:2b', 'phi3:mini']
+const MODELS = ['llama3.2', 'qwen2.5:3b', 'gemma2:2b', 'phi3:mini']
 
 // -- Prompt variants targeting the buried-thread weakness --
 const basePrompt = buildSystemPrompt({ chatId: 'benchmark', speakBias: 0, updatedAt: 0 })
