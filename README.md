@@ -167,7 +167,9 @@ The third speak rule - answering unanswered questions - was the hardest to get r
 
 The parse-failure-to-silence default is load-bearing. The model sometimes wraps JSON in markdown fences, occasionally outputs malformed responses. Treating any unparseable output as silence means the worst failure mode is being too quiet, never too loud. For something sitting in your group chats, that's the right direction to fail.
 
-The train/holdout split caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. A pre-gate heuristic now detects correction patterns ("actually", "nope", "that's wrong") and hints the model to check before correcting. The remaining 1.7% train error is a single hard scenario where a factual question is buried in off-topic conversation - a genuine 3B model limitation.
+The train/holdout split caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. A pre-gate heuristic now detects correction patterns ("actually", "nope", "that's wrong") and hints the model to check before correcting.
+
+The hardest remaining failure is the buried-thread case: a factual question asked mid-conversation, then buried by off-topic messages that nobody answered. Phila should speak - but doesn't. A dedicated probe across 4 models (llama3.2, qwen2.5:3b, gemma2:2b, phi3:mini) × 4 prompt variants × 30 generated scenarios returned 0% pass rate across every combination. This isn't a prompt problem. No rephrasing of the system prompt moves the needle. The 3B models don't scan the full conversation history when the relevant signal is several messages back and recent context is unrelated noise. Fine-tuning on targeted buried-thread examples is the planned fix.
 
 ## setup
 
@@ -198,6 +200,21 @@ npm start
 | `PHILA_MEMORY_WINDOW` | `50` | number of recent messages to include as context |
 | `PHILA_DB_PATH` | `phila.db` | SQLite database path |
 | `PHILA_PRUNE_DAYS` | `7` | Auto-delete messages older than N days |
+
+## research infrastructure
+
+`test/research/` contains the full benchmark and optimization pipeline used to validate the gate:
+
+- `overnight-campaign.sh` — orchestrates multi-round prompt optimization: adversarial scenario generation → mutation generation → tournament → report
+- `tournament.ts` — single-elimination tournament with paired t-test (p < 0.10) significance gating
+- `gen-adversarial.ts` — generates adversarial test scenarios via LLM, targeting known failure categories
+- `gen-prompt-mutations.ts` — generates targeted prompt mutations based on failure patterns
+- `model-compare.ts` — benchmarks multiple Ollama models against the baseline prompt
+- `buried-thread-probe.ts` — targeted investigation of the buried-thread weakness across models and prompt variants
+- `gen-finetune-data.ts` — generates labeled training data (JSONL) for fine-tuning
+- `FINDINGS.md` — cumulative research log with all benchmark results
+
+`test/eval-shared.ts` — shared `evaluate()`, `pairedTTest()`, and reward-hacking detection used across all benchmark scripts.
 
 ## open questions
 
