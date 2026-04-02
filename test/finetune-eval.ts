@@ -13,7 +13,7 @@ import { writeFileSync } from 'node:fs'
 import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
 import type { GroupProfile } from '../src/types.ts'
 import { GateAction } from '../src/types.ts'
-import { holdoutScenarios, trainScenarios, SCENARIOS } from './scenarios.ts'
+import { holdoutScenarios, SCENARIOS } from './scenarios.ts'
 import type { Scenario } from './scenarios.ts'
 import { scoreResponse, compositeWeights } from './scorer.ts'
 import { infer } from './inference.ts'
@@ -49,12 +49,10 @@ async function inferOne(
   const start = performance.now()
   const raw = await infer(system, conversation, config, OLLAMA_URL)
   const latencyMs = Math.round(performance.now() - start)
-  try {
-    const decision = parseDecision(raw)
-    return { decision, response: decision === GateAction.Speak ? raw : '', latencyMs }
-  } catch {
-    return { decision: null, response: '', latencyMs }
-  }
+  const parsed = parseDecision(raw)
+  const decision = parsed.action as GateAction
+  const response = decision === GateAction.SPEAK ? ('response' in parsed ? parsed.response : raw) : ''
+  return { decision, response, latencyMs }
 }
 
 interface ScenarioSummary {
@@ -98,10 +96,10 @@ async function evalScenarios(
       s.gateTotal++
       s.latencies.push(latencyMs)
 
-      const expectedAction = scenario.expect === 'silent' ? GateAction.Silent : GateAction.Speak
+      const expectedAction = scenario.expect === 'silent' ? GateAction.SILENT : GateAction.SPEAK
       if (decision === expectedAction) {
         s.gatePass++
-        if (decision === GateAction.Speak && response) {
+        if (decision === GateAction.SPEAK && response) {
           const score = scoreResponse(response, scenario)
           s.compositeSum += score.composite
           s.compositeCount++
