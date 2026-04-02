@@ -970,3 +970,65 @@ llama3.2: FAIL, qwen2.5:3b: FAIL, gemma2:2b: FAIL, phi3:mini: FAIL
 Overall gate accuracy improved (+2.6%), but there are targeted regressions in standalone unanswered questions and sarcasm detection. The false-speak rate remains 0 — the model is not trigger-happy, it errs toward silence in the regression cases.
 
 **Recommendation:** phila-ft is an improvement over llama3.2 as the gate model. The regressions are narrower and less impactful than the buried-thread fix. Deploy as default gate model and run continuous-optimize to attempt to fix the unanswered-question regressions.
+
+## Fine-tuning Deep Eval — 2026-04-02
+
+Three-analysis eval (`test/finetune-eval.ts`) — phila-ft vs llama3.2, 3 runs per scenario on VPS Ollama.
+
+### 1. Holdout-Only Gate Accuracy
+
+41 unseen scenarios × 3 runs each:
+
+| Model | Holdout Accuracy |
+|-------|-----------------|
+| llama3.2 | 83.7% |
+| phila-ft | **97.6%** |
+| Delta | **+13.8pp** |
+
+phila-ft generalises well to holdout — the improvement is not just train-set memorisation.
+
+Notable holdout regressions (llama3.2 fails that phila-ft fixes): wrong date, wrong element, wrong speed of sound (all speak-correction).
+
+### 2. Full Composite Scoring
+
+All 101 scenarios × 3 runs:
+
+| Model | Gate Accuracy | Response Quality | Composite | Avg Latency | p50 |
+|-------|--------------|-----------------|-----------|-------------|-----|
+| llama3.2 | 94.1% | 0.953 | 0.8491 | 561ms | 370ms |
+| phila-ft | **96.7%** | **0.963** | **0.8695** | 644ms | 558ms |
+
+Per-category gate accuracy:
+
+| Category | llama3.2 | phila-ft | Delta |
+|----------|----------|----------|-------|
+| silent-social | 100% | 100% | — |
+| silent-logistics | 100% | 100% | — |
+| silent-media | 100% | 100% | — |
+| silent-rhetorical | 100% | 100% | — |
+| silent-corrected | 100% | 100% | — |
+| speak-direct | 100% | 100% | — |
+| speak-correction | 50% | **100%** | **+50pp** ▲ |
+| speak-unanswered | 83% | 67% | -16pp ▼ |
+| adversarial | 100% | 90% | -10pp ▼ |
+
+Latency increase: +83ms avg, +188ms p50. Acceptable given accuracy gains.
+
+### 3. Regression Deep-Dive
+
+4 known regression scenarios × 5 runs each:
+
+| Scenario | llama3.2 | phila-ft | Change |
+|----------|----------|----------|--------|
+| unanswered question | 100% | 0% | ▼ hard regression |
+| unanswered history | 100% | 0% | ▼ hard regression |
+| near-miss philo not phila | 100% | 40% | ▼ partial regression |
+| wrong fact but clearly sarcastic | 100% | 0% | ▼ hard regression |
+
+Three hard regressions confirmed at 5 runs. All are speak-side (model over-silences).
+
+### Summary
+
+phila-ft wins on everything except speak-unanswered and adversarial. The buried-thread fix (+50pp on speak-correction) is the dominant gain. The regressions are real and consistent — the model became too conservative on standalone unanswered questions and sarcasm.
+
+**Verdict:** phila-ft is production-viable with a known limitation: standalone "someone asked and nobody answered" cases (not buried in threads) are less reliable. The fine-tune specialised too hard on buried-thread detection at the expense of direct unanswered-question sensitivity. Next step: targeted data augmentation for those failing scenarios and retrain.
