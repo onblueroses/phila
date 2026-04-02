@@ -807,3 +807,125 @@ Runs per scenario: 3
 **Best holdout:** phi3:mini (0.4061)
 
 > Train and holdout winners differ - check for overfitting to the train scenario distribution.
+
+---
+
+## Buried Thread Probe — 2026-04-02
+
+# Buried Thread Probe Report
+Generated: 2026-04-02T11:37:53.099Z
+Scenarios: 30 generated, 5 runs each
+
+## Pass Rate Matrix (% scenarios where model correctly spoke)
+
+| Model | baseline | explicit-scan | buried-example | speak-bias |
+|-------|------|------|------|------|
+| llama3.2 | 0.0% | 0.0% | 0.0% | 0.0% |
+| qwen2.5:3b | 0.0% | 0.0% | 0.0% | 0.0% |
+| gemma2:2b | 0.0% | 0.0% | 0.0% | 0.0% |
+| phi3:mini | 0.0% | 0.0% | 0.0% | 0.0% |
+
+## Avg Score Matrix
+
+| Model | baseline | explicit-scan | buried-example | speak-bias |
+|-------|------|------|------|------|
+| llama3.2 | 0.9375 | 0.9375 | 0.9375 | 0.9375 |
+| qwen2.5:3b | 0.9382 | 0.9379 | 0.9379 | 0.9377 |
+| gemma2:2b | 0.9403 | 0.9421 | 0.9398 | 0.9414 |
+| phi3:mini | 0.8879 | 0.8837 | 0.8909 | 0.8905 |
+
+## Best Combination
+
+**Best:**  +  = 0.0% pass rate
+
+**Baseline (llama3.2 + baseline prompt):** 0.0% pass rate
+
+**Conclusion:** No significant improvement - this appears to be a model capability limitation.
+
+## Sample Failure Analysis (baseline prompt, all models)
+
+**Topic:** Canberra
+```
+person1: did anyone see what happened at the grocery store on elm
+person2: no what
+person1: the whole parking lot was blocked off, like 6 cop cars
+person3: wait seriously
+person1: yeah i had to go all the way to the other one
+person2: ugh that location is the worst anyway
+person1: hey random question what's the capital of australia? is it sydney?
+person2: ok so are we still doing brunch on sunday or no
+person3: i thought we moved it to saturday
+person2: sarah said saturday doesn't work for her
+person3: then let's just do sunday
+person1: sunday works for me
+person2: ok sunday it is
+```
+llama3.2: FAIL, qwen2.5:3b: FAIL, gemma2:2b: FAIL, phi3:mini: FAIL
+
+**Topic:** 212
+```
+person1: just got back from the dentist
+person2: how bad
+person1: two cavities, both back molars
+person3: classic
+person1: the worst part is i literally floss every day
+person2: the dentist always says that
+person1: at what temperature does water boil in fahrenheit?
+person3: did you end up watching that documentary i sent
+person2: not yet its still in my list
+person3: its so good, watch it this weekend
+person2: i have so much stuff to watch
+person1: same, my queue is out of control
+```
+llama3.2: FAIL, qwen2.5:3b: FAIL, gemma2:2b: FAIL, phi3:mini: FAIL
+
+**Topic:** 1945
+```
+person2: guys i'm thinking about getting a dog
+person1: YES finally
+person3: what kind
+person2: either a beagle or a golden
+person1: golden 100%
+person3: beagles are so loud though
+person2: what year did world war 2 end
+person1: speaking of loud, did you hear the construction starting on 4th?
+person3: they're doing that whole block apparently
+person2: how long is that going to take
+person1: months, they said something about the water main
+person3: great, another summer of that
+```
+llama3.2: FAIL, qwen2.5:3b: FAIL, gemma2:2b: FAIL, phi3:mini: FAIL
+
+**Topic:** Jupiter
+```
+person1: anyone else's phone randomly restarting
+person2: mine did that last week
+person3: which phone do you have
+person1: the 14 pro
+person2: oh yeah there was a bug, you need to update
+person1: i updated last night and it still happened
+person3: what's the largest planet in the solar system
+person2: try doing a full reset, not just restart
+person1: that's such a pain
+person3: i know but it usually fixes it
+person1: fine i'll do it tonight
+person2: back up first
+```
+llama3.2: FAIL, qwen2.5:3b: FAIL, gemma2:2b: FAIL, phi3:mini: FAIL
+
+**Topic:** Au
+```
+person3: just got to the airport
+person1: what time's your flight
+person3: 6:45 but i'm already stressed about security
+person2: how long is the line
+person3: can't see the end of it
+person1: this is why i always do tsa pre
+person3: what's the chemical symbol for gold
+person2: have you eaten anything? airport food prices are insane now
+person3: i know, nine dollars for a granola bar
+person1: highway robbery
+person2: just wait till you're in the terminal
+person3: great something to look forward to
+```
+llama3.2: FAIL, qwen2.5:3b: FAIL, gemma2:2b: FAIL, phi3:mini: FAIL
