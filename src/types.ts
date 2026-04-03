@@ -39,6 +39,7 @@ export interface ConversationContext {
   correctionHint: boolean
   messagesPerMinute: number | null
   latestMessageHour: number | null // 0-23, local time
+  groupNotes: string | null
 }
 
 export interface PhilaConfig {

@@ -103,31 +103,31 @@ describe('gate', () => {
     })
 
     it('correction hint adds warning', () => {
-      const ctx: ConversationContext = { correctionHint: true, messagesPerMinute: null, latestMessageHour: null }
+      const ctx: ConversationContext = { correctionHint: true, messagesPerMinute: null, latestMessageHour: null, groupNotes: null }
       const prompt = buildSystemPrompt(baseProfile, ctx)
       assert.ok(prompt.includes('already corrected an error'))
     })
 
     it('high momentum adds caution', () => {
-      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: 8, latestMessageHour: null }
+      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: 8, latestMessageHour: null, groupNotes: null }
       const prompt = buildSystemPrompt(baseProfile, ctx)
       assert.ok(prompt.includes('very active right now'))
     })
 
     it('normal momentum adds nothing', () => {
-      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: 3, latestMessageHour: null }
+      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: 3, latestMessageHour: null, groupNotes: null }
       const prompt = buildSystemPrompt(baseProfile, ctx)
       assert.ok(!prompt.includes('very active'))
     })
 
     it('late night restricts to direct address', () => {
-      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: null, latestMessageHour: 2 }
+      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: null, latestMessageHour: 2, groupNotes: null }
       const prompt = buildSystemPrompt(baseProfile, ctx)
       assert.ok(prompt.includes("it's late at night"))
     })
 
     it('daytime adds nothing', () => {
-      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: null, latestMessageHour: 14 }
+      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: null, latestMessageHour: 14, groupNotes: null }
       const prompt = buildSystemPrompt(baseProfile, ctx)
       assert.ok(!prompt.includes('late at night'))
     })
