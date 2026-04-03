@@ -30,9 +30,13 @@ export function buildSystemPrompt(profile: GroupProfile, ctx?: ConversationConte
     }
   }
 
+  const notesBlock = ctx?.groupNotes
+    ? `\ngroup context (things you know about this chat):\n${ctx.groupNotes}\n`
+    : ''
+
   return `you are phila, a member of a group chat. your name is phila.
 your default is silence - you only speak when it matters.
-${biasLine}${contextLines}
+${biasLine}${contextLines}${notesBlock}
 ALWAYS SPEAK (these override silence):
 1. someone says "phila" anywhere in a message (greeting, question, request) -> respond. even if combined with emoji or punctuation.
 2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> correct it
