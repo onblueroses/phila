@@ -36,3 +36,41 @@ export async function chat(system: string, user: string, config: PhilaConfig): P
     return attempt(system, user, config)
   }
 }
+
+const SUMMARIZE_SYSTEM = `you maintain concise notes about a group chat. given the existing notes and new messages, produce updated notes.
+keep only facts, recurring topics, and notable events. max 2000 characters.
+use person1/person2 style labels, not real names. output only the updated notes, nothing else.`
+
+async function attemptSummarize(existingNotes: string, messages: string, config: PhilaConfig): Promise<string> {
+  const user = `existing notes:\n${existingNotes}\n\nnew messages:\n${messages}`
+  const res = await fetch(`${config.ollamaUrl}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(60_000),
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: SUMMARIZE_SYSTEM },
+        { role: 'user', content: user },
+      ],
+      stream: false,
+      options: { temperature: 0.3, num_predict: 256, top_p: 0.9 },
+    }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`ollama ${res.status}: ${body}`)
+  }
+
+  return ((await res.json()) as OllamaResponse).message.content
+}
+
+export async function summarize(existingNotes: string, messages: string, config: PhilaConfig): Promise<string> {
+  try {
+    return await attemptSummarize(existingNotes, messages, config)
+  } catch {
+    await new Promise((r) => setTimeout(r, 2000))
+    return attemptSummarize(existingNotes, messages, config)
+  }
+}
