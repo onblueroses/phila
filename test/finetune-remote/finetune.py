@@ -146,7 +146,16 @@ def main():
     print("\n=== Exporting to GGUF (q4_k_m) ===")
     # This merges adapter into base model at FP16, then quantizes to GGUF.
     # DO NOT import the raw adapter into Ollama - it produces garbage output silently.
-    model.save_pretrained_gguf(args.out, tokenizer, quantization_method="q4_k_m")
+    import shutil
+    free_gb = shutil.disk_usage("/workspace").free / 1e9
+    print(f"  Disk free before export: {free_gb:.1f} GB")
+    try:
+        model.save_pretrained_gguf(args.out, tokenizer, quantization_method="q4_k_m")
+    except Exception as gguf_err:
+        # Write a partial done.json so monitor can diagnose - then re-raise
+        with open("/workspace/done.json", "w") as f:
+            json.dump({"status": "failed", "error": "gguf_export", "detail": str(gguf_err)}, f, indent=2)
+        raise
 
     # Find the generated files
     out_dir = Path(args.out).parent
