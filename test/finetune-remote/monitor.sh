@@ -87,6 +87,33 @@ fi
 
 scp_from /workspace/run.log "$RESULTS_DIR/run.log" || true
 
+# Verify GGUF is local before destroying - scp directly if not already present
+LOCAL_GGUF=$(ls "$RESULTS_DIR"/phila-ft*.gguf 2>/dev/null | head -1)
+if [ -z "$LOCAL_GGUF" ]; then
+    echo "  WARNING: No GGUF found locally - attempting direct scp from instance" | tee -a "$LOG"
+    REMOTE_GGUF=$(ssh $SCP_OPTS -p "$SSH_PORT" "root@${SSH_HOST}" \
+        "ls /workspace/phila-ft*.gguf 2>/dev/null | head -1" 2>/dev/null || echo "")
+    if [ -n "$REMOTE_GGUF" ]; then
+        scp_from "$REMOTE_GGUF" "$RESULTS_DIR/$(basename $REMOTE_GGUF)" \
+            && echo "  Rescued GGUF via scp: $(basename $REMOTE_GGUF)" | tee -a "$LOG" \
+            || echo "  ERROR: scp rescue also failed" | tee -a "$LOG"
+    else
+        echo "  ERROR: No GGUF on instance either - training may have failed" | tee -a "$LOG"
+    fi
+fi
+
+# Also grab Modelfile if not already present
+[ -f "$RESULTS_DIR/Modelfile" ] || scp_from /workspace/Modelfile "$RESULTS_DIR/Modelfile" || true
+
+# Final check - refuse to destroy if no GGUF landed locally
+LOCAL_GGUF=$(ls "$RESULTS_DIR"/phila-ft*.gguf 2>/dev/null | head -1)
+if [ -z "$LOCAL_GGUF" ]; then
+    echo "  ABORT DESTROY: No GGUF confirmed locally. Manual intervention needed." | tee -a "$LOG"
+    echo "  Instance $INSTANCE_ID left running - check /workspace on instance." | tee -a "$LOG"
+    exit 1
+fi
+echo "  GGUF confirmed: $LOCAL_GGUF ($(du -sh "$LOCAL_GGUF" | cut -f1))" | tee -a "$LOG"
+
 # List what we got
 echo "  Results in $RESULTS_DIR:" | tee -a "$LOG"
 ls -lh "$RESULTS_DIR"/*.gguf "$RESULTS_DIR/Modelfile" "$DONE_MARKER" 2>/dev/null \
