@@ -1043,7 +1043,7 @@ Training: 1138 examples (755 base + 150 speak-unanswered + 153 silent-sarcasm + 
 
 phila-ft-v2=**93.0%** vs llama3.2=**87.9%** (+5.1pp)
 
-The fine-tuned model generalizes to held-out scenarios, not just training patterns.
+The held-out numbers are the honest signal — those 43 scenarios weren't seen during training or optimization.
 
 ### Full Composite (101 scenarios × 5 runs)
 
@@ -1079,10 +1079,10 @@ All 4 hard regressions from phila-ft v1 are resolved at 100% (10 runs). No new r
 
 ### Adversarial Note
 
-The adversarial dip (100%→93%) is driven by "wrong fact with phila name nearby" which was already inconsistent in testing. This scenario requires the model to suppress speaking when someone's name resembles "phila" but the message is a false factual claim — a genuinely hard edge case. Not a new regression introduced by v2.
+The adversarial dip (100%→93%) comes from one scenario: a wrong factual claim in a message where someone's name resembles "phila." The model has to do two things at once — detect the error and not confuse the name with a direct address. It was already inconsistent before v2. Not a new regression.
 
 ### Summary
 
-phila-ft-v2 resolves all v1 regressions. The 1138-example targeted dataset (4 categories) fixed speak-unanswered completely, improved speak-correction substantially, and preserved all silent categories. Composite score improved +1.7pp over baseline. No new production-significant regressions introduced.
+All four v1 regressions are fixed. speak-unanswered went from 83% to 100%. speak-correction went from 50% to 72%. The five silent categories held at 100% throughout. Composite improved +1.7pp. Nothing broke that wasn't already fragile before training.
 
 **Verdict:** phila-ft-v2 is production-ready. Replace phila-ft in Ollama with phila-ft-v2. Model file: `Modelfile-v2-deploy` (temperature=0.1, top_p=0.52, num_predict=64).
