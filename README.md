@@ -125,9 +125,9 @@ The speak gate is validated against 101 test scenarios across 9 categories and 4
 | Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16, 429 steps |
 | Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
 
-An automated optimizer runs mutations against the prompt and inference parameters, scoring each variant on gate accuracy, response quality, and latency. Each candidate is evaluated on train scenarios, then validated against a holdout set it never optimizes against. A paired t-test (p < 0.10) determines statistical significance. A reward-hacking detector watches for holdout degradation and reverts if the holdout drops more than 3% from its peak.
+An automated optimizer mutates the prompt and inference parameters, scores each candidate against the train scenarios, then checks it against the holdout it never sees during optimization. Statistical significance requires p < 0.10. A reward-hacking detector rolls back anything that improves train accuracy while degrading holdout by more than 3%.
 
-After 660+ generations, no prompt or parameter mutation beat the baseline with statistical significance. The buried-thread weakness (factual questions buried in active thread noise) was confirmed as a model capability limit, not fixable through prompting. That triggered the fine-tuning pipeline.
+660+ generations. Nothing beat the baseline. The buried-thread failure — factual questions asked mid-conversation then buried under off-topic noise — came back 0% across every prompt variant and model combination tested. That's a model capability problem, not something rephrasing fixes, which is why fine-tuning happened.
 
 Response quality is scored on 5 dimensions: topic accuracy (0.35), casualness (0.25), AI-speak absence (0.20), length fit (0.10), and voice survival (0.10). Stratified k-fold cross-validation detects flaky scenarios across runs.
 
@@ -180,9 +180,9 @@ The hardest failure was the buried-thread case: a factual question asked mid-con
 
 Fine-tuning fixed it. QLoRA on a first dataset of 755 targeted examples pushed the buried-thread category from 0% to 100%. But the model regressed hard on three cases it previously handled correctly: standalone unanswered questions, unanswered history questions, and sarcastic wrong-fact detection — all dropping from 100% to 0%. It had specialised too hard in one direction.
 
-The second fine-tune (`phila-ft-v2`) added 383 purpose-built examples across the three regressed categories (150 speak-unanswered, 153 silent-sarcasm, 80 near-miss), keeping the original 755 as the base — 1,138 total. Trained on an RTX 4090 via Vast.ai (429 steps, ~40 min). All four regression scenarios are now back to 100% across 10 runs. Holdout accuracy sits at 93.0%, up 5.1pp from the untuned baseline.
+The second fine-tune added 383 examples targeting exactly those three failures — 150 speak-unanswered, 153 silent-sarcasm, 80 near-miss — on top of the original 755. 1,138 total. RTX 4090, 429 steps, roughly 40 minutes. All four regression scenarios came back to 100% across 10 runs. Holdout accuracy landed at 93.0%, which is 5.1pp above where the untuned baseline sits.
 
-The iteration loop — benchmark, find regressions, build targeted data, retrain, re-benchmark — is the entire research pipeline in miniature. The fine-tuning infrastructure (`finetune.py`, `launch-remote.sh`, `monitor.sh`, `finetune-eval.ts`) was built to make that loop fast enough to actually run.
+The whole loop — benchmark, find regressions, build targeted data, retrain, re-benchmark — is what the research pipeline was designed for. The fine-tuning infrastructure exists specifically to make that loop fast enough to be worth running more than once.
 
 ## setup
 
