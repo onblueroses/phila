@@ -10,16 +10,49 @@ echo "=== Phila fine-tune launch ==="
 echo "Instance: ${VAST_INSTANCE_ID}"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
-echo "=== Installing Unsloth and deps (pinned to v1-compatible version) ==="
-# Do NOT use --force-reinstall: it clobbers the conda-managed torch in the Docker image,
-# replacing it with a pip version that may use a different CUDA runtime.
-# pip install with an exact version will downgrade unsloth without touching torch.
-pip install 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datasets 2>&1
+# Quick CUDA sanity check before touching anything
+python3 -c "
+import ctypes, sys
+cuda = ctypes.cdll.LoadLibrary('libcuda.so.1')
+ret = cuda.cuInit(0)
+if ret != 0:
+    print(f'ERROR: cuInit failed with code {ret} (804=forward compat error = broken driver)', file=sys.stderr)
+    sys.exit(1)
+print('cuInit OK - CUDA driver is functional')
+" || { echo 'ABORT: CUDA driver not functional on this machine. Try a different instance.'; exit 1; }
+
+echo "=== Installing Unsloth and deps ==="
+# V1 approach: pin torch first so pip dep resolution won't upgrade it.
+# conda-installed torch is NOT visible to pip, so without a pin, unsloth's
+# dependency (xformers 0.0.35, which requires torch>=2.10) would upgrade torch
+# to PyPI torch 2.10.0+cu128, which fails on drivers with max CUDA 12.7 or lower.
+#
+# Try cu126 whl index first (CUDA 12.6, works on driver 565.77+).
+# Fall back to PyPI torch (CUDA 12.8, requires driver 570+) if cu126 not available.
+CUDA_VER=$(nvidia-smi --query-gpu=name --format=csv,noheader > /dev/null && \
+    python3 -c "import ctypes; c=ctypes.cdll.LoadLibrary('libcuda.so.1'); v=ctypes.c_int(); c.cuDriverGetVersion(ctypes.byref(v)); print(v.value)" 2>/dev/null || echo 0)
+echo "Driver max CUDA version code: $CUDA_VER"
+
+if python3 -c "import sys; sys.exit(0 if int('${CUDA_VER}') >= 12080 else 1)" 2>/dev/null; then
+    echo "Driver supports CUDA 12.8+ - using PyPI torch 2.10.0"
+    pip install --quiet 'torch==2.10.0' 'torchvision>=0.25.0' 2>&1
+elif python3 -c "import sys; sys.exit(0 if int('${CUDA_VER}') >= 12060 else 1)" 2>/dev/null; then
+    echo "Driver supports CUDA 12.6-12.7 - trying cu126 torch"
+    pip install --quiet 'torch==2.10.0' 'torchvision>=0.25.0' \
+        --index-url https://download.pytorch.org/whl/cu126 2>&1 || \
+    pip install --quiet 'torch==2.10.0' 'torchvision>=0.25.0' 2>&1
+else
+    echo "WARNING: Driver max CUDA <12.6 - training may fail; trying PyPI torch anyway"
+    pip install --quiet 'torch==2.10.0' 'torchvision>=0.25.0' 2>&1
+fi
+
+pip install --quiet 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datasets 2>&1
+
 python3 -c "
 import torch, sys
 print('torch version:', torch.__version__)
 if not torch.cuda.is_available():
-    print('ERROR: CUDA not available', file=sys.stderr)
+    print('ERROR: CUDA not available - torch CUDA version incompatible with driver', file=sys.stderr)
     sys.exit(1)
 print('GPU:', torch.cuda.get_device_name(0))
 print('VRAM:', torch.cuda.get_device_properties(0).total_memory / 1e9, 'GB')
