@@ -1,6 +1,6 @@
 # phila Research Findings
 
-Autonomous research campaign running on Hetzner VPS (12 vCPU, 24GB RAM, CPU-only inference).
+Autonomous research campaign running on a Linux VPS (12 vCPU, 24GB RAM, CPU-only inference).
 Updated as cycles complete. Raw cycle reports in `test/research-reports/` (gitignored).
 
 ---
@@ -208,8 +208,8 @@ Results are remarkably stable at temperature=0.1. The top models (llama3.2, qwen
 
 # Overnight Campaign - Round 1 Report
 Generated: 2026-04-01T21:36:18.669Z
-Tournament: /home/onblueroses/phila/test/research-reports/rounds/round-001/tournament-1775078310.json
-Adversarial: /home/onblueroses/phila/test/research-reports/rounds/round-001/adversarial-1775078117.json
+Tournament: test/research-reports/rounds/round-001/tournament-1775078310.json
+Adversarial: test/research-reports/rounds/round-001/adversarial-1775078117.json
 
 ---
 
@@ -343,8 +343,8 @@ Distributions are over 10 runs of the winning prompt on each speak scenario.
 
 # Overnight Campaign - Round 2 Report
 Generated: 2026-04-01T22:02:40.919Z
-Tournament: /home/onblueroses/phila/test/research-reports/rounds/round-002/tournament-1775079848.json
-Adversarial: /home/onblueroses/phila/test/research-reports/rounds/round-002/adversarial-1775079378.json
+Tournament: test/research-reports/rounds/round-002/tournament-1775079848.json
+Adversarial: test/research-reports/rounds/round-002/adversarial-1775079378.json
 
 ---
 
@@ -484,8 +484,8 @@ Distributions are over 10 runs of the winning prompt on each speak scenario.
 
 # Overnight Campaign - Round 3 Report
 Generated: 2026-04-01T22:24:45.343Z
-Tournament: /home/onblueroses/phila/test/research-reports/rounds/round-003/tournament-1775081339.json
-Adversarial: /home/onblueroses/phila/test/research-reports/rounds/round-003/adversarial-1775080960.json
+Tournament: test/research-reports/rounds/round-003/tournament-1775081339.json
+Adversarial: test/research-reports/rounds/round-003/adversarial-1775080960.json
 
 ---
 
@@ -626,8 +626,8 @@ Distributions are over 10 runs of the winning prompt on each speak scenario.
 
 # Overnight Campaign - Round 4 Report
 Generated: 2026-04-01T22:47:37.741Z
-Tournament: /home/onblueroses/phila/test/research-reports/rounds/round-004/tournament-1775082668.json
-Adversarial: /home/onblueroses/phila/test/research-reports/rounds/round-004/adversarial-1775082285.json
+Tournament: test/research-reports/rounds/round-004/tournament-1775082668.json
+Adversarial: test/research-reports/rounds/round-004/adversarial-1775082285.json
 
 ---
 

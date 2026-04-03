@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "type": "module",
   "description": "A group chat agent biased toward silence",
+  "keywords": ["imessage", "agent", "ollama", "local-first", "typescript"],
+  "repository": { "type": "git", "url": "https://github.com/onblueroses/phila.git" },
+  "homepage": "https://github.com/onblueroses/phila",
+  "bugs": { "url": "https://github.com/onblueroses/phila/issues" },
+  "license": "MIT",
   "scripts": {
     "start": "node --experimental-strip-types src/index.ts",
     "test": "node --experimental-strip-types --test test/*.test.ts",
