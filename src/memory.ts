@@ -1,6 +1,8 @@
 import Database from 'better-sqlite3'
 import { FeedbackType } from './types.ts'
 import type { ChatMessage, FeedbackSignal, GroupProfile, PhilaConfig } from './types.ts'
+import { summarize } from './ollama.ts'
+import { buildConversation } from './gate.ts'
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS messages (
@@ -86,6 +88,7 @@ export class Memory {
   private searchFts: Database.Statement
   private selectNotes: Database.Statement
   private upsertNotes: Database.Statement
+  private config: PhilaConfig
   private pruneIntervalMs: number
   private lastPruneAt = 0
 
@@ -128,12 +131,32 @@ export class Memory {
       `INSERT INTO group_notes (chat_id, notes, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(chat_id) DO UPDATE SET notes = excluded.notes, updated_at = excluded.updated_at`,
     )
+    this.config = config
     this.pruneIntervalMs = config.pruneAfterDays * 24 * 60 * 60 * 1000
   }
 
   storeMessage(msg: ChatMessage): void {
     this.insertMsg.run(msg.chatId, msg.sender, msg.text, msg.timestamp)
     this.maybePrune(msg.timestamp)
+  }
+
+  getMessagesBeforeCutoff(cutoff: number, limitPerChat: number): Map<string, ChatMessage[]> {
+    const rows = this.db.prepare(
+      'SELECT chat_id, sender, text, timestamp FROM messages WHERE timestamp < ? ORDER BY chat_id, timestamp DESC LIMIT ?',
+    ).all(cutoff, limitPerChat * 100) as MessageRow[]
+
+    const grouped = new Map<string, ChatMessage[]>()
+    for (const r of rows) {
+      let msgs = grouped.get(r.chat_id)
+      if (!msgs) {
+        msgs = []
+        grouped.set(r.chat_id, msgs)
+      }
+      if (msgs.length < limitPerChat) {
+        msgs.push({ chatId: r.chat_id, sender: r.sender, text: r.text, timestamp: r.timestamp })
+      }
+    }
+    return grouped
   }
 
   pruneOldMessages(now: number): number {
@@ -143,10 +166,31 @@ export class Memory {
     return result.changes
   }
 
+  async pruneWithSummary(now: number): Promise<number> {
+    const cutoff = now - this.pruneIntervalMs
+    const doomed = this.getMessagesBeforeCutoff(cutoff, 200)
+
+    for (const [chatId, msgs] of doomed) {
+      try {
+        const existing = this.getGroupNotes(chatId)
+        const formatted = buildConversation(msgs)
+        const updated = await summarize(existing, formatted, this.config)
+        this.setGroupNotes(chatId, updated)
+      } catch (err) {
+        console.error(`[phila] summarization failed for ${chatId.slice(0, 8)}:`, err instanceof Error ? err.message : err)
+      }
+    }
+
+    return this.pruneOldMessages(now)
+  }
+
   private maybePrune(now: number): void {
     // Run at most once per hour
     if (now - this.lastPruneAt > 3_600_000) {
-      this.pruneOldMessages(now)
+      this.lastPruneAt = now
+      this.pruneWithSummary(now).catch((err) =>
+        console.error('[phila] prune error:', err instanceof Error ? err.message : err),
+      )
     }
   }
 

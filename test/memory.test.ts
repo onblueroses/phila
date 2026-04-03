@@ -105,6 +105,51 @@ describe('Memory', () => {
   })
 })
 
+describe('getMessagesBeforeCutoff', () => {
+  let mem: Memory
+
+  beforeEach(() => {
+    mem = new Memory(testConfig)
+  })
+
+  afterEach(() => {
+    mem.close()
+  })
+
+  it('returns messages older than cutoff grouped by chatId', () => {
+    const now = Date.now()
+    const old = now - 10 * 24 * 60 * 60 * 1000
+    const recent = now - 1 * 24 * 60 * 60 * 1000
+
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'old msg', timestamp: old })
+    mem.storeMessage({ chatId: 'chat1', sender: 'bob', text: 'recent msg', timestamp: recent })
+    mem.storeMessage({ chatId: 'chat2', sender: 'alice', text: 'old chat2 msg', timestamp: old })
+
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000
+    const grouped = mem.getMessagesBeforeCutoff(cutoff, 200)
+
+    assert.equal(grouped.get('chat1')?.length, 1)
+    assert.equal(grouped.get('chat1')?.[0].text, 'old msg')
+    assert.equal(grouped.get('chat2')?.length, 1)
+  })
+
+  it('returns empty map when no messages before cutoff', () => {
+    const now = Date.now()
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'recent', timestamp: now })
+    const grouped = mem.getMessagesBeforeCutoff(now - 7 * 24 * 60 * 60 * 1000, 200)
+    assert.equal(grouped.size, 0)
+  })
+
+  it('respects per-chat limit', () => {
+    const cutoff = Date.now()
+    for (let i = 0; i < 10; i++) {
+      mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: `msg ${i}`, timestamp: cutoff - (i + 1) * 1000 })
+    }
+    const grouped = mem.getMessagesBeforeCutoff(cutoff, 3)
+    assert.ok((grouped.get('chat1')?.length ?? 0) <= 3)
+  })
+})
+
 describe('searchMessages', () => {
   let mem: Memory
 
