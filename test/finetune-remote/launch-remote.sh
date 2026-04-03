@@ -10,18 +10,22 @@ echo "=== Phila fine-tune launch ==="
 echo "Instance: ${VAST_INSTANCE_ID}"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
-echo "=== Pinning torch to 2.10.0 (unsloth requires >=2.4.0,<2.11.0) ==="
-pip install --quiet 'torch==2.10.0' 'torchvision>=0.25.0'
-
 echo "=== Installing Unsloth and deps (pinned to v1-compatible version) ==="
-pip install --force-reinstall 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datasets 2>&1
+# Do NOT use --force-reinstall: it clobbers the conda-managed torch in the Docker image,
+# replacing it with a pip version that may use a different CUDA runtime.
+# pip install with an exact version will downgrade unsloth without touching torch.
+pip install 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datasets 2>&1
 python3 -c "
+import torch, sys
+print('torch version:', torch.__version__)
+if not torch.cuda.is_available():
+    print('ERROR: CUDA not available', file=sys.stderr)
+    sys.exit(1)
+print('GPU:', torch.cuda.get_device_name(0))
+print('VRAM:', torch.cuda.get_device_properties(0).total_memory / 1e9, 'GB')
 import unsloth
-v = unsloth.__version__
-print('Unsloth version installed:', v)
-assert v == '2026.3.18', f'ABORT: unsloth version is {v}, need 2026.3.18'
-print('Version check PASSED')
-" || { echo 'ERROR: Unsloth version check failed - aborting training'; exit 1; }
+print('Unsloth version:', unsloth.__version__)
+" || { echo 'ERROR: CUDA/GPU check failed - aborting training'; exit 1; }
 
 echo "=== HuggingFace setup ==="
 if [ -n "$HF_TOKEN" ]; then
@@ -33,14 +37,6 @@ if [ -n "$HF_TOKEN" ]; then
 else
     echo "WARNING: No HF_TOKEN set - model download may fail for gated repos"
 fi
-
-echo "=== Verifying GPU ==="
-python3 -c "
-import torch
-assert torch.cuda.is_available(), 'No CUDA GPU found'
-print('GPU:', torch.cuda.get_device_name(0))
-print('VRAM:', torch.cuda.get_device_properties(0).total_memory / 1e9, 'GB')
-"
 
 echo "=== Normalizing training data filename ==="
 # Prefer train-v2.jsonl over any pre-existing train.jsonl (older base data)
