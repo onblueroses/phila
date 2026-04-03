@@ -96,7 +96,7 @@ async function evalOne(
     try {
       const response = await infer(prompt, conversation, config, baseUrl)
       const decision = parseDecision(response)
-      const pass = decision === 'speak'
+      const pass = decision.action === 'speak'
       passes += pass ? 1 : 0
       const scenarioForScoring = {
         name: 'probe',
