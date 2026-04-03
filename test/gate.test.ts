@@ -138,6 +138,41 @@ describe('gate', () => {
       assert.equal(withCtx, without)
     })
 
+    it('null groupNotes produces byte-identical prompt to no-ctx', () => {
+      const withNullNotes = buildSystemPrompt(baseProfile, { correctionHint: false, messagesPerMinute: null, latestMessageHour: null, groupNotes: null })
+      const withoutCtx = buildSystemPrompt(baseProfile)
+      assert.equal(withNullNotes, withoutCtx)
+    })
+
+    it('empty groupNotes produces byte-identical prompt to no-ctx', () => {
+      const withEmptyNotes = buildSystemPrompt(baseProfile, { correctionHint: false, messagesPerMinute: null, latestMessageHour: null, groupNotes: '' })
+      const withoutCtx = buildSystemPrompt(baseProfile)
+      assert.equal(withEmptyNotes, withoutCtx)
+    })
+
+    it('non-empty groupNotes injects context block', () => {
+      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: null, latestMessageHour: null, groupNotes: 'they often discuss hiking.' }
+      const prompt = buildSystemPrompt(baseProfile, ctx)
+      assert.ok(prompt.includes('group context (things you know about this chat):'))
+      assert.ok(prompt.includes('they often discuss hiking.'))
+    })
+
+    it('groupNotes appears before ALWAYS SPEAK rules', () => {
+      const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: null, latestMessageHour: null, groupNotes: 'frequent sports talk.' }
+      const prompt = buildSystemPrompt(baseProfile, ctx)
+      const notesPos = prompt.indexOf('group context')
+      const rulesPos = prompt.indexOf('ALWAYS SPEAK')
+      assert.ok(notesPos < rulesPos, 'notes block should appear before ALWAYS SPEAK rules')
+    })
+
+    it('groupNotes combined with bias and correction hint all coexist', () => {
+      const ctx: ConversationContext = { correctionHint: true, messagesPerMinute: null, latestMessageHour: null, groupNotes: 'tech-savvy group.' }
+      const prompt = buildSystemPrompt({ ...baseProfile, speakBias: -0.1 }, ctx)
+      assert.ok(prompt.includes('prefers you stay quiet'))
+      assert.ok(prompt.includes('already corrected an error'))
+      assert.ok(prompt.includes('tech-savvy group.'))
+    })
+
     it('includes core instructions', () => {
       const prompt = buildSystemPrompt(baseProfile)
       assert.ok(prompt.includes('ALWAYS SPEAK'))
