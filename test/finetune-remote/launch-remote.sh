@@ -13,8 +13,15 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 echo "=== Pinning torch to 2.10.0 (unsloth requires >=2.4.0,<2.11.0) ==="
 pip install --quiet 'torch==2.10.0' 'torchvision>=0.25.0'
 
-echo "=== Installing Unsloth and deps (pinned to v1 versions) ==="
-pip install --quiet 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datasets
+echo "=== Installing Unsloth and deps (pinned to v1-compatible version) ==="
+pip install --force-reinstall 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datasets 2>&1
+python3 -c "
+import unsloth
+v = unsloth.__version__
+print('Unsloth version installed:', v)
+assert v == '2026.3.18', f'ABORT: unsloth version is {v}, need 2026.3.18'
+print('Version check PASSED')
+" || { echo 'ERROR: Unsloth version check failed - aborting training'; exit 1; }
 
 echo "=== HuggingFace setup ==="
 if [ -n "$HF_TOKEN" ]; then
@@ -36,12 +43,15 @@ print('VRAM:', torch.cuda.get_device_properties(0).total_memory / 1e9, 'GB')
 "
 
 echo "=== Normalizing training data filename ==="
-# scp preserves source basename; standardize to train.jsonl
-if [ -f /workspace/train-v2.jsonl ] && [ ! -f /workspace/train.jsonl ]; then
-    mv /workspace/train-v2.jsonl /workspace/train.jsonl
-    echo "Renamed train-v2.jsonl -> train.jsonl"
+# Prefer train-v2.jsonl over any pre-existing train.jsonl (older base data)
+if [ -f /workspace/train-v2.jsonl ]; then
+    mv -f /workspace/train-v2.jsonl /workspace/train.jsonl
+    echo "Moved train-v2.jsonl -> train.jsonl ($(wc -l < /workspace/train.jsonl) lines)"
+else
+    echo "No train-v2.jsonl found, using existing train.jsonl if present"
 fi
 [ -f /workspace/train.jsonl ] || { echo "ERROR: /workspace/train.jsonl not found"; exit 1; }
+echo "Training data: $(wc -l < /workspace/train.jsonl) examples"
 
 echo "=== Setup complete, starting training (nohup) ==="
 
