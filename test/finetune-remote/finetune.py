@@ -123,6 +123,26 @@ def main():
     print(f"\nTraining complete. Runtime: {trainer_stats.metrics['train_runtime']:.0f}s")
     print(f"Train loss: {trainer_stats.metrics['train_loss']:.4f}")
 
+    # Save LoRA adapter to HF immediately — GGUF export can fail, this must not.
+    print("\n=== Saving LoRA adapter to HuggingFace ===")
+    lora_hf_repo = None
+    try:
+        from huggingface_hub import HfApi
+        api = HfApi()
+        username = api.whoami()["name"]
+        lora_hf_repo = f"{username}/phila-ft-lora"
+        api.create_repo(lora_hf_repo, repo_type="model", private=True, exist_ok=True)
+        model.save_pretrained("/workspace/phila-ft-lora")
+        tokenizer.save_pretrained("/workspace/phila-ft-lora")
+        api.upload_folder(
+            folder_path="/workspace/phila-ft-lora",
+            repo_id=lora_hf_repo,
+            repo_type="model",
+        )
+        print(f"  LoRA saved to HF: {lora_hf_repo}")
+    except Exception as e:
+        print(f"  WARNING: LoRA HF upload failed: {e}")
+
     print("\n=== Exporting to GGUF (q4_k_m) ===")
     # This merges adapter into base model at FP16, then quantizes to GGUF.
     # DO NOT import the raw adapter into Ollama - it produces garbage output silently.
@@ -148,6 +168,7 @@ def main():
         "train_runtime_s": trainer_stats.metrics["train_runtime"],
         "train_loss": trainer_stats.metrics["train_loss"],
         "gguf_files": [str(f) for f in gguf_files],
+        "lora_hf_repo": lora_hf_repo,
     }
     with open("/workspace/done.json", "w") as f:
         json.dump(marker, f, indent=2)

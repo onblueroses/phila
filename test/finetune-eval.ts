@@ -68,7 +68,6 @@ interface ScenarioSummary {
 }
 
 async function evalScenarios(
-  label: string,
   scenarios: Scenario[],
   model: string,
   runs: number,
@@ -166,10 +165,10 @@ console.log(`Ollama: ${OLLAMA_URL}  |  runs: ${RUNS}  |  regression runs: ${REGR
 printSection(`1. HOLDOUT ACCURACY (n=${holdoutScenarios().length} scenarios × ${RUNS} runs)`)
 
 console.log(`\n[${ftModel}]`)
-const ftHoldout = await evalScenarios('ft-holdout', holdoutScenarios(), ftModel, RUNS)
+const ftHoldout = await evalScenarios(holdoutScenarios(), ftModel, RUNS)
 
 console.log(`\n[${baselineModel}]`)
-const baseHoldout = await evalScenarios('base-holdout', holdoutScenarios(), baselineModel, RUNS)
+const baseHoldout = await evalScenarios(holdoutScenarios(), baselineModel, RUNS)
 
 const ftH = summarize(ftHoldout)
 const baseH = summarize(baseHoldout)
@@ -180,10 +179,10 @@ console.log(`\nHoldout gate accuracy:  ${baselineModel}=${(baseH.acc * 100).toFi
 printSection(`2. COMPOSITE SCORING — all ${SCENARIOS.length} scenarios × ${RUNS} runs`)
 
 console.log(`\n[${ftModel}]`)
-const ftAll = await evalScenarios('ft-all', SCENARIOS, ftModel, RUNS)
+const ftAll = await evalScenarios(SCENARIOS, ftModel, RUNS)
 
 console.log(`\n[${baselineModel}]`)
-const baseAll = await evalScenarios('base-all', SCENARIOS, baselineModel, RUNS)
+const baseAll = await evalScenarios(SCENARIOS, baselineModel, RUNS)
 
 const ftA = summarize(ftAll)
 const baseA = summarize(baseAll)
@@ -211,10 +210,10 @@ const regressionSet = SCENARIOS.filter((s) => REGRESSION_SCENARIOS.includes(s.na
 console.log(`\nRunning ${regressionSet.length} scenarios × ${REGRESSION_RUNS} runs on ${ftModel} and ${baselineModel}`)
 
 console.log(`\n[${ftModel}]`)
-const ftReg = await evalScenarios('ft-reg', regressionSet, ftModel, REGRESSION_RUNS)
+const ftReg = await evalScenarios(regressionSet, ftModel, REGRESSION_RUNS)
 
 console.log(`\n[${baselineModel}]`)
-const baseReg = await evalScenarios('base-reg', regressionSet, baselineModel, REGRESSION_RUNS)
+const baseReg = await evalScenarios(regressionSet, baselineModel, REGRESSION_RUNS)
 
 console.log('\nRegression scenario detail:')
 for (const s of ftReg) {
