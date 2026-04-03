@@ -55,6 +55,19 @@ if [ ! -f "$DONE_MARKER" ]; then
     exit 0
 fi
 
+# Check if training actually succeeded before downloading/destroying
+TRAIN_STATUS=$(python3 -c "import json; d=json.load(open('$DONE_MARKER')); print(d.get('status','unknown'))" 2>/dev/null || echo "unknown")
+if [ "$TRAIN_STATUS" = "failed" ]; then
+    EXIT_CODE=$(python3 -c "import json; d=json.load(open('$DONE_MARKER')); print(d.get('exit_code','?'))" 2>/dev/null || echo "?")
+    echo "  TRAINING FAILED (exit_code=$EXIT_CODE) - leaving instance running for diagnosis." | tee -a "$LOG"
+    echo "  Grabbing run.log for diagnostics..." | tee -a "$LOG"
+    scp_from /workspace/run.log "$RESULTS_DIR/run-failed-${INSTANCE_ID}.log" || true
+    echo "  MANUAL ACTION NEEDED: ssh -p $SSH_PORT root@${SSH_HOST}" | tee -a "$LOG"
+    echo "  Check: cat /workspace/run.log" | tee -a "$LOG"
+    echo "  Destroy manually when done: vastai destroy instance $INSTANCE_ID" | tee -a "$LOG"
+    exit 1
+fi
+
 echo "  Training complete! Downloading results..." | tee -a "$LOG"
 
 # Check if HF repo is in done.json (instance may have already self-destructed after uploading)
@@ -87,8 +100,9 @@ fi
 
 scp_from /workspace/run.log "$RESULTS_DIR/run.log" || true
 
-# Verify GGUF is local before destroying - scp directly if not already present
-LOCAL_GGUF=$(ls "$RESULTS_DIR"/phila-ft*.gguf 2>/dev/null | head -1)
+# Verify GGUF is local before destroying - only count GGUFs modified within last 10 minutes
+# Prevents false positives from pre-existing GGUFs from prior runs
+LOCAL_GGUF=$(find "$RESULTS_DIR" -name "phila-ft*.gguf" -newer "$DONE_MARKER" 2>/dev/null | head -1)
 if [ -z "$LOCAL_GGUF" ]; then
     echo "  WARNING: No GGUF found locally - attempting direct scp from instance" | tee -a "$LOG"
     REMOTE_GGUF=$(ssh $SCP_OPTS -p "$SSH_PORT" "root@${SSH_HOST}" \
@@ -105,8 +119,8 @@ fi
 # Also grab Modelfile if not already present
 [ -f "$RESULTS_DIR/Modelfile" ] || scp_from /workspace/Modelfile "$RESULTS_DIR/Modelfile" || true
 
-# Final check - refuse to destroy if no GGUF landed locally
-LOCAL_GGUF=$(ls "$RESULTS_DIR"/phila-ft*.gguf 2>/dev/null | head -1)
+# Final check - refuse to destroy if no new GGUF landed (newer than done.json)
+LOCAL_GGUF=$(find "$RESULTS_DIR" -name "phila-ft*.gguf" -newer "$DONE_MARKER" 2>/dev/null | head -1)
 if [ -z "$LOCAL_GGUF" ]; then
     echo "  ABORT DESTROY: No GGUF confirmed locally. Manual intervention needed." | tee -a "$LOG"
     echo "  Instance $INSTANCE_ID left running - check /workspace on instance." | tee -a "$LOG"
