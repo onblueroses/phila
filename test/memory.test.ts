@@ -105,6 +105,107 @@ describe('Memory', () => {
   })
 })
 
+describe('searchMessages', () => {
+  let mem: Memory
+
+  beforeEach(() => {
+    mem = new Memory(testConfig)
+  })
+
+  afterEach(() => {
+    mem.close()
+  })
+
+  it('finds messages matching a keyword', () => {
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'anyone want pizza tonight?', timestamp: 1000 })
+    mem.storeMessage({ chatId: 'chat1', sender: 'bob', text: 'lets get sushi', timestamp: 2000 })
+
+    const results = mem.searchMessages('chat1', 'pizza', 10)
+    assert.equal(results.length, 1)
+    assert.equal(results[0].text, 'anyone want pizza tonight?')
+  })
+
+  it('returns empty for no matches', () => {
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'hello world', timestamp: 1000 })
+    const results = mem.searchMessages('chat1', 'tacos', 10)
+    assert.equal(results.length, 0)
+  })
+
+  it('isolates results by chatId', () => {
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'pizza is great', timestamp: 1000 })
+    mem.storeMessage({ chatId: 'chat2', sender: 'bob', text: 'pizza party tomorrow', timestamp: 2000 })
+
+    const results = mem.searchMessages('chat1', 'pizza', 10)
+    assert.equal(results.length, 1)
+    assert.equal(results[0].chatId, 'chat1')
+  })
+
+  it('respects limit', () => {
+    for (let i = 0; i < 5; i++) {
+      mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: `pizza msg ${i}`, timestamp: i * 1000 })
+    }
+    const results = mem.searchMessages('chat1', 'pizza', 3)
+    assert.equal(results.length, 3)
+  })
+
+  it('returns empty for FTS5 invalid query without throwing', () => {
+    mem.storeMessage({ chatId: 'chat1', sender: 'alice', text: 'hello', timestamp: 1000 })
+    // FTS5 special characters that could cause a syntax error
+    const results = mem.searchMessages('chat1', '"unclosed quote', 10)
+    assert.equal(results.length, 0)
+  })
+})
+
+describe('group notes', () => {
+  let mem: Memory
+
+  beforeEach(() => {
+    mem = new Memory(testConfig)
+  })
+
+  afterEach(() => {
+    mem.close()
+  })
+
+  it('returns empty string for unknown chatId', () => {
+    assert.equal(mem.getGroupNotes('chat1'), '')
+  })
+
+  it('stores and retrieves notes', () => {
+    mem.setGroupNotes('chat1', 'they talk about sports a lot.')
+    assert.equal(mem.getGroupNotes('chat1'), 'they talk about sports a lot.')
+  })
+
+  it('overwrites existing notes on set', () => {
+    mem.setGroupNotes('chat1', 'first note.')
+    mem.setGroupNotes('chat1', 'updated note.')
+    assert.equal(mem.getGroupNotes('chat1'), 'updated note.')
+  })
+
+  it('isolates notes by chatId', () => {
+    mem.setGroupNotes('chat1', 'chat1 note.')
+    mem.setGroupNotes('chat2', 'chat2 note.')
+    assert.equal(mem.getGroupNotes('chat1'), 'chat1 note.')
+    assert.equal(mem.getGroupNotes('chat2'), 'chat2 note.')
+  })
+
+  it('truncates notes at 2000 chars at sentence boundary', () => {
+    const sentence = 'x'.repeat(100) + '. '
+    const long = sentence.repeat(25) // 2550 chars
+    mem.setGroupNotes('chat1', long)
+    const stored = mem.getGroupNotes('chat1')
+    assert.ok(stored.length <= 2000, `expected <=2000 chars, got ${stored.length}`)
+    assert.ok(stored.endsWith('.'), 'expected truncation at sentence boundary')
+  })
+
+  it('stores notes without sentence boundary when none exists within limit', () => {
+    const noSentence = 'a'.repeat(2500)
+    mem.setGroupNotes('chat1', noSentence)
+    const stored = mem.getGroupNotes('chat1')
+    assert.equal(stored.length, 2000)
+  })
+})
+
 describe('detectFeedback', () => {
   it('detects positive feedback mentioning phila', () => {
     const signal = detectFeedback([
