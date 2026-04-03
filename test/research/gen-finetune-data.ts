@@ -1,7 +1,7 @@
 // Generates training JSONL for fine-tuning the phila gate model.
 //
 // Modes:
-//   --count N --category buried-thread|speak-unanswered|silent-sarcasm|general|all --out path
+//   --count N --category buried-thread|speak-unanswered|silent-sarcasm|near-miss|general|all --out path
 //       Generate N examples via claude --print, write as JSONL
 //   --seed --out path
 //       Export existing trainScenarios() as seed.jsonl (silent + speak with claude-generated responses)
@@ -216,6 +216,22 @@ Example patterns:
   "oh yeah the moon is made of cheese, definitely" + agreement banter → silent
   "as we all know, the sun rises in the west" used sarcastically → silent
   wrong fact stated in obvious self-mockery → silent`
+  } else if (category === 'near-miss') {
+    categoryInstructions = `Generate ${count} NEAR-MISS silent examples.
+Rules:
+- Words that LOOK like "phila" appear in conversation, but they are NOT the bot's name
+- Near-miss words to use (vary across examples): philo, philosophy, philosopher, philadelphia, philanthropy, philanthropist, philharmonic, philatelist, philippine, philippines, phillip, philodendron, phil, phillip, philology
+- phila should stay SILENT (action: "silent") — these are not direct addresses
+- Include question patterns that look triggerable but aren't (e.g. "anyone been to philadelphia?" → silent, not a direct address to phila)
+- Include cases where "phil" appears as someone's name in the conversation
+- Vary conversation length: 2-5 messages
+- NEVER use "phila" as an address in near-miss examples — if "phila" appears it must be in a context where it clearly isn't being addressed (e.g. "Philadelphia Eagles" or "phila marathon")
+
+Example patterns:
+  "anyone interested in philo lately" + philosophy discussion → silent
+  "planning a trip to philadelphia" + logistics → silent
+  "phil can you pass the salt" + someone named phil answers → silent
+  "the philadelphia orchestra is playing tonight" → silent`
   } else {
     categoryInstructions = `Generate ${count} mixed examples with this approximate distribution:
 - 40% silent-social (small talk, emotions, opinions, celebrations, gossip)
