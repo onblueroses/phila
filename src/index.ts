@@ -56,6 +56,7 @@ const feed = createBatcher(config.batchWindowMs, async (chatId, newMessages) => 
       correctionHint: detectCorrection(recent),
       messagesPerMinute: computeMomentum(recent),
       latestMessageHour: extractHour(lastTs),
+      groupNotes: memory.getGroupNotes(chatId) || null,
     }
 
     const decision = await evaluate(recent, profile, config, ctx)

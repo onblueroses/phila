@@ -12,6 +12,20 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_messages_chat_time ON messages (chat_id, timestamp);
 
+  CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+    text,
+    content='messages',
+    content_rowid='id'
+  );
+
+  CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
+    INSERT INTO messages_fts(rowid, text) VALUES (new.id, new.text);
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS messages_ad AFTER DELETE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, text) VALUES('delete', old.id, old.text);
+  END;
+
   CREATE TABLE IF NOT EXISTS group_profiles (
     chat_id TEXT PRIMARY KEY,
     speak_bias REAL NOT NULL DEFAULT 0.0,
@@ -26,10 +40,25 @@ const SCHEMA = `
     timestamp INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_feedback_chat ON feedback (chat_id, timestamp);
+
+  CREATE TABLE IF NOT EXISTS group_notes (
+    chat_id TEXT PRIMARY KEY,
+    notes TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL
+  );
 `
 
 interface MessageRow { chat_id: string; sender: string; text: string; timestamp: number }
 interface ProfileRow { chat_id: string; speak_bias: number; updated_at: number }
+interface NotesRow { chat_id: string; notes: string; updated_at: number }
+
+// Truncate to maxChars at the last sentence boundary within the limit
+function truncateToLimit(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text
+  const slice = text.slice(0, maxChars)
+  const lastSentence = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('.\n'))
+  return lastSentence > 0 ? slice.slice(0, lastSentence + 1) : slice
+}
 
 const POSITIVE = /\b(thanks?|helpful|good\s+one|nice\s+one|nice|great)\b/i
 const NEGATIVE = /\b(not\s+now|shut\s+up|nobody\s+asked|stop|be\s+quiet|go\s+away|enough)\b/i
@@ -54,6 +83,9 @@ export class Memory {
   private upsertProfile: Database.Statement
   private insertFeedback: Database.Statement
   private deleteOld: Database.Statement
+  private searchFts: Database.Statement
+  private selectNotes: Database.Statement
+  private upsertNotes: Database.Statement
   private pruneIntervalMs: number
   private lastPruneAt = 0
 
@@ -80,6 +112,21 @@ export class Memory {
     )
     this.deleteOld = this.db.prepare(
       'DELETE FROM messages WHERE timestamp < ?',
+    )
+    this.searchFts = this.db.prepare(
+      `SELECT m.chat_id, m.sender, m.text, m.timestamp
+       FROM messages m
+       JOIN messages_fts f ON m.id = f.rowid
+       WHERE messages_fts MATCH ? AND m.chat_id = ?
+       ORDER BY f.rank
+       LIMIT ?`,
+    )
+    this.selectNotes = this.db.prepare(
+      'SELECT chat_id, notes, updated_at FROM group_notes WHERE chat_id = ?',
+    )
+    this.upsertNotes = this.db.prepare(
+      `INSERT INTO group_notes (chat_id, notes, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET notes = excluded.notes, updated_at = excluded.updated_at`,
     )
     this.pruneIntervalMs = config.pruneAfterDays * 24 * 60 * 60 * 1000
   }
@@ -111,6 +158,16 @@ export class Memory {
     }))
   }
 
+  searchMessages(chatId: string, query: string, limit: number): ChatMessage[] {
+    try {
+      const rows = this.searchFts.all(query, chatId, limit) as MessageRow[]
+      return rows.map((r) => ({ chatId: r.chat_id, sender: r.sender, text: r.text, timestamp: r.timestamp }))
+    } catch {
+      // FTS5 query syntax errors should not crash the caller
+      return []
+    }
+  }
+
   getGroupProfile(chatId: string): GroupProfile {
     const row = this.selectProfile.get(chatId) as ProfileRow | undefined
     if (!row) return { chatId, speakBias: 0.0, updatedAt: Date.now() }
@@ -125,6 +182,16 @@ export class Memory {
 
   storeFeedback(chatId: string, signal: FeedbackSignal): void {
     this.insertFeedback.run(chatId, signal.type, signal.context, signal.timestamp)
+  }
+
+  getGroupNotes(chatId: string): string {
+    const row = this.selectNotes.get(chatId) as NotesRow | undefined
+    return row?.notes ?? ''
+  }
+
+  setGroupNotes(chatId: string, notes: string): void {
+    const bounded = truncateToLimit(notes, 2000)
+    this.upsertNotes.run(chatId, bounded, Date.now())
   }
 
   // Asymmetric: negative 2.5x positive weight
