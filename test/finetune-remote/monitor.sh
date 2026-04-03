@@ -6,7 +6,8 @@ set -euo pipefail
 
 INSTANCE_ID="${PHILA_FINETUNE_INSTANCE_ID:?Need PHILA_FINETUNE_INSTANCE_ID}"
 RESULTS_DIR="$(cd "$(dirname "$0")"/../research-reports/finetune-data && pwd)"
-DONE_MARKER="$RESULTS_DIR/done.json"
+# Instance-specific marker prevents stale done.json from a previous run triggering teardown
+DONE_MARKER="$RESULTS_DIR/done-${INSTANCE_ID}.json"
 LOG="$RESULTS_DIR/monitor.log"
 
 timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
@@ -32,34 +33,63 @@ if [ "$STATUS" = "gone" ] || [ "$STATUS" = "destroyed" ] || [ "$STATUS" = "unkno
     exit 0
 fi
 
+# Get SSH credentials for scp (vastai copy fails with 403)
+SSH_INFO=$(vastai show instance "$INSTANCE_ID" --raw 2>/dev/null \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('ssh_host',''), d.get('ssh_port',''))" 2>/dev/null \
+    || echo "")
+SSH_HOST=$(echo "$SSH_INFO" | awk '{print $1}')
+SSH_PORT=$(echo "$SSH_INFO" | awk '{print $2}')
+SCP_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=15"
+
+scp_from() { scp $SCP_OPTS -P "$SSH_PORT" "root@${SSH_HOST}:$1" "$2" 2>/dev/null; }
+
 # Try to copy done.json
-vastai copy "C.${INSTANCE_ID}:/workspace/done.json" "$DONE_MARKER" 2>/dev/null || true
+scp_from /workspace/done.json "$DONE_MARKER" || true
 
 if [ ! -f "$DONE_MARKER" ]; then
     echo "  Not done yet - checking log tail..." | tee -a "$LOG"
-    vastai copy "C.${INSTANCE_ID}:/workspace/run.log" "$RESULTS_DIR/run.log" 2>/dev/null || true
+    scp_from /workspace/run.log "$RESULTS_DIR/run.log" || true
     if [ -f "$RESULTS_DIR/run.log" ]; then
-        tail -3 "$RESULTS_DIR/run.log" | sed 's/^/  log: /' | tee -a "$LOG"
+        tail -5 "$RESULTS_DIR/run.log" | sed 's/^/  log: /' | tee -a "$LOG"
     fi
     exit 0
 fi
 
 echo "  Training complete! Downloading results..." | tee -a "$LOG"
 
-# Download GGUF and Modelfile
-vastai copy "C.${INSTANCE_ID}:/workspace/phila-ft-q4_k_m.gguf" "$RESULTS_DIR/" 2>/dev/null \
-    && echo "  Downloaded phila-ft-q4_k_m.gguf" | tee -a "$LOG" \
-    || echo "  WARNING: GGUF download failed - check /workspace for exact filename" | tee -a "$LOG"
+# Check if HF repo is in done.json (instance may have already self-destructed after uploading)
+HF_REPO=$(python3 -c "import json; d=json.load(open('$DONE_MARKER')); print(d.get('hf_repo',''))" 2>/dev/null || echo "")
 
-vastai copy "C.${INSTANCE_ID}:/workspace/Modelfile" "$RESULTS_DIR/" 2>/dev/null \
-    && echo "  Downloaded Modelfile" | tee -a "$LOG" \
-    || echo "  WARNING: Modelfile not found" | tee -a "$LOG"
+if [ -n "$HF_REPO" ]; then
+    echo "  Pulling from HuggingFace: $HF_REPO" | tee -a "$LOG"
+    python3 -c "
+from huggingface_hub import snapshot_download
+import os
+snapshot_download('$HF_REPO', repo_type='model', local_dir='$RESULTS_DIR',
+    token=open(os.path.expanduser('~/.config/huggingface/token')).read().strip())
+print('Downloaded from HF')
+" 2>&1 | tee -a "$LOG" \
+        || echo "  WARNING: HF download failed" | tee -a "$LOG"
+else
+    echo "  No HF repo in done.json - falling back to scp" | tee -a "$LOG"
+    GGUF_FILE=$(ssh $SCP_OPTS -p "$SSH_PORT" "root@${SSH_HOST}" \
+        "ls /workspace/phila-ft*q4_k_m.gguf 2>/dev/null | head -1" 2>/dev/null || echo "")
+    if [ -n "$GGUF_FILE" ]; then
+        scp_from "$GGUF_FILE" "$RESULTS_DIR/$(basename $GGUF_FILE)" \
+            && echo "  Downloaded $(basename $GGUF_FILE)" | tee -a "$LOG" \
+            || echo "  WARNING: GGUF download failed" | tee -a "$LOG"
+    else
+        echo "  WARNING: no GGUF found in /workspace" | tee -a "$LOG"
+    fi
+    scp_from /workspace/Modelfile "$RESULTS_DIR/Modelfile" \
+        && echo "  Downloaded Modelfile" | tee -a "$LOG" || true
+fi
 
-vastai copy "C.${INSTANCE_ID}:/workspace/run.log" "$RESULTS_DIR/" 2>/dev/null || true
+scp_from /workspace/run.log "$RESULTS_DIR/run.log" || true
 
 # List what we got
 echo "  Results in $RESULTS_DIR:" | tee -a "$LOG"
-ls -lh "$RESULTS_DIR"/*.gguf "$RESULTS_DIR/Modelfile" "$RESULTS_DIR/done.json" 2>/dev/null \
+ls -lh "$RESULTS_DIR"/*.gguf "$RESULTS_DIR/Modelfile" "$DONE_MARKER" 2>/dev/null \
     | sed 's/^/    /' | tee -a "$LOG"
 
 # Destroy instance
