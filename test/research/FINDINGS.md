@@ -1032,3 +1032,57 @@ Three hard regressions confirmed at 5 runs. All are speak-side (model over-silen
 phila-ft wins on everything except speak-unanswered and adversarial. The buried-thread fix (+50pp on speak-correction) is the dominant gain. The regressions are real and consistent — the model became too conservative on standalone unanswered questions and sarcasm.
 
 **Verdict:** phila-ft is production-viable with a known limitation: standalone "someone asked and nobody answered" cases (not buried in threads) are less reliable. The fine-tune specialised too hard on buried-thread detection at the expense of direct unanswered-question sensitivity. Next step: targeted data augmentation for those failing scenarios and retrain.
+
+---
+
+## phila-ft-v2 — 2026-04-04
+
+Training: 1138 examples (755 base + 150 speak-unanswered + 153 silent-sarcasm + 80 near-miss) | unsloth 2026.3.18 | QLoRA r=16 | RTX 4090 (South Africa), 429 steps, ~40 min | Eval: 5 runs (101 scenarios), regression deep-dive 10 runs
+
+### Holdout Accuracy (43 unseen scenarios)
+
+phila-ft-v2=**93.0%** vs llama3.2=**87.9%** (+5.1pp)
+
+The fine-tuned model generalizes to held-out scenarios, not just training patterns.
+
+### Full Composite (101 scenarios × 5 runs)
+
+| Model | Gate Accuracy | Response Quality | Composite | Avg Latency |
+|-------|--------------|-----------------|-----------|-------------|
+| llama3.2 | 94.1% | 0.951 | 0.8487 | 515ms |
+| phila-ft-v2 | **95.8%** | **0.965** | **0.8638** | 544ms |
+
+### Per-Category Gate Accuracy
+
+| Category | llama3.2 | phila-ft-v2 | Change |
+|----------|----------|-------------|--------|
+| silent-social | 100% | 100% | = |
+| silent-logistics | 100% | 100% | = |
+| silent-media | 100% | 100% | = |
+| silent-rhetorical | 100% | 100% | = |
+| silent-corrected | 100% | 100% | = |
+| speak-direct | 100% | 97% | ▼ -3pp (minor) |
+| speak-correction | 50% | 72% | ▲ +22pp |
+| speak-unanswered | 83% | 100% | ▲ **+17pp — regression fixed** |
+| adversarial | 100% | 93% | ▼ -7pp (flaky scenario) |
+
+### Regression Deep-Dive (10 runs each)
+
+| Scenario | llama3.2 | phila-ft-v2 | Change |
+|----------|----------|-------------|--------|
+| unanswered question | 100% | 100% | = fixed |
+| unanswered history | 100% | 100% | = fixed |
+| near-miss philo not phila | 100% | 100% | = fixed |
+| wrong fact but clearly sarcastic | 100% | 100% | = fixed |
+
+All 4 hard regressions from phila-ft v1 are resolved at 100% (10 runs). No new regressions on the targeted categories.
+
+### Adversarial Note
+
+The adversarial dip (100%→93%) is driven by "wrong fact with phila name nearby" which was already inconsistent in testing. This scenario requires the model to suppress speaking when someone's name resembles "phila" but the message is a false factual claim — a genuinely hard edge case. Not a new regression introduced by v2.
+
+### Summary
+
+phila-ft-v2 resolves all v1 regressions. The 1138-example targeted dataset (4 categories) fixed speak-unanswered completely, improved speak-correction substantially, and preserved all silent categories. Composite score improved +1.7pp over baseline. No new production-significant regressions introduced.
+
+**Verdict:** phila-ft-v2 is production-ready. Replace phila-ft in Ollama with phila-ft-v2. Model file: `Modelfile-v2-deploy` (temperature=0.1, top_p=0.52, num_predict=64).

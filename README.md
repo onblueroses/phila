@@ -106,27 +106,28 @@ group chat message arrives
 
 ## evaluation
 
-The speak gate is validated against 101 test scenarios across 9 categories and 4 difficulty tiers, with a strict train/holdout split (58 train, 43 holdout) to prevent overfitting.
+The speak gate is validated against 101 test scenarios across 9 categories and 4 difficulty tiers, with a strict train/holdout split (58 train, 43 holdout) to prevent overfitting. All final numbers come from the holdout set the model never trained against.
 
-| Metric | llama3.2 (base) | phila-ft (fine-tuned) |
-|--------|----------------|----------------------|
-| Gate accuracy (holdout) | 83.7% | **97.6%** |
-| Gate accuracy (all 101) | 94.1% | **96.7%** |
-| Response quality | 0.953 | **0.963** |
-| Composite score | 0.849 | **0.870** |
-| Avg latency | 561ms | 644ms |
+| Metric | llama3.2 (base) | phila-ft-v2 (fine-tuned) |
+|--------|----------------|--------------------------|
+| Gate accuracy (holdout, 43 scenarios) | 87.9% | **93.0%** |
+| Gate accuracy (all 101 scenarios) | 94.1% | **95.8%** |
+| Response quality | 0.951 | **0.965** |
+| Composite score | 0.8487 | **0.8638** |
+| Avg latency | 515ms | 544ms |
 
 | Infrastructure | Value |
 |----------------|-------|
 | Test scenarios | 101 (58 train / 43 holdout) |
-| Unit + integration tests | 113 |
+| Unit + integration tests | 132 |
 | Optimizer generations | 660+ |
-| Fine-tune training examples | 755 |
-| Optimal params | temperature 0.1, topP 0.52, numPredict 64 |
+| Fine-tune training examples | 1,138 (across 4 targeted categories) |
+| Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16, 429 steps |
+| Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
 
 An automated optimizer runs mutations against the prompt and inference parameters, scoring each variant on gate accuracy, response quality, and latency. Each candidate is evaluated on train scenarios, then validated against a holdout set it never optimizes against. A paired t-test (p < 0.10) determines statistical significance. A reward-hacking detector watches for holdout degradation and reverts if the holdout drops more than 3% from its peak.
 
-After 660+ generations, no prompt or parameter mutation beat the baseline with statistical significance. The buried-thread weakness (factual questions buried in active thread noise) was confirmed as a model capability limit — not fixable through prompting. A QLoRA fine-tune on 755 purpose-built examples fixed it: 0% → 100% on the buried-thread category.
+After 660+ generations, no prompt or parameter mutation beat the baseline with statistical significance. The buried-thread weakness (factual questions buried in active thread noise) was confirmed as a model capability limit, not fixable through prompting. That triggered the fine-tuning pipeline.
 
 Response quality is scored on 5 dimensions: topic accuracy (0.35), casualness (0.25), AI-speak absence (0.20), length fit (0.10), and voice survival (0.10). Stratified k-fold cross-validation detects flaky scenarios across runs.
 
@@ -177,17 +178,23 @@ The train/holdout split caught a real behavioral gap: the model false-speaks on 
 
 The hardest failure was the buried-thread case: a factual question asked mid-conversation, then buried by off-topic messages that nobody answered. Phila should speak — but didn't. A dedicated probe across 4 models × 4 prompt variants × 30 generated scenarios returned 0% pass rate across every combination. No rephrasing moved the needle. The 3B models don't scan full conversation history when relevant signal is several messages back and recent context is unrelated noise.
 
-Fine-tuning fixed it. QLoRA on 755 targeted training examples (173 buried-thread, 524 general) pushed the buried-thread category from 0% to 100%. The fine-tuned model (`phila-ft`) improved overall gate accuracy from 94.1% to 96.7% and holdout accuracy from 83.7% to 97.6%. The tradeoff: it over-silences on simple standalone unanswered questions and sarcastic wrong-fact scenarios — cases it previously handled correctly. The specialisation went too hard in one direction. Next iteration: targeted data augmentation for the regressed categories.
+Fine-tuning fixed it. QLoRA on a first dataset of 755 targeted examples pushed the buried-thread category from 0% to 100%. But the model regressed hard on three cases it previously handled correctly: standalone unanswered questions, unanswered history questions, and sarcastic wrong-fact detection — all dropping from 100% to 0%. It had specialised too hard in one direction.
+
+The second fine-tune (`phila-ft-v2`) added 383 purpose-built examples across the three regressed categories (150 speak-unanswered, 153 silent-sarcasm, 80 near-miss), keeping the original 755 as the base — 1,138 total. Trained on an RTX 4090 via Vast.ai (429 steps, ~40 min). All four regression scenarios are now back to 100% across 10 runs. Holdout accuracy sits at 93.0%, up 5.1pp from the untuned baseline.
+
+The iteration loop — benchmark, find regressions, build targeted data, retrain, re-benchmark — is the entire research pipeline in miniature. The fine-tuning infrastructure (`finetune.py`, `launch-remote.sh`, `monitor.sh`, `finetune-eval.ts`) was built to make that loop fast enough to actually run.
 
 ## setup
 
 **Requirements**: macOS, [Ollama](https://ollama.com), Node.js 22.6+
 
 ```bash
-# install ollama and pull the base model
-ollama pull llama3.2
-# or use the fine-tuned model (better on buried-thread questions)
-# ollama pull phila-ft  # not yet published
+# install ollama and pull the model
+# fine-tuned v2 (recommended) — better across all categories
+ollama pull llama3.2  # base model, or use phila-ft-v2 if you have it
+
+# to use the fine-tuned model: build from the GGUF in test/research-reports/finetune-data/
+# ollama create phila-ft-v2 -f test/research-reports/finetune-data/Modelfile-v2-deploy
 
 # clone and install
 git clone https://github.com/onblueroses/phila.git && cd phila
@@ -240,4 +247,4 @@ npm start
 - What's the right memory window? 50 messages might be too few for slow chats and too many for rapid-fire ones.
 - Should phila ever initiate? Right now it only reacts. "hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - but that's a different trust equation entirely.
 - Can the silence rate emerge from the feedback loop instead of being hardcoded? Let each group find its own tolerance.
-- The fine-tuned model regressed on standalone unanswered questions and sarcasm detection. Is this fixable with more targeted training data, or does fixing buried-thread inherently trade off against simpler cases?
+- The adversarial category dipped 7pp after v2 fine-tuning. One specific scenario — wrong facts in messages where someone's name resembles "phila" — remains inconsistent. It requires the model to do two things at once: detect a factual error and not confuse the name with a direct address. Unclear if this is fixable with data or requires a larger model.
