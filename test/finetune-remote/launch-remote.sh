@@ -13,8 +13,8 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 echo "=== Pinning torch to 2.10.0 (unsloth requires >=2.4.0,<2.11.0) ==="
 pip install --quiet 'torch==2.10.0' 'torchvision>=0.25.0'
 
-echo "=== Installing Unsloth and deps ==="
-pip install --quiet unsloth trl peft bitsandbytes accelerate datasets
+echo "=== Installing Unsloth and deps (pinned to v1 versions) ==="
+pip install --quiet 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datasets
 
 echo "=== HuggingFace setup ==="
 if [ -n "$HF_TOKEN" ]; then
@@ -79,7 +79,7 @@ try:
     print('=== Uploading to HuggingFace: ' + repo_id + ' ===')
     api.create_repo(repo_id, repo_type='model', private=True, exist_ok=True)
     print('  Repo ready')
-    gguf_files = sorted(glob.glob('/workspace/phila-ft*q4_k_m.gguf'))
+    gguf_files = sorted(glob.glob('/workspace/phila-ft*.gguf'))
     if gguf_files:
         gguf = gguf_files[0]
         api.upload_file(path_or_fileobj=gguf, path_in_repo=os.path.basename(gguf), repo_id=repo_id, repo_type='model')

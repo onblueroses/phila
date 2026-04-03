@@ -73,7 +73,7 @@ print('Downloaded from HF')
 else
     echo "  No HF repo in done.json - falling back to scp" | tee -a "$LOG"
     GGUF_FILE=$(ssh $SCP_OPTS -p "$SSH_PORT" "root@${SSH_HOST}" \
-        "ls /workspace/phila-ft*q4_k_m.gguf 2>/dev/null | head -1" 2>/dev/null || echo "")
+        "ls /workspace/phila-ft*.gguf 2>/dev/null | head -1" 2>/dev/null || echo "")
     if [ -n "$GGUF_FILE" ]; then
         scp_from "$GGUF_FILE" "$RESULTS_DIR/$(basename $GGUF_FILE)" \
             && echo "  Downloaded $(basename $GGUF_FILE)" | tee -a "$LOG" \
