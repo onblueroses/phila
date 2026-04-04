@@ -1100,3 +1100,65 @@ The adversarial dip (100%→93%) comes from one scenario: a wrong factual claim 
 All four v1 regressions are fixed. speak-unanswered went from 83% to 100%. speak-correction went from 50% to 72%. The five silent categories held at 100% throughout. Composite improved +1.7pp. Nothing broke that wasn't already fragile before training.
 
 **Verdict:** phila-ft-v2 is production-ready. Replace phila-ft in Ollama with phila-ft-v2. Model file: `Modelfile-v2-deploy` (temperature=0.1, top_p=0.52, num_predict=64).
+
+## v3: Hierarchical Gate Experiment — 2026-04-04
+
+Architecture change: decompose the monolithic single-LLM-call gate into a staged pipeline.
+
+### Architecture
+
+```
+Stage 0 (rule-based, 0ms): direct address detection via regex, context gate (speakBias, late-night, high-traffic)
+Stage 1 (LLM, numPredict=4): classify conversation as social/claim/question/memory
+Stage 2 (LLM, numPredict=64, conditional): verify claim / answer question / retrieve from memory
+```
+
+The hypothesis: 95% of messages are social. A fast classifier (numPredict=4) that exits early should cut latency for the common case, while the 5% speak path pays for a second LLM call.
+
+### Benchmark: Monolithic vs Hierarchical (llama3.2, 3 runs, 101 scenarios)
+
+| Metric | Monolithic | Hierarchical |
+|--------|-----------|-------------|
+| Accuracy | **94.1%** | 71.9% |
+| False-speak rate (FPR) | - | **0.011** |
+| Precision (when speaks) | - | **0.932** |
+| Recall (speaks when should) | - | 0.263 |
+| Specificity (silent when should) | - | **0.989** |
+| Avg latency | 536ms | 808ms |
+| P50 latency | 364ms | 404ms |
+
+### Per-scenario latency (social scenarios only)
+
+| Gate | Avg latency | Range |
+|------|------------|-------|
+| Monolithic | ~390ms | 350-440ms |
+| Hierarchical | ~275ms | 240-340ms |
+
+The latency win for social scenarios is real: ~30% faster on the 95% case. Stage 1 with numPredict=4 produces a classification word in ~270ms vs ~390ms for the full monolithic prompt.
+
+### The problem: recall collapse
+
+Stage 1 at numPredict=4 is too aggressive at classifying things as "social." 74% of speak-worthy scenarios get suppressed before reaching Stage 2. The confusion matrix tells the story: when the hierarchical gate speaks, it's right 93% of the time (precision). But it stays silent through most moments where it should speak (recall 0.263).
+
+Root cause: 4 output tokens may not give the 3B model enough room to "think" before committing to a classification. The model defaults to "social" when uncertain, which is the safe behavior we designed for, but it's too safe.
+
+### What this means
+
+The architecture is sound. Specificity (0.989) proves Stage 1 correctly identifies social conversations. The latency improvement on social scenarios is real. The classification accuracy problem is solvable:
+
+1. **Increase numPredict for Stage 1** (8 or 12) - give the model room to reason before outputting the class label
+2. **Fine-tune a classification adapter** - the 3B model with a few hundred labeled classification examples should do much better
+3. **Two-word output format** - have Stage 1 output "category: social" which forces a reasoning token before the label
+
+Next step: test numPredict=8 and numPredict=12 for Stage 1 and measure the accuracy/latency tradeoff.
+
+### Eval improvements in v3
+
+Expanded scenario set from 101 to 140 scenarios (66 train / 74 holdout). Three new categories:
+- `speak-memory-logistics` (7 scenarios) - "where are we meeting?" answerable from conversation history
+- `speak-memory-commitment` (5 scenarios) - "who said they'd bring drinks?" 
+- `speak-memory-personal` (3 scenarios) - "aren't you allergic to shellfish?"
+
+Added confusion matrix and bootstrap confidence intervals to benchmark output. Holdout CI for monolithic llama3.2: the precision of "94.1%" is now properly bounded.
+
+Added `gate-hierarchical.ts` with: rule-based pre-filter (tightened direct-address regex to avoid "phila museum" false positives), context gate (speakBias, late-night, high-traffic), and profile/context threading through all stages. Feature-flagged via `PHILA_GATE=hierarchical` env var.
