@@ -34,6 +34,7 @@ const MEMORY_QUERY_PATTERNS = [
   /\bwhat was\b/i,                // "what was the address"
   /\bwhen did\b/i,                // "when did we say"
   /\bwhen is\b/i,                 // "when is the party"
+  /\bwhat day\b/i,                // "what day was the party"
   /\bwhich\b.{0,15}(place|restaurant|one|flight)/i,   // "which restaurant"
   /\bwhat did\b.*\bsay\b/i,       // "what did person2 say"
   /\bdidnt\b.*\bsay\b/i,          // "didnt you say you were allergic"
@@ -67,6 +68,10 @@ correct response: {"action":"speak","reason":"memory recall","response":"person1
 facts: allergy = person1 is allergic to shellfish
 question: "can everyone eat shrimp?"
 correct response: {"action":"speak","reason":"memory recall","response":"person1 mentioned theyre allergic to shellfish"}
+
+facts: commitment = person1 will bring chips, commitment = person2 will handle drinks
+question: "who said theyd get drinks?"
+correct response: {"action":"speak","reason":"memory recall","response":"person2 said theyd handle drinks"}
 
 USE THE FACTS TO ANSWER. if the facts contain the answer, speak up.
 only stay silent if the facts genuinely don't help answer what was asked.
