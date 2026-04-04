@@ -37,7 +37,7 @@ export async function chat(system: string, user: string, config: PhilaConfig): P
   }
 }
 
-// Fast classification call: numPredict=4 is enough for one word (social/claim/question/memory)
+// Fast classification call: numPredict=8 gives the model room to output a classification word
 async function attemptFast(system: string, user: string, config: PhilaConfig): Promise<string> {
   const res = await fetch(`${config.ollamaUrl}/api/chat`, {
     method: 'POST',
@@ -50,7 +50,7 @@ async function attemptFast(system: string, user: string, config: PhilaConfig): P
         { role: 'user', content: user },
       ],
       stream: false,
-      options: { temperature: 0.1, num_predict: 4, top_p: 0.52 },
+      options: { temperature: 0.1, num_predict: 8, top_p: 0.52 },
     }),
   })
 
