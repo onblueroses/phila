@@ -1224,6 +1224,38 @@ Why this is better than decomposition:
 - **No classification bottleneck**: we don't need the 3B to classify in 8 tokens
 - **Honest latency profile**: ~530ms for everything that works now, ~1000-1500ms for memory queries (new capability with no baseline to regress against)
 
+### Monolithic confusion matrix (140 scenarios, llama3.2, 3 runs)
+
+| Metric | Value |
+|--------|-------|
+| Accuracy | 86.4% |
+| Precision | 1.000 |
+| Recall | 0.635 |
+| Specificity | 1.000 |
+| FPR | 0.000 |
+| F1 | 0.776 |
+| Holdout CI (95%) | [77.0%, 93.2%] |
+| Avg latency | 613ms |
+
+The monolithic gate dropped from 94.1% (101 scenarios) to 86.4% (140 scenarios). The drop is entirely from the 15 new memory-grounded scenarios (logistics, commitment, personal recall) - the gate gets 0% on most of them because it has no mechanism to retrieve facts from conversation history. World-knowledge scenarios remain at ~94%.
+
+Both gates (monolithic and hierarchical v2) share the same safety profile: **perfect precision (1.000) and zero false-speaks (FPR=0.000)**. Neither ever talks when it shouldn't. The only difference is recall - how many speak-worthy moments they catch.
+
+### Complete comparison table (all iterations, 140 scenarios, llama3.2)
+
+| Metric | Monolithic | Hier. v1 (np=4) | Hier. v1 (np=8) | Hier. v2 (bin+mono) |
+|--------|-----------|----------------|----------------|-------------------|
+| Accuracy | **86.4%** | 71.9% | 69.3% | 77.9% |
+| Precision | **1.000** | 0.932 | 0.909 | **1.000** |
+| Recall | **0.635** | 0.263 | 0.192 | 0.404 |
+| Specificity | **1.000** | 0.989 | 0.989 | **1.000** |
+| FPR | **0.000** | 0.011 | 0.011 | **0.000** |
+| F1 | **0.776** | 0.410 | 0.317 | 0.575 |
+| Avg latency | **613ms** | 808ms | 1032ms | 1798ms |
+| P50 latency | **395ms** | 404ms | 429ms | 451ms |
+
+The monolithic gate wins on every metric except social-path latency (~390ms for social scenarios vs ~270ms hierarchical). The dual-pass additive architecture is designed to close the recall gap on memory-grounded queries without touching the monolithic gate's proven performance on world-knowledge scenarios.
+
 ### Eval improvements in v3
 
 Expanded scenario set from 101 to 140 scenarios (66 train / 74 holdout). Three new categories:
