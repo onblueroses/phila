@@ -56,13 +56,11 @@ This is harder than it sounds. Language models are trained to respond. Teaching 
 
 ## the capability wall
 
-The speak gate is validated against 101 test scenarios across 9 categories and 4 difficulty tiers, with a strict train/holdout split (58 train, 43 holdout) to prevent overfitting. All final numbers come from the holdout set the model never trained against.
+The hardest failure was the buried-thread case: someone asks a factual question, five people change the subject, nobody answers. Phila should speak - but didn't.
 
-An automated optimizer mutates the prompt and inference parameters, scores each candidate against the train scenarios, then checks it against the holdout. Statistical significance requires p < 0.10. A reward-hacking detector rolls back anything that improves train accuracy while degrading holdout by more than 3%.
+We validated the speak gate against 101 test scenarios across 9 categories, with a strict train/holdout split (58 train, 43 holdout). An automated optimizer mutated the prompt and inference parameters over 660+ generations, with statistical significance gating (p < 0.10) and a reward-hacking detector that rolls back anything improving train accuracy while degrading holdout by more than 3%.
 
-660+ generations. Nothing beat the baseline.
-
-The hardest failure was the buried-thread case: a factual question asked mid-conversation, then buried by off-topic messages that nobody answered. Phila should speak - but didn't. A dedicated probe across 4 models, 4 prompt variants, and 30 generated scenarios returned 0% pass rate across every combination. No rephrasing moved the needle.
+Nothing beat the baseline. A dedicated probe across 4 models, 4 prompt variants, and 30 generated scenarios returned 0% pass rate on buried-thread across every combination. No rephrasing moved the needle.
 
 The 3B models don't scan full conversation history when relevant signal is several messages back and recent context is unrelated noise. This is a model capability limitation, not a prompt problem.
 
@@ -107,6 +105,8 @@ group chat message arrives
 
 **Stack**: TypeScript, `@photon-ai/imessage-kit`, Ollama, `better-sqlite3`
 
+What went into it:
+
 | Infrastructure | Value |
 |----------------|-------|
 | Test scenarios | 101 (58 train / 43 holdout) |
@@ -146,7 +146,7 @@ Silence is easy. Talking at the right time is hard.
 
 Running llama3.2 against the test scenarios, it nails every silence case on the first try - small talk, emotions, jokes, opinions, already-answered questions. Never over-talks. The struggle is the opposite: getting a model that's been told "your default is silence" to override that default when it sees a factual error.
 
-The buried-thread failure was the turning point. When a dedicated probe across 4 models, 4 prompt variants, and 30 generated scenarios returned 0% across every combination, it became clear that no amount of prompt engineering would fix it. That's what pushed the project from "clever prompt wrapper" to "custom trained model."
+Simplifying the prompt made things worse. Smaller models need more structure, not less. Priority ordering ("ALWAYS SPEAK for these, STAY SILENT for everything else") outperformed percentage-based framing ("stay silent 95% of the time"). Clear rules beat vibes. And the parse-failure-to-silence default is load-bearing - when the model outputs malformed JSON, treating it as silence means the worst failure mode is being too quiet, never too loud.
 
 Full research log and methodology: [FINDINGS.md](FINDINGS.md)
 
@@ -192,6 +192,7 @@ npm start
 
 ## open questions
 
-- How should phila handle being wrong? It doesn't track its own accuracy or learn from corrections yet.
 - Should phila ever initiate? "Hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - but that's a different trust equation entirely.
 - The adversarial category dipped 7pp after v2 fine-tuning. One scenario - wrong facts where someone's name resembles "phila" - remains inconsistent. Unclear if fixable with data or requires a larger model.
+
+More in [FINDINGS.md](FINDINGS.md).
