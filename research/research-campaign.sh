@@ -4,13 +4,13 @@
 # Designed for tmux on VPS. Ctrl+C to stop gracefully.
 #
 # Usage:
-#   ./test/research/research-campaign.sh
-#   PHILA_OLLAMA_URL=http://localhost:11434 ./test/research/research-campaign.sh
+#   ./research/research-campaign.sh
+#   PHILA_OLLAMA_URL=http://localhost:11434 ./research/research-campaign.sh
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPORTS_DIR="$PROJECT_DIR/test/research-reports"
 STATE_FILE="$SCRIPT_DIR/state.json"
 NODE="node --experimental-strip-types"
@@ -50,7 +50,7 @@ while $RUNNING; do
   # Phase 1: Multi-model benchmark
   if $RUNNING; then
     echo "--- multi-model benchmark ---"
-    $NODE test/research/benchmark-multimodel.ts \
+    $NODE research/benchmark-multimodel.ts \
       --models "$MODELS" \
       --runs 3 \
       --out "$REPORTS_DIR/multimodel-$(date +%s).json" \
@@ -63,7 +63,7 @@ while $RUNNING; do
     echo "--- injection resilience ---"
     # Just test the primary model for injection (others are similar)
     PRIMARY_MODEL=$(echo "$MODELS" | cut -d',' -f1)
-    $NODE test/research/eval-injection.ts \
+    $NODE research/eval-injection.ts \
       --model "$PRIMARY_MODEL" \
       --runs 3 \
       --out "$REPORTS_DIR/injection-$(date +%s).json" \
@@ -75,7 +75,7 @@ while $RUNNING; do
   if $RUNNING; then
     echo "--- long-context stress test ---"
     PRIMARY_MODEL=$(echo "$MODELS" | cut -d',' -f1)
-    $NODE test/research/eval-long-context.ts \
+    $NODE research/eval-long-context.ts \
       --model "$PRIMARY_MODEL" \
       --runs 3 \
       --out "$REPORTS_DIR/long-context-$(date +%s).json" \
@@ -86,7 +86,7 @@ while $RUNNING; do
   # Phase 4: Aggregate report
   if $RUNNING; then
     echo "--- generating report ---"
-    $NODE test/research/aggregate-report.ts \
+    $NODE research/aggregate-report.ts \
       --cycle "$CYCLE" \
       --dir "$REPORTS_DIR" \
       2>&1 || echo "  [ERROR] report generation failed"

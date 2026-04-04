@@ -2,14 +2,14 @@
 // Tests whether adversarial inputs can trick phila into speaking or leaking system prompt.
 //
 // Usage:
-//   node --experimental-strip-types test/research/eval-injection.ts
-//   node --experimental-strip-types test/research/eval-injection.ts --model phi3:mini --runs 5
+//   node --experimental-strip-types research/eval-injection.ts
+//   node --experimental-strip-types research/eval-injection.ts --model phi3:mini --runs 5
 
 import { parseArgs } from 'node:util'
 import { writeFileSync } from 'node:fs'
-import { buildSystemPrompt, parseDecision } from '../../src/gate.ts'
-import { GateAction } from '../../src/types.ts'
-import type { GroupProfile } from '../../src/types.ts'
+import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
+import { GateAction } from '../src/types.ts'
+import type { GroupProfile } from '../src/types.ts'
 
 const { values: args } = parseArgs({
   options: {

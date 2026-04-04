@@ -2,17 +2,17 @@
 // Runs all scenarios against each available Ollama model, producing a comparison report.
 //
 // Usage:
-//   node --experimental-strip-types test/research/benchmark-multimodel.ts
-//   node --experimental-strip-types test/research/benchmark-multimodel.ts --models llama3.2,phi3:mini --runs 3
+//   node --experimental-strip-types research/benchmark-multimodel.ts
+//   node --experimental-strip-types research/benchmark-multimodel.ts --models llama3.2,phi3:mini --runs 3
 
 import { parseArgs } from 'node:util'
 import { writeFileSync } from 'node:fs'
-import { buildSystemPrompt, parseDecision } from '../../src/gate.ts'
-import { GateAction } from '../../src/types.ts'
-import type { GroupProfile } from '../../src/types.ts'
-import { SCENARIOS } from '../scenarios.ts'
-import type { Scenario, ScenarioCategory } from '../scenarios.ts'
-import { scoreResponse } from '../scorer.ts'
+import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
+import { GateAction } from '../src/types.ts'
+import type { GroupProfile } from '../src/types.ts'
+import { SCENARIOS } from '../test/scenarios.ts'
+import type { Scenario, ScenarioCategory } from '../test/scenarios.ts'
+import { scoreResponse } from '../test/scorer.ts'
 
 const { values: args } = parseArgs({
   options: {

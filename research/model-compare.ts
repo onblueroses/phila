@@ -2,15 +2,15 @@
 // Produces a markdown comparison table and per-scenario breakdown.
 //
 // Usage:
-//   PHILA_OLLAMA_URL=http://localhost:11434 node --experimental-strip-types test/research/model-compare.ts
-//   node --experimental-strip-types test/research/model-compare.ts --models llama3.2,qwen2.5:7b --runs 3
+//   PHILA_OLLAMA_URL=http://localhost:11434 node --experimental-strip-types research/model-compare.ts
+//   node --experimental-strip-types research/model-compare.ts --models llama3.2,qwen2.5:7b --runs 3
 
 import { parseArgs } from 'node:util'
 import { writeFileSync } from 'node:fs'
-import { buildSystemPrompt } from '../../src/gate.ts'
-import { evaluate } from '../eval-shared.ts'
-import { trainScenarios, holdoutScenarios } from '../scenarios.ts'
-import type { InferenceConfig } from '../inference.ts'
+import { buildSystemPrompt } from '../src/gate.ts'
+import { evaluate } from '../test/eval-shared.ts'
+import { trainScenarios, holdoutScenarios } from '../test/scenarios.ts'
+import type { InferenceConfig } from '../test/inference.ts'
 
 const { values } = parseArgs({
   options: {

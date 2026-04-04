@@ -82,7 +82,7 @@ const { values } = parseArgs({
 
 if (!values.dir) {
   console.error(
-    'Usage: node --experimental-strip-types test/research/overnight-report.ts --dir <round-dir> [--round N] [--out <path>]',
+    'Usage: node --experimental-strip-types research/overnight-report.ts --dir <round-dir> [--round N] [--out <path>]',
   )
   process.exit(1)
 }

@@ -5,12 +5,12 @@
 import { parseArgs } from 'node:util'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
 
-import { buildSystemPrompt } from '../../src/gate.ts'
-import { evaluate, pairedTTest, detectRewardHacking, T_TEST_THRESHOLD } from '../eval-shared.ts'
-import type { EvalResult, HackingState } from '../eval-shared.ts'
-import { trainScenarios, holdoutScenarios } from '../scenarios.ts'
-import type { Scenario } from '../scenarios.ts'
-import type { InferenceConfig } from '../inference.ts'
+import { buildSystemPrompt } from '../src/gate.ts'
+import { evaluate, pairedTTest, detectRewardHacking, T_TEST_THRESHOLD } from '../test/eval-shared.ts'
+import type { EvalResult, HackingState } from '../test/eval-shared.ts'
+import { trainScenarios, holdoutScenarios } from '../test/scenarios.ts'
+import type { Scenario } from '../test/scenarios.ts'
+import type { InferenceConfig } from '../test/inference.ts'
 
 // -- Types --
 
@@ -86,7 +86,7 @@ const { values } = parseArgs({
 
 if (!values.out) {
   console.error(
-    'Usage: node --experimental-strip-types test/research/tournament.ts --out <path> [--mutations <path>] [--runs N] [--model <name>]',
+    'Usage: node --experimental-strip-types research/tournament.ts --out <path> [--mutations <path>] [--runs N] [--model <name>]',
   )
   process.exit(1)
 }

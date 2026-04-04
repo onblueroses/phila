@@ -3,19 +3,19 @@
 # Creates a tmux session with 3 windows: orchestrator, ollama, watcher.
 #
 # Usage:
-#   ./test/research/start-campaign.sh
+#   ./research/start-campaign.sh
 
 set -euo pipefail
 
 SESSION="phila-research"
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Kill existing session if any
 tmux kill-session -t "$SESSION" 2>/dev/null || true
 
 # Create session with orchestrator window
 tmux new-session -d -s "$SESSION" -n orchestrator -c "$PROJECT_DIR"
-tmux send-keys -t "$SESSION:orchestrator" "./test/research/research-campaign.sh" Enter
+tmux send-keys -t "$SESSION:orchestrator" "./research/research-campaign.sh" Enter
 
 # Ollama logs window
 tmux new-window -t "$SESSION" -n ollama
