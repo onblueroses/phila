@@ -3,15 +3,15 @@
 // Goal: determine if this is a model capability limit or a prompt-fixable issue.
 //
 // Usage:
-//   PHILA_OLLAMA_URL=http://localhost:11434 node --experimental-strip-types test/research/buried-thread-probe.ts
+//   PHILA_OLLAMA_URL=http://localhost:11434 node --experimental-strip-types research/buried-thread-probe.ts
 
 import { execFileSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
-import { buildSystemPrompt } from '../../src/gate.ts'
-import { scoreResponse } from '../scorer.ts'
-import { parseDecision } from '../../src/gate.ts'
-import { infer } from '../inference.ts'
-import type { InferenceConfig } from '../inference.ts'
+import { buildSystemPrompt } from '../src/gate.ts'
+import { scoreResponse } from '../test/scorer.ts'
+import { parseDecision } from '../src/gate.ts'
+import { infer } from '../test/inference.ts'
+import type { InferenceConfig } from '../test/inference.ts'
 
 const baseUrl = process.env['PHILA_OLLAMA_URL'] ?? 'http://localhost:11434'
 const RUNS = 5

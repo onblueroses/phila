@@ -1,6 +1,10 @@
 # phila
 
-An iMessage group chat agent that stays silent.
+A group chat agent whose default state is silence.
+
+It runs a local 3B language model, evaluates every message, and stays silent 95% of the time. When 660 prompt mutations couldn't fix its hardest failure mode, we trained a custom model. It works.
+
+**~650 lines** of TypeScript. **Local inference** via Ollama - messages never leave your device. **Custom QLoRA fine-tune** on 1,138 targeted examples. **93% gate accuracy** on a holdout set the model never trained against.
 
 ---
 
@@ -22,19 +26,6 @@ jordan: yeah i think so
                                         → phila: the great wall is in china, not japan
 ```
 
-**answers questions nobody else did:**
-```
-alex: whats the tallest mountain in the world
-jordan: idk
-                                        → phila: mount everest, 8849 meters
-```
-
-**responds when addressed directly:**
-```
-jordan: hey phila what year did we land on the moon
-                                        → phila: 1969, apollo 11
-```
-
 **stays out of opinions and emotions:**
 ```
 alex: i think the new star wars movies are terrible
@@ -43,17 +34,6 @@ alex: fight me
 jordan: the originals aren't even that good
 alex: blocked
                                         → phila: (silent)
-```
-
-**learns from feedback:**
-```
-jordan: phila shut up nobody asked
-                        → speak bias: -0.05 (quieter in this group)
-
-...later...
-
-alex: thanks phila that was helpful
-                        → speak bias: +0.02 (slightly more willing)
 ```
 
 ## the problem
@@ -73,6 +53,36 @@ The core is a "speak gate" - it evaluates every batch of messages and almost alw
 Everything else gets silence. Emotional conversations, jokes, banter, small talk, gossip, opinions, agreement - phila stays out of it. It never says "great question." It doesn't offer unsolicited advice or restate what someone already said.
 
 This is harder than it sounds. Language models are trained to respond. Teaching one to not respond - to recognize that the best thing it can do right now is nothing - that's the design challenge.
+
+## the capability wall
+
+The speak gate is validated against 101 test scenarios across 9 categories and 4 difficulty tiers, with a strict train/holdout split (58 train, 43 holdout) to prevent overfitting. All final numbers come from the holdout set the model never trained against.
+
+An automated optimizer mutates the prompt and inference parameters, scores each candidate against the train scenarios, then checks it against the holdout. Statistical significance requires p < 0.10. A reward-hacking detector rolls back anything that improves train accuracy while degrading holdout by more than 3%.
+
+660+ generations. Nothing beat the baseline.
+
+The hardest failure was the buried-thread case: a factual question asked mid-conversation, then buried by off-topic messages that nobody answered. Phila should speak - but didn't. A dedicated probe across 4 models, 4 prompt variants, and 30 generated scenarios returned 0% pass rate across every combination. No rephrasing moved the needle.
+
+The 3B models don't scan full conversation history when relevant signal is several messages back and recent context is unrelated noise. This is a model capability limitation, not a prompt problem.
+
+## training a custom model
+
+Fine-tuning fixed it.
+
+QLoRA on a first dataset of 755 targeted examples pushed the buried-thread category from 0% to 100%. But the model regressed hard on three cases it previously handled correctly: standalone unanswered questions, unanswered history questions, and sarcastic wrong-fact detection - all dropping from 100% to 0%. It had specialized too hard in one direction.
+
+The second fine-tune added 383 examples targeting exactly those three failures - 150 speak-unanswered, 153 silent-sarcasm, 80 near-miss - on top of the original 755. 1,138 total. RTX 4090, QLoRA r=16, 429 steps, roughly 40 minutes. All four regression scenarios came back to 100% across 10 runs.
+
+| Metric | llama3.2 (base) | phila-ft-v2 (fine-tuned) |
+|--------|----------------|--------------------------|
+| Gate accuracy (holdout, 43 scenarios) | 87.9% | **93.0%** |
+| Gate accuracy (all 101 scenarios) | 94.1% | **95.8%** |
+| Response quality | 0.951 | **0.965** |
+| Composite score | 0.8487 | **0.8638** |
+| Avg latency | 515ms | 544ms |
+
+The whole loop - benchmark, find regressions, build targeted data, retrain, re-benchmark - is what the research pipeline was designed for.
 
 ## how it works
 
@@ -97,25 +107,6 @@ group chat message arrives
 
 **Stack**: TypeScript, `@photon-ai/imessage-kit`, Ollama, `better-sqlite3`
 
-**Files**:
-- `src/gate.ts` - The speak/silent decision engine. System prompt encodes when to speak vs. stay silent, with group-specific behavioral modifiers.
-- `src/voice.ts` - Post-processing for personality constraints. Lowercases, caps sentences, strips AI-speak.
-- `src/memory.ts` - SQLite persistence. Conversation history, group profiles, social learning feedback loop.
-- `src/ollama.ts` - Thin wrapper around Ollama's chat API.
-- `src/index.ts` - Watcher, message batcher, pipeline orchestration.
-
-## evaluation
-
-The speak gate is validated against 101 test scenarios across 9 categories and 4 difficulty tiers, with a strict train/holdout split (58 train, 43 holdout) to prevent overfitting. All final numbers come from the holdout set the model never trained against.
-
-| Metric | llama3.2 (base) | phila-ft-v2 (fine-tuned) |
-|--------|----------------|--------------------------|
-| Gate accuracy (holdout, 43 scenarios) | 87.9% | **93.0%** |
-| Gate accuracy (all 101 scenarios) | 94.1% | **95.8%** |
-| Response quality | 0.951 | **0.965** |
-| Composite score | 0.8487 | **0.8638** |
-| Avg latency | 515ms | 544ms |
-
 | Infrastructure | Value |
 |----------------|-------|
 | Test scenarios | 101 (58 train / 43 holdout) |
@@ -125,17 +116,21 @@ The speak gate is validated against 101 test scenarios across 9 categories and 4
 | Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16, 429 steps |
 | Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
 
-An automated optimizer mutates the prompt and inference parameters, scores each candidate against the train scenarios, then checks it against the holdout it never sees during optimization. Statistical significance requires p < 0.10. A reward-hacking detector rolls back anything that improves train accuracy while degrading holdout by more than 3%.
-
-660+ generations. Nothing beat the baseline. The buried-thread failure — factual questions asked mid-conversation then buried under off-topic noise — came back 0% across every prompt variant and model combination tested. That's a model capability problem, not something rephrasing fixes, which is why fine-tuning happened.
-
-Response quality is scored on 5 dimensions: topic accuracy (0.35), casualness (0.25), AI-speak absence (0.20), length fit (0.10), and voice survival (0.10). Stratified k-fold cross-validation detects flaky scenarios across runs.
-
 ## social learning
 
 Your work chat and your college friends chat have completely different norms. You know this intuitively. Phila learns it.
 
 When someone says "thanks phila" or "good one," phila gets slightly more willing to speak in that group. When someone says "not now" or "shut up," that carries 2.5x the weight. People say "thanks" casually. They don't say "shut up" casually.
+
+```
+jordan: phila shut up nobody asked
+                        → speak bias: -0.05 (quieter in this group)
+
+...later...
+
+alex: thanks phila that was helpful
+                        → speak bias: +0.02 (slightly more willing)
+```
 
 Over time each group chat develops its own version of phila. The one in your cooking group might speak up about recipes. The one in your sports chat might have learned to stay completely quiet during game threads.
 
@@ -143,46 +138,17 @@ All stored locally in SQLite. No cloud, no syncing. The learning stays on your m
 
 ## privacy
 
-Phila runs a local language model through Ollama. Messages never leave your device. No API calls to OpenAI, no cloud, no telemetry.
-
-This thing sits in your most personal conversations, reading messages from your friends. Trust has to come from the architecture, not a privacy policy. Local inference is slower and less capable than cloud APIs. Worth it.
-
-## the voice
-
-When phila does speak, it texts like a person in a group chat:
-
-- lowercase, always
-- short - one or two sentences max
-- no bullet points, no markdown, no formatting
-- no "I'd be happy to help!" or "Great question!"
-- can be wrong and says so: "actually not sure about that"
-- first person, not third: "i think" not "based on my analysis"
-
-The system prompt handles most of this. A post-processing layer enforces the constraints as a safety net - if the model slips into assistant-speak, it gets caught before sending.
+Phila runs a local language model through Ollama. Messages never leave your device. No API calls to OpenAI, no cloud, no telemetry. Trust comes from the architecture, not a privacy policy.
 
 ## what i learned
 
 Silence is easy. Talking at the right time is hard.
 
-Running llama3.2 (3B) against the test scenarios, it nails every silence case on the first try - small talk, emotions, jokes, opinions, already-answered questions. Never over-talks. The struggle is the opposite: getting a model that's been told "your default is silence" to override that default when it sees a factual error.
+Running llama3.2 against the test scenarios, it nails every silence case on the first try - small talk, emotions, jokes, opinions, already-answered questions. Never over-talks. The struggle is the opposite: getting a model that's been told "your default is silence" to override that default when it sees a factual error.
 
-The error correction case broke four prompt iterations. A 3B model doesn't have enough reasoning to both detect a wrong fact and decide to speak. What finally worked: a concrete example in the system prompt showing exactly what a factual error looks like and how to respond. It now catches "the eiffel tower is in london" but misses subtler errors like "the boiling point of water is 50 degrees." Model size limitation, not a prompt problem.
+The buried-thread failure was the turning point. When a dedicated probe across 4 models, 4 prompt variants, and 30 generated scenarios returned 0% across every combination, it became clear that no amount of prompt engineering would fix it. That's what pushed the project from "clever prompt wrapper" to "custom trained model."
 
-Simplifying the prompt made things worse. My instinct was to trim it down. But smaller models need more structure, not less. Priority ordering ("ALWAYS SPEAK for these, STAY SILENT for everything else") outperformed percentage-based framing ("stay silent 95% of the time"). Clear rules beat vibes.
-
-The third speak rule - answering unanswered questions - was the hardest to get right. A 3B model needs to recognize that "idk" means the question is still open. Abstract instructions didn't work. A concrete example in the prompt ("person1: whats the tallest mountain? / person2: idk / correct response: speak") was what made it click. Small models learn from examples, not descriptions.
-
-The parse-failure-to-silence default is load-bearing. The model sometimes wraps JSON in markdown fences, occasionally outputs malformed responses. Treating any unparseable output as silence means the worst failure mode is being too quiet, never too loud. For something sitting in your group chats, that's the right direction to fail.
-
-The train/holdout split caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. A pre-gate heuristic now detects correction patterns ("actually", "nope", "that's wrong") and hints the model to check before correcting.
-
-The hardest failure was the buried-thread case: a factual question asked mid-conversation, then buried by off-topic messages that nobody answered. Phila should speak — but didn't. A dedicated probe across 4 models × 4 prompt variants × 30 generated scenarios returned 0% pass rate across every combination. No rephrasing moved the needle. The 3B models don't scan full conversation history when relevant signal is several messages back and recent context is unrelated noise.
-
-Fine-tuning fixed it. QLoRA on a first dataset of 755 targeted examples pushed the buried-thread category from 0% to 100%. But the model regressed hard on three cases it previously handled correctly: standalone unanswered questions, unanswered history questions, and sarcastic wrong-fact detection — all dropping from 100% to 0%. It had specialised too hard in one direction.
-
-The second fine-tune added 383 examples targeting exactly those three failures — 150 speak-unanswered, 153 silent-sarcasm, 80 near-miss — on top of the original 755. 1,138 total. RTX 4090, 429 steps, roughly 40 minutes. All four regression scenarios came back to 100% across 10 runs. Holdout accuracy landed at 93.0%, which is 5.1pp above where the untuned baseline sits.
-
-The whole loop — benchmark, find regressions, build targeted data, retrain, re-benchmark — is what the research pipeline was designed for. The fine-tuning infrastructure exists specifically to make that loop fast enough to be worth running more than once.
+Full research log and methodology: [FINDINGS.md](FINDINGS.md)
 
 ## setup
 
@@ -190,10 +156,9 @@ The whole loop — benchmark, find regressions, build targeted data, retrain, re
 
 ```bash
 # install ollama and pull the model
-# fine-tuned v2 (recommended) — better across all categories
 ollama pull llama3.2  # base model, or use phila-ft-v2 if you have it
 
-# to use the fine-tuned model: build from the GGUF in test/research-reports/finetune-data/
+# to use the fine-tuned model: build from the GGUF
 # ollama create phila-ft-v2 -f test/research-reports/finetune-data/Modelfile-v2-deploy
 
 # clone and install
@@ -207,7 +172,8 @@ npm install
 npm start
 ```
 
-**Configuration** (environment variables):
+<details>
+<summary>Configuration (environment variables)</summary>
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -218,33 +184,14 @@ npm start
 | `PHILA_DB_PATH` | `phila.db` | SQLite database path |
 | `PHILA_PRUNE_DAYS` | `7` | Auto-delete messages older than N days |
 
+</details>
+
 ## research infrastructure
 
-`test/research/` contains the full benchmark and optimization pipeline used to validate the gate:
-
-- `overnight-campaign.sh` — orchestrates multi-round prompt optimization: adversarial scenario generation → mutation generation → tournament → report
-- `tournament.ts` — single-elimination tournament with paired t-test (p < 0.10) significance gating
-- `gen-adversarial.ts` — generates adversarial test scenarios via LLM, targeting known failure categories
-- `gen-prompt-mutations.ts` — generates targeted prompt mutations based on failure patterns
-- `model-compare.ts` — benchmarks multiple Ollama models against the baseline prompt
-- `buried-thread-probe.ts` — targeted probe of the buried-thread weakness across models and prompt variants
-- `gen-finetune-data.ts` — generates labeled training data (JSONL) for fine-tuning
-- `FINDINGS.md` — cumulative research log with all benchmark results
-
-`test/finetune-remote/` — QLoRA fine-tuning pipeline:
-
-- `finetune.py` — Unsloth QLoRA training script (reads `train.jsonl`, exports GGUF via `save_pretrained_gguf`)
-- `launch-remote.sh` — remote launch script: installs deps, runs training, self-destructs instance on completion
-- `monitor.sh` — local polling monitor: waits for completion, downloads GGUF + Modelfile
-
-`test/finetune-eval.ts` — three-analysis eval comparing fine-tuned vs baseline: holdout accuracy, composite scoring, and regression deep-dive.
-
-`test/eval-shared.ts` — shared `evaluate()`, `pairedTTest()`, and reward-hacking detection used across all benchmark scripts.
+`research/` contains the full benchmark and optimization pipeline: adversarial scenario generation, single-elimination tournaments with paired t-tests, multi-model benchmarking, prompt injection resilience testing, and context window degradation analysis. `research/finetune/` has the QLoRA fine-tuning pipeline (Unsloth + Vast.ai). Full results and methodology in [FINDINGS.md](FINDINGS.md).
 
 ## open questions
 
-- How should phila handle being wrong? It can say "not sure about that," but it doesn't track its own accuracy or learn from corrections.
-- What's the right memory window? 50 messages might be too few for slow chats and too many for rapid-fire ones.
-- Should phila ever initiate? Right now it only reacts. "hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - but that's a different trust equation entirely.
-- Can the silence rate emerge from the feedback loop instead of being hardcoded? Let each group find its own tolerance.
-- The adversarial category dipped 7pp after v2 fine-tuning. One specific scenario — wrong facts in messages where someone's name resembles "phila" — remains inconsistent. It requires the model to do two things at once: detect a factual error and not confuse the name with a direct address. Unclear if this is fixable with data or requires a larger model.
+- How should phila handle being wrong? It doesn't track its own accuracy or learn from corrections yet.
+- Should phila ever initiate? "Hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - but that's a different trust equation entirely.
+- The adversarial category dipped 7pp after v2 fine-tuning. One scenario - wrong facts where someone's name resembles "phila" - remains inconsistent. Unclear if fixable with data or requires a larger model.

@@ -41,13 +41,13 @@ The gate is the entire product. Everything else is plumbing.
 - `finetune-eval.ts` — Three-part eval: holdout accuracy, full composite scoring, regression deep-dive. Use this to compare fine-tuned vs baseline.
 - `inference.ts` — Ollama inference wrapper used by all benchmark scripts
 
-**Research pipeline** (`test/research/`):
-- `FINDINGS.md` — Cumulative research log. All benchmark results and decisions. Read this for full experiment history.
+**Research pipeline** (`research/`):
+- `FINDINGS.md` — Cumulative research log at repo root. All benchmark results and decisions. Read this for full experiment history.
 - `gen-finetune-data.ts` — Generates labeled JSONL training data by category
 - `buried-thread-probe.ts` — Targeted probe of the hardest failure category
 - `gen-adversarial.ts`, `gen-prompt-mutations.ts` — LLM-assisted scenario/prompt generation
 
-**Fine-tuning pipeline** (`test/finetune-remote/`):
+**Fine-tuning pipeline** (`research/finetune/`):
 - `finetune.py` — Unsloth QLoRA training. Reads `train.jsonl`, fine-tunes `unsloth/Llama-3.2-3B-Instruct`, exports GGUF via `save_pretrained_gguf`. Saves LoRA to HuggingFace before GGUF export as recovery checkpoint.
 - `launch-remote.sh` — Runs on Vast.ai instance via SSH. Installs deps, pre-builds llama.cpp (must run in foreground — nohup breaks the interactive build), launches training as nohup.
 - `monitor.sh` — Local cron monitor. Waits for `done.json`, checks training status, downloads GGUF, destroys instance. Uses `find -newer done.json` to verify GGUF is from the current run.
@@ -83,4 +83,4 @@ node --experimental-strip-types test/finetune-eval.ts --model phila-ft-v2 --base
 3. **phila-ft v1** (755 examples): fixed buried-thread (0%→100%) but introduced 3 hard regressions
 4. **phila-ft v2** (1,138 examples, adds 383 targeted): all 4 regression scenarios back to 100%, holdout +5.1pp vs baseline
 
-Full details: `test/research/FINDINGS.md`
+Full details: `FINDINGS.md` (repo root)

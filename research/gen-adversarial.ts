@@ -6,11 +6,11 @@ import { parseArgs } from 'node:util'
 import { execFileSync } from 'node:child_process'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 
-import { buildSystemPrompt, parseDecision } from '../../src/gate.ts'
-import type { ScenarioCategory } from '../scenarios.ts'
-import { infer } from '../inference.ts'
-import type { InferenceConfig } from '../inference.ts'
-import { GateAction } from '../../src/types.ts'
+import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
+import type { ScenarioCategory } from '../test/scenarios.ts'
+import { infer } from '../test/inference.ts'
+import type { InferenceConfig } from '../test/inference.ts'
+import { GateAction } from '../src/types.ts'
 
 const VALID_CATEGORIES = new Set<ScenarioCategory>([
   'silent-social',
@@ -211,7 +211,7 @@ const { values } = parseArgs({
 })
 
 if (!values.out) {
-  console.error('Usage: node --experimental-strip-types test/research/gen-adversarial.ts --out <path> [--count N] [--findings <path>]')
+  console.error('Usage: node --experimental-strip-types research/gen-adversarial.ts --out <path> [--count N] [--findings <path>]')
   process.exit(1)
 }
 

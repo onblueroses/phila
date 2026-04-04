@@ -5,13 +5,13 @@
 # Designed for tmux on VPS. Ctrl+C to stop gracefully.
 #
 # Usage:
-#   ./test/research/overnight-campaign.sh [--rounds N] [--runs R] [--mutations M]
-#   PHILA_OLLAMA_URL=http://localhost:11434 ./test/research/overnight-campaign.sh
+#   ./research/overnight-campaign.sh [--rounds N] [--runs R] [--mutations M]
+#   PHILA_OLLAMA_URL=http://localhost:11434 ./research/overnight-campaign.sh
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPORTS_DIR="$PROJECT_DIR/test/research-reports"
 STATE_FILE="$SCRIPT_DIR/overnight-state.json"
 NODE="node --experimental-strip-types"
@@ -95,11 +95,11 @@ while $RUNNING && [ "$ROUND" -lt "$MAX_ROUNDS" ]; do
     ADV_OUT="$ROUND_DIR/adversarial-$(date +%s).json"
 
     FINDINGS_FLAG=""
-    if [ -f "$PROJECT_DIR/test/research/FINDINGS.md" ]; then
-      FINDINGS_FLAG="--findings $PROJECT_DIR/test/research/FINDINGS.md"
+    if [ -f "$PROJECT_DIR/FINDINGS.md" ]; then
+      FINDINGS_FLAG="--findings $PROJECT_DIR/FINDINGS.md"
     fi
 
-    $NODE test/research/gen-adversarial.ts \
+    $NODE research/gen-adversarial.ts \
       --count "$ADVERSARIAL_COUNT" \
       --out "$ADV_OUT" \
       $FINDINGS_FLAG \
@@ -132,7 +132,7 @@ while $RUNNING && [ "$ROUND" -lt "$MAX_ROUNDS" ]; do
       BASE_PROMPT_FLAG="--base-prompt $BEST_PROMPT_PATH"
     fi
 
-    $NODE test/research/gen-prompt-mutations.ts \
+    $NODE research/gen-prompt-mutations.ts \
       --count "$MUTATIONS_PER_ROUND" \
       --out "$MUT_OUT" \
       $FAILURES_FLAG \
@@ -151,7 +151,7 @@ while $RUNNING && [ "$ROUND" -lt "$MAX_ROUNDS" ]; do
     echo "--- tournament (runs=$RUNS_PER_EVAL, model=$MODEL) ---"
     TOURN_OUT="$ROUND_DIR/tournament-$(date +%s).json"
 
-    $NODE test/research/tournament.ts \
+    $NODE research/tournament.ts \
       --mutations "$MUT_OUT" \
       --runs "$RUNS_PER_EVAL" \
       --model "$MODEL" \
@@ -185,14 +185,14 @@ while $RUNNING && [ "$ROUND" -lt "$MAX_ROUNDS" ]; do
     echo "--- generating report ---"
     REPORT_OUT="$REPORTS_DIR/overnight-round-${ROUND_LABEL}.md"
 
-    $NODE test/research/overnight-report.ts \
+    $NODE research/overnight-report.ts \
       --dir "$ROUND_DIR" \
       --round "$ROUND" \
       --out "$REPORT_OUT" \
       2>&1 || echo "  [ERROR] report generation failed"
 
     # Append round report to FINDINGS.md
-    FINDINGS_FILE="$SCRIPT_DIR/FINDINGS.md"
+    FINDINGS_FILE="$PROJECT_DIR/FINDINGS.md"
     if [ -f "$REPORT_OUT" ]; then
       printf '\n---\n\n## Overnight Round %s — %s\n\n' "$ROUND_LABEL" "$(date '+%Y-%m-%d')" >> "$FINDINGS_FILE"
       cat "$REPORT_OUT" >> "$FINDINGS_FILE"

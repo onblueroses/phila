@@ -1,7 +1,7 @@
 // Aggregate cycle results into a markdown report.
 //
 // Usage:
-//   node --experimental-strip-types test/research/aggregate-report.ts --cycle 1
+//   node --experimental-strip-types research/aggregate-report.ts --cycle 1
 
 import { parseArgs } from 'node:util'
 import { writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs'

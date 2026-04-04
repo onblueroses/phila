@@ -5,7 +5,7 @@
 set -euo pipefail
 
 INSTANCE_ID="${PHILA_FINETUNE_INSTANCE_ID:?Need PHILA_FINETUNE_INSTANCE_ID}"
-RESULTS_DIR="$(cd "$(dirname "$0")"/../research-reports/finetune-data && pwd)"
+RESULTS_DIR="$(cd "$(dirname "$0")/../../test/research-reports/finetune-data" && pwd)"
 # Instance-specific marker prevents stale done.json from a previous run triggering teardown
 DONE_MARKER="$RESULTS_DIR/done-${INSTANCE_ID}.json"
 LOG="$RESULTS_DIR/monitor.log"
