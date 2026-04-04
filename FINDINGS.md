@@ -1256,6 +1256,40 @@ Both gates (monolithic and hierarchical v2) share the same safety profile: **per
 
 The monolithic gate wins on every metric except social-path latency (~390ms for social scenarios vs ~270ms hierarchical). The dual-pass additive architecture is designed to close the recall gap on memory-grounded queries without touching the monolithic gate's proven performance on world-knowledge scenarios.
 
+### Dual-pass benchmark (140 scenarios, llama3.2, 3 runs)
+
+| Metric | Monolithic | Dual-pass | Delta |
+|--------|-----------|-----------|-------|
+| Accuracy | 86.4% | 86.4% | = |
+| Precision | 1.000 | 0.971 | -0.029 |
+| Recall | 0.635 | **0.654** | **+0.019** |
+| Specificity | 1.000 | 0.989 | -0.011 |
+| FPR | 0.000 | 0.011 | +0.011 |
+| F1 | 0.776 | **0.782** | **+0.006** |
+| Holdout CI | [77.0%, 93.2%] | [78.4%, 93.2%] | higher floor |
+| Avg latency | 613ms | 4928ms | +4315ms |
+
+The dual-pass architecture works: same accuracy as monolithic, slightly better recall (+3 true positives from Pass 2 memory-recall). Three false-speaks from Pass 2 being too eager on social scenarios where the extraction found spurious "facts."
+
+**What Pass 2 caught that Pass 1 missed:**
+- "what time is checkout" - extracted fact "checkout at 11am", Pass 2 answered correctly
+- "flight number recall" - Pass 1 (monolithic) actually caught this one directly
+- A few other scenarios where the monolithic gate's recall was inconsistent across runs
+
+**What Pass 2 still misses:**
+Most memory-grounded scenarios reach `p2:memory-check` (facts are extracted and found) but the MEMORY_CHECK_SYSTEM prompt returns silent. The prompt is too conservative - it sees the facts but doesn't generate a response. This is the same pattern as the hierarchical Stage 2: stripped-down prompts don't work well for 3B models. The model needs more examples and stronger instruction to actually use the injected facts.
+
+**The false-speak problem:**
+3 false-speaks came from Pass 2 responding to social conversations where extraction had stored spurious facts. "workout chat" (person hit a new PR, extraction stored "PR: 225 bench") triggered a memory response when it shouldn't have. The extraction prompt needs to be more selective, or Pass 2 needs a higher confidence threshold.
+
+**Latency:**
+The dual-pass is expensive: ~5s avg because every scenario runs extraction + Pass 1 + Pass 2. In production, extraction runs in the background (fire-and-forget after gate decision), so real-world latency is Pass 1 (~530ms) for scenarios where Pass 1 speaks, and Pass 1 + Pass 2 (~1000ms) for scenarios where Pass 1 is silent and facts exist. The benchmark is pessimistic because it runs extraction synchronously.
+
+**Next iteration targets:**
+1. Make MEMORY_CHECK_SYSTEM more assertive with examples (like the monolithic gate has)
+2. Tighten extraction to skip trivially social messages (regex pre-filter)
+3. Reduce false-speaks by making Pass 2 only trigger when the question explicitly references earlier context
+
 ### Eval improvements in v3
 
 Expanded scenario set from 101 to 140 scenarios (66 train / 74 holdout). Three new categories:

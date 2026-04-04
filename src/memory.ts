@@ -48,6 +48,18 @@ const SCHEMA = `
     notes TEXT NOT NULL DEFAULT '',
     updated_at INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS extracted_facts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    message_id INTEGER NOT NULL DEFAULT 0,
+    timestamp INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_facts_chat_type ON extracted_facts (chat_id, type, timestamp);
+  CREATE INDEX IF NOT EXISTS idx_facts_chat_key ON extracted_facts (chat_id, key);
 `
 
 interface MessageRow { chat_id: string; sender: string; text: string; timestamp: number }
@@ -88,6 +100,10 @@ export class Memory {
   private searchFts: Database.Statement
   private selectNotes: Database.Statement
   private upsertNotes: Database.Statement
+  private insertFact: Database.Statement
+  private selectRecentFacts: Database.Statement
+  private selectFactsByType: Database.Statement
+  private selectFactsByKey: Database.Statement
   private config: PhilaConfig
   private pruneIntervalMs: number
   private lastPruneAt = 0
@@ -131,13 +147,26 @@ export class Memory {
       `INSERT INTO group_notes (chat_id, notes, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(chat_id) DO UPDATE SET notes = excluded.notes, updated_at = excluded.updated_at`,
     )
+    this.insertFact = this.db.prepare(
+      'INSERT INTO extracted_facts (chat_id, type, key, value, message_id, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
+    )
+    this.selectRecentFacts = this.db.prepare(
+      'SELECT chat_id, type, key, value, message_id, timestamp FROM extracted_facts WHERE chat_id = ? ORDER BY timestamp DESC LIMIT ?',
+    )
+    this.selectFactsByType = this.db.prepare(
+      'SELECT chat_id, type, key, value, message_id, timestamp FROM extracted_facts WHERE chat_id = ? AND type = ? ORDER BY timestamp DESC LIMIT ?',
+    )
+    this.selectFactsByKey = this.db.prepare(
+      'SELECT chat_id, type, key, value, message_id, timestamp FROM extracted_facts WHERE chat_id = ? AND key = ? ORDER BY timestamp DESC LIMIT ?',
+    )
     this.config = config
     this.pruneIntervalMs = config.pruneAfterDays * 24 * 60 * 60 * 1000
   }
 
-  storeMessage(msg: ChatMessage): void {
-    this.insertMsg.run(msg.chatId, msg.sender, msg.text, msg.timestamp)
+  storeMessage(msg: ChatMessage): number {
+    const result = this.insertMsg.run(msg.chatId, msg.sender, msg.text, msg.timestamp)
     this.maybePrune(msg.timestamp)
+    return Number(result.lastInsertRowid)
   }
 
   getMessagesBeforeCutoff(cutoff: number, limitPerChat: number): Map<string, ChatMessage[]> {
@@ -246,6 +275,28 @@ export class Memory {
       speakBias: Math.max(-0.3, Math.min(0.1, profile.speakBias + delta)),
     })
     this.storeFeedback(chatId, signal)
+  }
+
+  storeFact(fact: import('./types.ts').ExtractedFact): void {
+    this.insertFact.run(fact.chatId, fact.type, fact.key, fact.value, fact.messageId, fact.timestamp)
+  }
+
+  getRecentFacts(chatId: string, limit = 10): import('./types.ts').ExtractedFact[] {
+    interface FactRow { chat_id: string; type: string; key: string; value: string; message_id: number; timestamp: number }
+    const rows = this.selectRecentFacts.all(chatId, limit) as FactRow[]
+    return rows.map(r => ({ chatId: r.chat_id, type: r.type as import('./types.ts').FactType, key: r.key, value: r.value, messageId: r.message_id, timestamp: r.timestamp }))
+  }
+
+  searchFactsByType(chatId: string, type: import('./types.ts').FactType, limit = 10): import('./types.ts').ExtractedFact[] {
+    interface FactRow { chat_id: string; type: string; key: string; value: string; message_id: number; timestamp: number }
+    const rows = this.selectFactsByType.all(chatId, type, limit) as FactRow[]
+    return rows.map(r => ({ chatId: r.chat_id, type: r.type as import('./types.ts').FactType, key: r.key, value: r.value, messageId: r.message_id, timestamp: r.timestamp }))
+  }
+
+  searchFactsByKey(chatId: string, key: string, limit = 10): import('./types.ts').ExtractedFact[] {
+    interface FactRow { chat_id: string; type: string; key: string; value: string; message_id: number; timestamp: number }
+    const rows = this.selectFactsByKey.all(chatId, key, limit) as FactRow[]
+    return rows.map(r => ({ chatId: r.chat_id, type: r.type as import('./types.ts').FactType, key: r.key, value: r.value, messageId: r.message_id, timestamp: r.timestamp }))
   }
 
   close(): void {

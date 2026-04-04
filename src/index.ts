@@ -4,6 +4,8 @@ import closeWithGrace from 'close-with-grace'
 import { config } from './config.ts'
 import { evaluate, detectCorrection, computeMomentum, extractHour } from './gate.ts'
 import { evaluateHierarchical } from './gate-hierarchical.ts'
+import { evaluateDual } from './gate-dual.ts'
+import { extractFacts } from './memory-extract.ts'
 import { Memory, detectFeedback } from './memory.ts'
 import { GateAction } from './types.ts'
 import type { ChatMessage, ConversationContext } from './types.ts'
@@ -60,11 +62,25 @@ const feed = createBatcher(config.batchWindowMs, async (chatId, newMessages) => 
       groupNotes: memory.getGroupNotes(chatId) || null,
     }
 
-    const decision = config.gateMode === 'hierarchical'
-      ? await evaluateHierarchical(newMessages, profile, config, ctx, recent)
-      : await evaluate(recent, profile, config, ctx)
+    const decision = config.gateMode === 'dual'
+      ? await evaluateDual(newMessages, recent, profile, config, ctx, memory)
+      : config.gateMode === 'hierarchical'
+        ? await evaluateHierarchical(newMessages, profile, config, ctx, recent)
+        : await evaluate(recent, profile, config, ctx)
 
     const stageTrace = 'stages' in decision ? ` [${(decision as { stages: string[] }).stages.join(' -> ')}]` : ''
+
+    // Background extraction: fire-and-forget, never blocks gate response
+    if (config.gateMode === 'dual') {
+      extractFacts(newMessages, config)
+        .then(facts => {
+          for (const fact of facts) {
+            memory.storeFact({ chatId, type: fact.type, key: fact.key, value: fact.value, messageId: 0, timestamp: Date.now() })
+          }
+          if (facts.length) log(`extracted ${facts.length} facts from ${chatId.slice(0, 8)}`)
+        })
+        .catch(err => log(`extraction error: ${err instanceof Error ? err.message : String(err)}`))
+    }
 
     if (decision.action === GateAction.SPEAK) {
       const response = constrain(decision.response)
