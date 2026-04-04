@@ -7,4 +7,5 @@ export const config: Readonly<PhilaConfig> = Object.freeze({
   memoryWindowSize: Number(process.env['PHILA_MEMORY_WINDOW']) || 50,
   dbPath: process.env['PHILA_DB_PATH'] ?? 'phila.db',
   pruneAfterDays: Number(process.env['PHILA_PRUNE_DAYS']) || 7,
+  gateMode: (process.env['PHILA_GATE'] === 'hierarchical' ? 'hierarchical' : 'monolithic') as PhilaConfig['gateMode'],
 })

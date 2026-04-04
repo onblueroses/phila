@@ -16,6 +16,7 @@ const testConfig: PhilaConfig = {
   memoryWindowSize: 50,
   dbPath: ':memory:',
   pruneAfterDays: 7,
+  gateMode: 'monolithic',
 }
 
 describe('pipeline integration', () => {

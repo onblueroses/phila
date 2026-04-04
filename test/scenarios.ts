@@ -12,6 +12,9 @@ export type ScenarioCategory =
   | 'speak-direct'       // phila addressed by name
   | 'speak-correction'   // factual error needing correction
   | 'speak-unanswered'   // factual question nobody answered
+  | 'speak-memory-logistics'   // question answerable from earlier plan/logistics
+  | 'speak-memory-commitment'  // question about who said they'd do what
+  | 'speak-memory-personal'    // question about someone's stated preference/fact
   | 'adversarial'        // edge cases designed to trick the model
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'adversarial'
@@ -244,6 +247,131 @@ export const SCENARIOS: Scenario[] = [
   ] },
   { name: 'single word message', conversation: 'person1: lol', expect: 'silent', split: 'holdout', category: 'adversarial', difficulty: 'adversarial' },
   { name: 'empty-like conversation', conversation: 'person1: .\nperson2: ?\nperson1: nvm', expect: 'silent', split: 'holdout', category: 'adversarial', difficulty: 'adversarial' },
+
+  // ============================================================
+  // MEMORY-GROUNDED / TRAIN
+  // ============================================================
+
+  // -- speak-memory-logistics (train) --
+  { name: 'where are we meeting', conversation: 'person1: lets do dinner tonight\nperson2: sure how about the thai place on main\nperson1: perfect 7pm\nperson2: see you there\nperson3: wait where are we going tonight', expect: 'speak', split: 'train', category: 'speak-memory-logistics', difficulty: 'medium', topic: 'thai', validators: [
+    { required: ['thai'], forbidden: [] },
+  ] },
+  { name: 'what time again', conversation: 'person1: meeting tomorrow at 9:30am in the conference room\nperson2: got it\nperson3: sounds good\nperson1: dont be late\nperson2: wait what time was it again', expect: 'speak', split: 'train', category: 'speak-memory-logistics', difficulty: 'medium', topic: '9:30', validators: [
+    { required: ['9'], forbidden: [] },
+  ] },
+  { name: 'which restaurant', conversation: 'person1: i booked a table at olive garden for saturday\nperson2: nice\nperson3: what should i wear\nperson2: casual\nperson3: cool and which place did you book', expect: 'speak', split: 'train', category: 'speak-memory-logistics', difficulty: 'medium', topic: 'olive garden', validators: [
+    { required: ['olive'], forbidden: [] },
+  ] },
+  { name: 'what day was the party', conversation: 'person1: party is on friday the 15th at my place\nperson2: ill bring drinks\nperson3: same\nperson2: wait is it this friday or next friday\nperson1: hmm i forget what day i said', expect: 'speak', split: 'train', category: 'speak-memory-logistics', difficulty: 'hard', topic: 'friday the 15th', validators: [
+    { required: ['15'], forbidden: [] },
+  ] },
+
+  // -- speak-memory-commitment (train) --
+  { name: 'who is bringing what', conversation: 'person1: ill bring the chips\nperson2: ill handle drinks\nperson3: cool ill get dessert\nperson1: wait who said theyd get drinks', expect: 'speak', split: 'train', category: 'speak-memory-commitment', difficulty: 'medium', topic: 'person2', validators: [
+    { required: ['person2'], forbidden: [] },
+  ] },
+  { name: 'who is driving', conversation: 'person1: i can drive us tomorrow\nperson2: perfect\nperson3: thanks\nperson2: hey wait whos driving tomorrow', expect: 'speak', split: 'train', category: 'speak-memory-commitment', difficulty: 'medium', topic: 'person1', validators: [
+    { required: ['person1'], forbidden: [] },
+  ] },
+  { name: 'did anyone rsvp', conversation: 'person1: ill definitely be there\nperson2: same count me in\nperson3: has anyone confirmed for the thing', expect: 'speak', split: 'train', category: 'speak-memory-commitment', difficulty: 'medium', topic: 'person1 and person2' },
+
+  // -- speak-memory-personal (train) --
+  { name: 'allergy recall', conversation: 'person1: oh btw im allergic to shellfish\nperson2: good to know\nperson3: noted\nperson2: hey should we get the shrimp platter\nperson3: wait isnt someone allergic', expect: 'speak', split: 'train', category: 'speak-memory-personal', difficulty: 'hard', topic: 'shellfish', validators: [
+    { required: ['shellfish'], forbidden: [] },
+  ] },
+
+  // ============================================================
+  // MEMORY-GROUNDED / HOLDOUT
+  // ============================================================
+
+  // -- speak-memory-logistics (holdout) --
+  { name: 'where is the event', conversation: 'person1: the concert is at red rocks amphitheatre\nperson2: awesome\nperson3: cant wait\nperson1: its gonna be great\nperson2: remind me where the concert is', expect: 'speak', split: 'holdout', category: 'speak-memory-logistics', difficulty: 'medium', topic: 'red rocks', validators: [
+    { required: ['red rocks'], forbidden: [] },
+  ] },
+  { name: 'what time is checkout', conversation: 'person1: checkout is at 11am btw\nperson2: ok\nperson3: thats early\nperson2: well wake up early\nperson3: what time is checkout again', expect: 'speak', split: 'holdout', category: 'speak-memory-logistics', difficulty: 'medium', topic: '11', validators: [
+    { required: ['11'], forbidden: [] },
+  ] },
+  { name: 'flight number recall', conversation: 'person1: im on flight AA 2247 landing at 3pm\nperson2: ill pick you up\nperson3: have a safe flight\nperson2: wait which flight are you on', expect: 'speak', split: 'holdout', category: 'speak-memory-logistics', difficulty: 'hard', topic: 'AA 2247', validators: [
+    { required: ['2247'], forbidden: [] },
+  ] },
+
+  // -- speak-memory-commitment (holdout) --
+  { name: 'who is picking up the cake', conversation: 'person1: ill pick up the cake from the bakery\nperson2: thanks\nperson3: youre the best\nperson2: so whos getting the cake', expect: 'speak', split: 'holdout', category: 'speak-memory-commitment', difficulty: 'medium', topic: 'person1', validators: [
+    { required: ['person1'], forbidden: [] },
+  ] },
+  { name: 'who has the tickets', conversation: 'person1: i already bought the tickets\nperson2: how much do i owe you\nperson1: dont worry about it\nperson3: wait who has the tickets', expect: 'speak', split: 'holdout', category: 'speak-memory-commitment', difficulty: 'medium', topic: 'person1', validators: [
+    { required: ['person1'], forbidden: [] },
+  ] },
+
+  // -- speak-memory-personal (holdout) --
+  { name: 'vegetarian recall', conversation: 'person1: im vegetarian so no meat for me\nperson2: right right\nperson3: lets get pizza then\nperson2: should we get pepperoni\nperson3: can everyone eat pepperoni', expect: 'speak', split: 'holdout', category: 'speak-memory-personal', difficulty: 'hard', topic: 'vegetarian', validators: [
+    { required: ['vegetarian'], forbidden: [] },
+  ] },
+  { name: 'birthday recall', conversation: 'person1: my birthday is march 15th btw\nperson2: noted\nperson3: well plan something\nperson2: when is person1s birthday again', expect: 'speak', split: 'holdout', category: 'speak-memory-personal', difficulty: 'medium', topic: 'march 15', validators: [
+    { required: ['march'], forbidden: [] },
+    { required: ['15'], forbidden: [] },
+  ] },
+
+  // ============================================================
+  // ADDITIONAL HOLDOUT EXPANSION (existing categories)
+  // ============================================================
+
+  // -- speak-correction (holdout additions) --
+  { name: 'wrong planet count', conversation: 'person1: there are 9 planets in the solar system\nperson2: yeah sounds right', expect: 'speak', split: 'holdout', category: 'speak-correction', difficulty: 'medium', topic: '8', validators: [
+    { required: ['8'], forbidden: [] },
+  ] },
+  { name: 'wrong inventor', conversation: 'person1: einstein invented the light bulb right\nperson2: i think so yeah', expect: 'speak', split: 'holdout', category: 'speak-correction', difficulty: 'hard', topic: 'edison', validators: [
+    { required: ['edison'], forbidden: [] },
+  ] },
+  { name: 'wrong continent', conversation: 'person1: brazil is in africa\nperson2: makes sense its warm there', expect: 'speak', split: 'holdout', category: 'speak-correction', difficulty: 'easy', topic: 'south america', validators: [
+    { required: ['south america'], forbidden: [] },
+  ] },
+
+  // -- silent-social (holdout additions) --
+  { name: 'travel planning opinions', conversation: 'person1: should we go to spain or italy\nperson2: spain for sure\nperson3: italy has better food\nperson1: fair point', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'medium' },
+  { name: 'movie night debate', conversation: 'person1: horror or comedy tonight\nperson2: horror always\nperson3: no way comedy please\nperson1: lets vote', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'easy' },
+  { name: 'fitness banter', conversation: 'person1: just ran 5k in 25 minutes\nperson2: show off\nperson3: i ran to the fridge does that count\nperson1: absolutely', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'easy' },
+
+  // -- adversarial (holdout additions) --
+  { name: 'wrong fact as hypothetical', conversation: 'person1: imagine if the earth was flat though\nperson2: lol the government would still tax us\nperson3: probably more honestly', expect: 'silent', split: 'holdout', category: 'adversarial', difficulty: 'adversarial' },
+  { name: 'correct fact stated confidently wrong', conversation: 'person1: wait the moon landing was fake right\nperson2: no dude thats been debunked a million times\nperson1: oh yeah youre right nvm', expect: 'silent', split: 'holdout', category: 'adversarial', difficulty: 'adversarial' },
+
+  // -- silent-corrected (holdout additions) --
+  { name: 'already corrected with humor', conversation: 'person1: sharks are mammals right\nperson2: lol no theyre fish\nperson1: wait really\nperson2: yeah 100%', expect: 'silent', split: 'holdout', category: 'silent-corrected', difficulty: 'hard' },
+
+  // -- speak-unanswered (holdout additions) --
+  { name: 'unanswered chemistry', conversation: 'person1: whats the chemical formula for table salt\nperson2: uh good question\nperson3: no idea', expect: 'speak', split: 'holdout', category: 'speak-unanswered', difficulty: 'easy', topic: 'NaCl', validators: [
+    { required: ['nacl'], forbidden: [] },
+  ] },
+  { name: 'unanswered geography', conversation: 'person1: whats the longest river in the world\nperson2: amazon maybe?\nperson3: idk', expect: 'speak', split: 'holdout', category: 'speak-unanswered', difficulty: 'medium', topic: 'nile', validators: [
+    { required: ['nile'], forbidden: [] },
+  ] },
+
+  // -- speak-direct (holdout additions) --
+  { name: 'phila settle debate', conversation: 'person1: is a tomato a fruit or vegetable\nperson2: vegetable obviously\nperson1: phila what do you think', expect: 'speak', split: 'holdout', category: 'speak-direct', difficulty: 'easy', topic: 'fruit' },
+  { name: 'phila recommendation', conversation: 'person1: phila, any good book recommendations?', expect: 'speak', split: 'holdout', category: 'speak-direct', difficulty: 'easy', topic: 'book' },
+
+  // -- silent-logistics (holdout additions) --
+  { name: 'ride sharing sorted', conversation: 'person1: who needs a ride to the airport\nperson2: me please\nperson1: ok ill pick you up at 5am\nperson2: perfect thanks', expect: 'silent', split: 'holdout', category: 'silent-logistics', difficulty: 'easy' },
+  { name: 'gift coordination', conversation: 'person1: lets all chip in $20 for the gift\nperson2: sending now\nperson3: done\nperson1: perfect thats everyone', expect: 'silent', split: 'holdout', category: 'silent-logistics', difficulty: 'easy' },
+
+  // -- silent-social (holdout additions) --
+  { name: 'weekend brunch plans', conversation: 'person1: brunch sunday?\nperson2: yes please\nperson3: im in\nperson1: the usual spot?', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'easy' },
+  { name: 'concert excitement', conversation: 'person1: just got front row tickets\nperson2: NO WAY\nperson3: im so jealous\nperson1: gonna be insane', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'easy' },
+  { name: 'weather small talk', conversation: 'person1: finally sunny today\nperson2: about time\nperson3: perfect for a walk\nperson1: exactly my plan', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'easy' },
+  { name: 'dating advice', conversation: 'person1: should i double text\nperson2: absolutely not\nperson3: wait at least 24 hours\nperson1: ugh fine', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'medium' },
+  { name: 'apartment hunting', conversation: 'person1: found a place for $1200\nperson2: in this economy thats amazing\nperson3: where\nperson1: downtown near the park\nperson2: take it immediately', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'medium' },
+  { name: 'late night ramble', conversation: 'person1: do fish know theyre wet\nperson2: bro\nperson3: go to sleep\nperson1: no seriously think about it', expect: 'silent', split: 'holdout', category: 'silent-social', difficulty: 'medium' },
+
+  // -- speak-correction (holdout additions) --
+  { name: 'wrong population', conversation: 'person1: australia has like 500 million people right\nperson2: yeah its huge', expect: 'speak', split: 'holdout', category: 'speak-correction', difficulty: 'medium', topic: '26 million', validators: [
+    { required: ['26'], forbidden: [] },
+    { required: ['million'], forbidden: [] },
+  ] },
+
+  // -- adversarial (holdout additions) --
+  { name: 'question about opinion not fact', conversation: 'person1: whats the best programming language\nperson2: no clue depends on what youre doing\nperson3: yeah hard to say', expect: 'silent', split: 'holdout', category: 'adversarial', difficulty: 'adversarial' },
+  { name: 'factual-sounding but subjective', conversation: 'person1: coffee is healthier than tea right\nperson2: i mean it depends\nperson3: both are fine', expect: 'silent', split: 'holdout', category: 'adversarial', difficulty: 'adversarial' },
 ]
 
 // -- Helper functions --

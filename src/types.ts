@@ -42,6 +42,26 @@ export interface ConversationContext {
   groupNotes: string | null
 }
 
+export type GateMode = 'monolithic' | 'hierarchical'
+
+export type Classification = 'social' | 'claim' | 'question' | 'memory-query'
+
+export type HierarchicalDecision = GateDecision & {
+  stages: string[]
+  classification?: Classification
+}
+
+export type FactType = 'logistics' | 'commitment' | 'preference' | 'personal'
+
+export interface ExtractedFact {
+  chatId: string
+  type: FactType
+  key: string
+  value: string
+  messageId: number
+  timestamp: number
+}
+
 export interface PhilaConfig {
   model: string
   ollamaUrl: string
@@ -49,4 +69,5 @@ export interface PhilaConfig {
   memoryWindowSize: number
   dbPath: string
   pruneAfterDays: number
+  gateMode: GateMode
 }

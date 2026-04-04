@@ -56,7 +56,7 @@ The gate is the entire product. Everything else is plumbing.
 **Fine-tune data** (`test/research-reports/finetune-data/`):
 - `train-v2.jsonl` — 1,138 training examples (755 base + 150 speak-unanswered + 153 silent-sarcasm + 80 near-miss)
 - `Modelfile-v2-deploy` — Ollama Modelfile for gate use (temperature=0.1, topP=0.52, numPredict=64 — GPU-optimized)
-- `phila-ft-v2.Q4_K_M.gguf` — Fine-tuned model weights (gitignored, 1.93GB)
+- `phila-ft-v2.Q4_K_M.gguf` — Fine-tuned model weights (gitignored, 1.93GB). Download from [HuggingFace](https://huggingface.co/onblueroses/phila-ft-v2-GGUF).
 
 ## Key invariants
 
