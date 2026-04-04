@@ -6,6 +6,7 @@
 //   node --experimental-strip-types test/benchmark.ts --runs 10 --temperature 0.3
 //   node --experimental-strip-types test/benchmark.ts --sweep
 //   node --experimental-strip-types test/benchmark.ts --model llama3.2:1b
+//   node --experimental-strip-types test/benchmark.ts --scenarios path/to/external.json
 //
 // Requires PHILA_OLLAMA_URL or localhost Ollama running.
 
@@ -17,7 +18,8 @@ import { evaluateDual } from '../src/gate-dual.ts'
 import { Memory } from '../src/memory.ts'
 import { extractFacts } from '../src/memory-extract.ts'
 import type { GroupProfile, PhilaConfig, ConversationContext, ChatMessage } from '../src/types.ts'
-import { SCENARIOS, holdoutScenarios } from './scenarios.ts'
+import { SCENARIOS as BUILTIN_SCENARIOS, holdoutScenarios } from './scenarios.ts'
+import { readFileSync } from 'node:fs'
 import { confusionMatrix, formatConfusionMatrix, bootstrapCI } from './eval-shared.ts'
 import type { ConfusionMatrix } from './eval-shared.ts'
 import { infer } from './inference.ts'
@@ -40,6 +42,7 @@ const { values: args } = parseArgs({
     'top-p': { type: 'string', default: '0.52' },
     seed: { type: 'string' },
     gate: { type: 'string', default: 'monolithic' },
+    scenarios: { type: 'string' },
     sweep: { type: 'boolean', default: false },
     'model-sweep': { type: 'boolean', default: false },
     out: { type: 'string' },
@@ -47,6 +50,26 @@ const { values: args } = parseArgs({
 })
 
 const BASE_URL = process.env['PHILA_OLLAMA_URL'] ?? 'http://localhost:11434'
+
+// Load external scenarios if --scenarios flag is set, otherwise use built-in
+function loadScenarios() {
+  if (args.scenarios) {
+    const raw = readFileSync(args.scenarios, 'utf-8')
+    const external = JSON.parse(raw) as Array<{ name: string; conversation: string; expect: string; category?: string; difficulty?: string; topic?: string }>
+    console.log(`loaded ${external.length} external scenarios from ${args.scenarios}`)
+    return external.map(s => ({
+      name: s.name,
+      conversation: s.conversation,
+      expect: s.expect as 'silent' | 'speak',
+      split: 'holdout' as const,
+      category: (s.category ?? 'unknown') as any,
+      difficulty: (s.difficulty ?? 'medium') as any,
+      topic: s.topic,
+    }))
+  }
+  return BUILTIN_SCENARIOS
+}
+const SCENARIOS = loadScenarios()
 
 // -- Timed inference wrapper --
 
@@ -167,23 +190,24 @@ async function runDualBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
   const mem = new Memory({ ...philaConfig, dbPath: ':memory:' })
   const results: ScenarioResult[] = []
 
-  for (const scenario of SCENARIOS) {
+  for (const [si, scenario] of SCENARIOS.entries()) {
     const result: ScenarioResult = { name: scenario.name, expect: scenario.expect, passes: 0, fails: 0, errors: 0, latencies: [] }
-    const messages = conversationToMessages(scenario.conversation)
+    const scenarioChatId = `bench-${si}`
+    const messages = conversationToMessages(scenario.conversation).map(m => ({ ...m, chatId: scenarioChatId }))
+    const scenarioProfile: GroupProfile = { chatId: scenarioChatId, speakBias: 0.0, updatedAt: Date.now() }
 
-    // Pre-extract facts from the conversation so Pass 2 has something to work with
-    // (simulates facts having been extracted on prior batches)
+    // Pre-extract facts from THIS conversation only (isolated per scenario)
     try {
       const facts = await extractFacts(messages, philaConfig)
       for (const fact of facts) {
-        mem.storeFact({ chatId: 'bench', type: fact.type, key: fact.key, value: fact.value, messageId: 0, timestamp: Date.now() })
+        mem.storeFact({ chatId: scenarioChatId, type: fact.type, key: fact.key, value: fact.value, messageId: 0, timestamp: Date.now() })
       }
     } catch { /* extraction failure is non-fatal */ }
 
     for (let i = 0; i < config.runs; i++) {
       try {
         const start = performance.now()
-        const decision = await evaluateDual(messages, messages, profile, philaConfig, ctx, mem)
+        const decision = await evaluateDual(messages, messages, scenarioProfile, philaConfig, ctx, mem)
         const latencyMs = Math.round(performance.now() - start)
         result.latencies.push(latencyMs)
 
