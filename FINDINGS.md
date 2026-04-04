@@ -1346,9 +1346,12 @@ False-speaks halved from 6 to 3. Precision up to 0.976. The relaxed regex caught
 | Hier v2 binary+mono | 77.9% | 1.000 | 0.404 | 0.575 | 0 | 1798ms |
 | Dual v1 (base) | 86.4% | 0.971 | 0.654 | 0.782 | 3 | 4928ms |
 | Dual v2 regex (ft-v2) | 90.5% | 0.953 | 0.782 | 0.859 | 6 | 3372ms |
-| **Dual v3 relaxed (ft-v2)** | **91.4%** | **0.976** | **0.788** | **0.872** | **3** | 3790ms |
+| Dual v3 relaxed (ft-v2) | 91.4% | 0.976 | 0.788 | 0.872 | 3 | 3790ms |
+| **Dual v4 isolated (ft-v2)** | **91.7%** | **0.976** | **0.795** | **0.876** | **3** | **3058ms** |
 
-Seven iterations, each informed by the failure analysis of the previous one. The final configuration (dual-pass with regex gate + fine-tuned model) beats the monolithic baseline by +5pp accuracy and +15.3pp recall while maintaining 0.976 precision.
+Eight iterations, each driven by failure analysis of the previous. From 86.4% monolithic to 91.7% dual-pass (+5.3pp accuracy, +16pp recall) with a genuinely new capability (memory-grounded recall from conversation history).
+
+v3->v4 fix: benchmark shared one chatId for all scenarios, polluting the fact store. Per-scenario isolation fixed "who is bringing what" (0%->100% after 6 iterations of failure) and eliminated false-speaks from cross-scenario fact contamination. Latency dropped 700ms from smaller fact stores.
 
 ### Eval improvements in v3
 
