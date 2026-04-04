@@ -1285,10 +1285,40 @@ Most memory-grounded scenarios reach `p2:memory-check` (facts are extracted and 
 **Latency:**
 The dual-pass is expensive: ~5s avg because every scenario runs extraction + Pass 1 + Pass 2. In production, extraction runs in the background (fire-and-forget after gate decision), so real-world latency is Pass 1 (~530ms) for scenarios where Pass 1 speaks, and Pass 1 + Pass 2 (~1000ms) for scenarios where Pass 1 is silent and facts exist. The benchmark is pessimistic because it runs extraction synchronously.
 
-**Next iteration targets:**
-1. Make MEMORY_CHECK_SYSTEM more assertive with examples (like the monolithic gate has)
-2. Tighten extraction to skip trivially social messages (regex pre-filter)
-3. Reduce false-speaks by making Pass 2 only trigger when the question explicitly references earlier context
+### Dual-pass v2: regex gate + assertive prompt + phila-ft-v2 (140 scenarios, 3 runs)
+
+Two fixes applied: (1) regex gate blocks Pass 2 unless recent messages match memory-query patterns, (2) assertive memory prompt with concrete examples. Tested with the fine-tuned model.
+
+| Metric | Mono (base) | Dual v1 (base) | **Dual v2 (ft-v2)** |
+|--------|------------|----------------|-------------------|
+| Accuracy | 86.4% | 86.4% | **90.5%** |
+| Precision | 1.000 | 0.971 | 0.953 |
+| Recall | 0.635 | 0.654 | **0.782** |
+| Specificity | 1.000 | 0.989 | 0.977 |
+| FPR | 0.000 | 0.011 | 0.023 |
+| F1 | 0.776 | 0.782 | **0.859** |
+| Holdout CI | [77%, 93%] | [78%, 93%] | **[85.1%, 97.3%]** |
+| Avg latency | 613ms | 4928ms | 3372ms |
+
+The fine-tuned model + regex gate is the strongest configuration tested. Recall jumped from 0.635 to 0.782 (+14.7pp). The fine-tuned model catches many scenarios directly in Pass 1 that the base model missed, including "allergy recall" (0%->100%) and "which restaurant" (0%->100%).
+
+**Memory scenarios that now pass:**
+- "allergy recall" - Pass 1 (ft-v2) catches directly
+- "where is the event" - Pass 2 memory-recall
+- "what time is checkout" - Pass 2 memory-recall
+- "flight number recall" - Pass 1 (ft-v2) catches directly
+- "which restaurant" - Pass 1 (ft-v2) catches directly
+- "what time again" - Pass 1 (ft-v2) catches directly
+
+**Remaining failures (regex patterns):**
+Several memory scenarios fail because the regex gate requires `?` but casual chat drops question marks: "whos driving tomorrow", "who is picking up the cake", "so whos getting the cake". Fix: make `?` optional in patterns.
+
+**False-speaks (6 total):**
+- "gaming" - regex matched "what time" in "what time...like 9?" (proposal, not recall)
+- "question directed at specific person" - "what time does the store close" directed at person2
+- Other edge cases where regex + extraction found spurious facts
+
+**Next:** Make `?` optional in regex patterns to catch question-mark-less memory queries.
 
 ### Eval improvements in v3
 
