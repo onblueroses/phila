@@ -41,8 +41,9 @@ The gate is the entire product. Everything else is plumbing.
 - `finetune-eval.ts` — Three-part eval: holdout accuracy, full composite scoring, regression deep-dive. Use this to compare fine-tuned vs baseline.
 - `inference.ts` — Ollama inference wrapper used by all benchmark scripts
 
+**Research log**: `FINDINGS.md` at repo root — cumulative benchmark results and decisions. Read this for full experiment history.
+
 **Research pipeline** (`research/`):
-- `FINDINGS.md` — Cumulative research log at repo root. All benchmark results and decisions. Read this for full experiment history.
 - `gen-finetune-data.ts` — Generates labeled JSONL training data by category
 - `buried-thread-probe.ts` — Targeted probe of the hardest failure category
 - `gen-adversarial.ts`, `gen-prompt-mutations.ts` — LLM-assisted scenario/prompt generation
