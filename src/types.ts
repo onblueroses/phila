@@ -42,7 +42,7 @@ export interface ConversationContext {
   groupNotes: string | null
 }
 
-export type GateMode = 'monolithic' | 'hierarchical'
+export type GateMode = 'monolithic' | 'hierarchical' | 'dual'
 
 export type Classification = 'social' | 'claim' | 'question' | 'memory-query'
 

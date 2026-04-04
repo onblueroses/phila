@@ -13,6 +13,9 @@ import { parseArgs } from 'node:util'
 import { writeFileSync } from 'node:fs'
 import { buildSystemPrompt, parseDecision, buildConversation } from '../src/gate.ts'
 import { evaluateHierarchical } from '../src/gate-hierarchical.ts'
+import { evaluateDual } from '../src/gate-dual.ts'
+import { Memory } from '../src/memory.ts'
+import { extractFacts } from '../src/memory-extract.ts'
 import type { GroupProfile, PhilaConfig, ConversationContext, ChatMessage } from '../src/types.ts'
 import { SCENARIOS, holdoutScenarios } from './scenarios.ts'
 import { confusionMatrix, formatConfusionMatrix, bootstrapCI } from './eval-shared.ts'
@@ -154,6 +157,60 @@ async function runHierarchicalBenchmark(config: RunConfig): Promise<ScenarioResu
   return results
 }
 
+async function runDualBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
+  const profile: GroupProfile = { chatId: 'bench', speakBias: 0.0, updatedAt: Date.now() }
+  const philaConfig: PhilaConfig = {
+    model: config.model, ollamaUrl: config.ollamaUrl, batchWindowMs: 3000,
+    memoryWindowSize: 50, dbPath: ':memory:', pruneAfterDays: 7, gateMode: 'dual',
+  }
+  const ctx: ConversationContext = { correctionHint: false, messagesPerMinute: null, latestMessageHour: 14, groupNotes: null }
+  const mem = new Memory({ ...philaConfig, dbPath: ':memory:' })
+  const results: ScenarioResult[] = []
+
+  for (const scenario of SCENARIOS) {
+    const result: ScenarioResult = { name: scenario.name, expect: scenario.expect, passes: 0, fails: 0, errors: 0, latencies: [] }
+    const messages = conversationToMessages(scenario.conversation)
+
+    // Pre-extract facts from the conversation so Pass 2 has something to work with
+    // (simulates facts having been extracted on prior batches)
+    try {
+      const facts = await extractFacts(messages, philaConfig)
+      for (const fact of facts) {
+        mem.storeFact({ chatId: 'bench', type: fact.type, key: fact.key, value: fact.value, messageId: 0, timestamp: Date.now() })
+      }
+    } catch { /* extraction failure is non-fatal */ }
+
+    for (let i = 0; i < config.runs; i++) {
+      try {
+        const start = performance.now()
+        const decision = await evaluateDual(messages, messages, profile, philaConfig, ctx, mem)
+        const latencyMs = Math.round(performance.now() - start)
+        result.latencies.push(latencyMs)
+
+        if (decision.action === scenario.expect) {
+          result.passes++
+        } else {
+          result.fails++
+          if (i === 0) {
+            process.stdout.write(`    FAIL: expected=${scenario.expect} got=${decision.action} stages=${decision.stages.join('->')}\n`)
+          }
+        }
+      } catch (err) {
+        result.errors++
+        if (i === 0) process.stdout.write(`    ERROR: ${err instanceof Error ? err.message : String(err)}\n`)
+      }
+    }
+
+    results.push(result)
+    const rate = `${Math.round(result.passes / config.runs * 100)}%`
+    const avgMs = result.latencies.length ? Math.round(avg(result.latencies)) : '-'
+    process.stdout.write(`  ${pad(scenario.name, 40)} ${result.passes}/${config.runs}  ${pad(rate, 6)} ${avgMs}ms\n`)
+  }
+
+  mem.close()
+  return results
+}
+
 // -- Stats --
 
 function avg(nums: number[]): number { return nums.reduce((a, b) => a + b, 0) / nums.length }
@@ -255,9 +312,11 @@ async function main() {
     console.log(`model: ${config.model} | gate: ${gateMode} | t=${config.temperature} tp=${config.topP} np=${config.numPredict} | runs: ${config.runs}`)
     console.log()
 
-    const results = gateMode === 'hierarchical'
-      ? await runHierarchicalBenchmark(config)
-      : await runBenchmark(config)
+    const results = gateMode === 'dual'
+      ? await runDualBenchmark(config)
+      : gateMode === 'hierarchical'
+        ? await runHierarchicalBenchmark(config)
+        : await runBenchmark(config)
     const s = summarize(results, config)
 
     // Confusion matrix from scenario results
