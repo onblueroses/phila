@@ -115,6 +115,78 @@ export async function evaluate(
   }
 }
 
+// -- Confusion Matrix --
+
+export interface ConfusionMatrix {
+  truePositive: number   // correctly spoke
+  trueNegative: number   // correctly silent
+  falsePositive: number  // false-speak (spoke when should be silent)
+  falseNegative: number  // false-silent (silent when should speak)
+  precision: number      // TP / (TP + FP)
+  recall: number         // TP / (TP + FN)
+  specificity: number    // TN / (TN + FP)
+  falsePositiveRate: number  // FP / (FP + TN)
+  f1: number
+  accuracy: number
+}
+
+export function confusionMatrix(result: EvalResult): ConfusionMatrix {
+  const tp = result.correctSpeak
+  const tn = result.correctSilent
+  const fp = result.falseSpeak
+  const fn = result.falseSilent
+
+  const precision = tp + fp > 0 ? tp / (tp + fp) : 1
+  const recall = tp + fn > 0 ? tp / (tp + fn) : 1
+  const specificity = tn + fp > 0 ? tn / (tn + fp) : 1
+  const falsePositiveRate = tn + fp > 0 ? fp / (tn + fp) : 0
+  const f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0
+  const accuracy = result.totalRuns > 0 ? (tp + tn) / result.totalRuns : 0
+
+  return { truePositive: tp, trueNegative: tn, falsePositive: fp, falseNegative: fn, precision, recall, specificity, falsePositiveRate, f1, accuracy }
+}
+
+export function formatConfusionMatrix(cm: ConfusionMatrix): string {
+  const lines = [
+    'confusion matrix:',
+    '                  predicted-speak  predicted-silent',
+    `  actual-speak         ${String(cm.truePositive).padStart(4)}            ${String(cm.falseNegative).padStart(4)}`,
+    `  actual-silent        ${String(cm.falsePositive).padStart(4)}            ${String(cm.trueNegative).padStart(4)}`,
+    '',
+    `  precision: ${cm.precision.toFixed(3)}  recall: ${cm.recall.toFixed(3)}  specificity: ${cm.specificity.toFixed(3)}  FPR: ${cm.falsePositiveRate.toFixed(3)}  F1: ${cm.f1.toFixed(3)}`,
+  ]
+  return lines.join('\n')
+}
+
+// -- Bootstrap Confidence Interval --
+
+export interface BootstrapCI {
+  lower: number
+  upper: number
+  mean: number
+}
+
+export function bootstrapCI(perScenarioScores: number[], nBootstrap = 10_000, alpha = 0.05): BootstrapCI {
+  const n = perScenarioScores.length
+  if (n === 0) return { lower: 0, upper: 0, mean: 0 }
+
+  const means: number[] = []
+  for (let i = 0; i < nBootstrap; i++) {
+    let sum = 0
+    for (let j = 0; j < n; j++) {
+      sum += perScenarioScores[Math.floor(Math.random() * n)]!
+    }
+    means.push(sum / n)
+  }
+  means.sort((a, b) => a - b)
+
+  const lo = Math.floor((alpha / 2) * nBootstrap)
+  const hi = Math.floor((1 - alpha / 2) * nBootstrap)
+  const mean = perScenarioScores.reduce((s, v) => s + v, 0) / n
+
+  return { lower: means[lo]!, upper: means[hi]!, mean }
+}
+
 // -- Paired t-test --
 
 export function pairedTTest(a: number[], b: number[]): { t: number; p: number } {

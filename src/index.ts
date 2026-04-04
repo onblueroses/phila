@@ -3,6 +3,7 @@ import type { Message } from '@photon-ai/imessage-kit'
 import closeWithGrace from 'close-with-grace'
 import { config } from './config.ts'
 import { evaluate, detectCorrection, computeMomentum, extractHour } from './gate.ts'
+import { evaluateHierarchical } from './gate-hierarchical.ts'
 import { Memory, detectFeedback } from './memory.ts'
 import { GateAction } from './types.ts'
 import type { ChatMessage, ConversationContext } from './types.ts'
@@ -59,22 +60,26 @@ const feed = createBatcher(config.batchWindowMs, async (chatId, newMessages) => 
       groupNotes: memory.getGroupNotes(chatId) || null,
     }
 
-    const decision = await evaluate(recent, profile, config, ctx)
+    const decision = config.gateMode === 'hierarchical'
+      ? await evaluateHierarchical(newMessages, profile, config, ctx, recent)
+      : await evaluate(recent, profile, config, ctx)
+
+    const stageTrace = 'stages' in decision ? ` [${(decision as { stages: string[] }).stages.join(' -> ')}]` : ''
 
     if (decision.action === GateAction.SPEAK) {
       const response = constrain(decision.response)
-      log(`speak (${decision.reason}) in ${chatId.slice(0, 8)}: ${response}`)
+      log(`speak (${decision.reason}) in ${chatId.slice(0, 8)}${stageTrace}: ${response}`)
       await sdk.send(chatId, response)
       memory.storeMessage({ chatId, sender: 'phila', text: response, timestamp: Date.now() })
     } else {
-      log(`silent in ${chatId.slice(0, 8)} (${newMessages.length} msgs)`)
+      log(`silent in ${chatId.slice(0, 8)} (${newMessages.length} msgs)${stageTrace}`)
     }
   } catch (err) {
     log(`error: ${err instanceof Error ? err.message : String(err)}`)
   }
 })
 
-log('starting...')
+log(`starting... (gate: ${config.gateMode})`)
 
 await sdk.startWatching({
   onGroupMessage: (msg) => {

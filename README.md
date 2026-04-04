@@ -114,6 +114,7 @@ What went into it:
 | Optimizer generations | 660+ |
 | Fine-tune training examples | 1,138 (across 4 targeted categories) |
 | Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16, 429 steps |
+| Fine-tuned model | [onblueroses/phila-ft-v2-GGUF](https://huggingface.co/onblueroses/phila-ft-v2-GGUF) |
 | Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
 
 ## social learning
@@ -156,10 +157,11 @@ Full research log and methodology: [FINDINGS.md](FINDINGS.md)
 
 ```bash
 # install ollama and pull the model
-ollama pull llama3.2  # base model, or use phila-ft-v2 if you have it
+ollama pull llama3.2  # base model works out of the box
 
-# to use the fine-tuned model: build from the GGUF
-# ollama create phila-ft-v2 -f test/research-reports/finetune-data/Modelfile-v2-deploy
+# to use the fine-tuned model (93% gate accuracy vs 88% base):
+# download from https://huggingface.co/onblueroses/phila-ft-v2-GGUF
+# then: ollama create phila-ft-v2 -f Modelfile
 
 # clone and install
 git clone https://github.com/onblueroses/phila.git && cd phila
