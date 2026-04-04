@@ -5,6 +5,20 @@ Updated as cycles complete. Raw cycle reports in `test/research-reports/` (gitig
 
 ---
 
+## Research Notes
+
+The error correction case broke four prompt iterations. A 3B model doesn't have enough reasoning to both detect a wrong fact and decide to speak. What finally worked: a concrete example in the system prompt showing exactly what a factual error looks like and how to respond. It now catches "the eiffel tower is in london" but misses subtler errors like "the boiling point of water is 50 degrees." Model size limitation, not a prompt problem.
+
+Simplifying the prompt made things worse. My instinct was to trim it down. But smaller models need more structure, not less. Priority ordering ("ALWAYS SPEAK for these, STAY SILENT for everything else") outperformed percentage-based framing ("stay silent 95% of the time"). Clear rules beat vibes.
+
+The third speak rule - answering unanswered questions - was the hardest to get right. A 3B model needs to recognize that "idk" means the question is still open. Abstract instructions didn't work. A concrete example in the prompt ("person1: whats the tallest mountain? / person2: idk / correct response: speak") was what made it click. Small models learn from examples, not descriptions.
+
+The parse-failure-to-silence default is load-bearing. The model sometimes wraps JSON in markdown fences, occasionally outputs malformed responses. Treating any unparseable output as silence means the worst failure mode is being too quiet, never too loud. For something sitting in your group chats, that's the right direction to fail.
+
+The train/holdout split caught a real behavioral gap: the model false-speaks on "already corrected" scenarios - when someone states a wrong fact and another person already corrected them, phila still piles on. A pre-gate heuristic now detects correction patterns ("actually", "nope", "that's wrong") and hints the model to check before correcting.
+
+---
+
 ## Cycle 1 — 2026-04-01
 
 Duration: 33 min | Models: gemma2:2b, qwen2.5:3b, phi3:mini, llama3.2 | 101 scenarios x 3 runs

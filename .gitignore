@@ -13,9 +13,9 @@ test/kaggle-kernel/
 test/kaggle-output/
 test/optimizer-output.txt
 .ruff_cache/
-test/research/state.json
-test/research/scenarios-research.ts
-test/research/overnight-state.json
+research/state.json
+research/scenarios-research.ts
+research/overnight-state.json
 test/research-reports/candidates/
 test/research-reports/rounds/
 

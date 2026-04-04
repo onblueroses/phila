@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util'
 import { execFileSync } from 'node:child_process'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
 
-import { buildSystemPrompt } from '../../src/gate.ts'
+import { buildSystemPrompt } from '../src/gate.ts'
 
 interface PromptMutation {
   name: string
@@ -229,7 +229,7 @@ const { values } = parseArgs({
 
 if (!values.out) {
   console.error(
-    'Usage: node --experimental-strip-types test/research/gen-prompt-mutations.ts --out <path> [--count N] [--failures <path>] [--base-prompt <path>]',
+    'Usage: node --experimental-strip-types research/gen-prompt-mutations.ts --out <path> [--count N] [--failures <path>] [--base-prompt <path>]',
   )
   process.exit(1)
 }

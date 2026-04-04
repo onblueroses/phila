@@ -23,9 +23,9 @@ import { parseArgs } from 'node:util'
 import { execFileSync } from 'node:child_process'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
 
-import { buildSystemPrompt } from '../../src/gate.ts'
-import { trainScenarios } from '../scenarios.ts'
-import type { Scenario } from '../scenarios.ts'
+import { buildSystemPrompt } from '../src/gate.ts'
+import { trainScenarios } from '../test/scenarios.ts'
+import type { Scenario } from '../test/scenarios.ts'
 
 interface TrainingRecord {
   messages: [
@@ -385,7 +385,7 @@ const { values } = parseArgs({
 
 if (!values.out) {
   console.error(
-    'Usage: node --experimental-strip-types test/research/gen-finetune-data.ts' +
+    'Usage: node --experimental-strip-types research/gen-finetune-data.ts' +
       ' --out <path> [--count N] [--category buried-thread|speak-unanswered|silent-sarcasm|general|all]' +
       ' [--validate] [--seed]',
   )

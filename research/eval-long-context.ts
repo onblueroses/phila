@@ -2,14 +2,14 @@
 // Builds conversations of increasing length, measures gate accuracy and latency degradation.
 //
 // Usage:
-//   node --experimental-strip-types test/research/eval-long-context.ts
-//   node --experimental-strip-types test/research/eval-long-context.ts --model phi3:mini --runs 3
+//   node --experimental-strip-types research/eval-long-context.ts
+//   node --experimental-strip-types research/eval-long-context.ts --model phi3:mini --runs 3
 
 import { parseArgs } from 'node:util'
 import { writeFileSync } from 'node:fs'
-import { buildSystemPrompt, parseDecision } from '../../src/gate.ts'
-import { GateAction } from '../../src/types.ts'
-import type { GroupProfile } from '../../src/types.ts'
+import { buildSystemPrompt, parseDecision } from '../src/gate.ts'
+import { GateAction } from '../src/types.ts'
+import type { GroupProfile } from '../src/types.ts'
 
 const { values: args } = parseArgs({
   options: {
