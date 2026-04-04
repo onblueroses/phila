@@ -1318,7 +1318,37 @@ Several memory scenarios fail because the regex gate requires `?` but casual cha
 - "question directed at specific person" - "what time does the store close" directed at person2
 - Other edge cases where regex + extraction found spurious facts
 
-**Next:** Make `?` optional in regex patterns to catch question-mark-less memory queries.
+### Dual-pass v3: relaxed regex + commitment example (140 scenarios, phila-ft-v2, 3 runs)
+
+Relaxed regex patterns (removed `?` requirement, added content-aware matching like `\bwhos\b.{0,20}driving`). Added commitment example to memory prompt.
+
+| Metric | Dual v2 (ft-v2) | **Dual v3 (ft-v2)** | Delta |
+|--------|----------------|-------------------|-------|
+| Accuracy | 90.5% | **91.4%** | +0.9pp |
+| Precision | 0.953 | **0.976** | +0.023 |
+| Recall | 0.782 | **0.788** | +0.006 |
+| Specificity | 0.977 | **0.989** | +0.012 |
+| F1 | 0.859 | **0.872** | +0.013 |
+| False-speaks | 6 | **3** | -3 |
+| Holdout CI | [85.1%, 97.3%] | [83.8%, 95.9%] | similar |
+
+False-speaks halved from 6 to 3. Precision up to 0.976. The relaxed regex caught "where are we meeting" (first time ever passing) and "birthday recall" while reducing false triggers on social scenarios.
+
+**New passes in v3:** "where are we meeting" (Pass 2 memory), "vegetarian recall" (Pass 1 ft-v2), "birthday recall" (Pass 1 ft-v2), "wrong population" (Pass 1 ft-v2).
+
+**Complete iteration history (140 scenarios, llama3.2 unless noted):**
+
+| Config | Acc | Prec | Recall | F1 | FP | Avg lat |
+|--------|-----|------|--------|-----|-----|---------|
+| Monolithic (base) | 86.4% | 1.000 | 0.635 | 0.776 | 0 | 613ms |
+| Hier v1 4-way np=4 | 71.9% | 0.932 | 0.263 | 0.410 | 3 | 808ms |
+| Hier v1 4-way np=8 | 69.3% | 0.909 | 0.192 | 0.317 | 3 | 1032ms |
+| Hier v2 binary+mono | 77.9% | 1.000 | 0.404 | 0.575 | 0 | 1798ms |
+| Dual v1 (base) | 86.4% | 0.971 | 0.654 | 0.782 | 3 | 4928ms |
+| Dual v2 regex (ft-v2) | 90.5% | 0.953 | 0.782 | 0.859 | 6 | 3372ms |
+| **Dual v3 relaxed (ft-v2)** | **91.4%** | **0.976** | **0.788** | **0.872** | **3** | 3790ms |
+
+Seven iterations, each informed by the failure analysis of the previous one. The final configuration (dual-pass with regex gate + fine-tuned model) beats the monolithic baseline by +5pp accuracy and +15.3pp recall while maintaining 0.976 precision.
 
 ### Eval improvements in v3
 
