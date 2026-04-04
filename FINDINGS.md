@@ -1150,7 +1150,79 @@ The architecture is sound. Specificity (0.989) proves Stage 1 correctly identifi
 2. **Fine-tune a classification adapter** - the 3B model with a few hundred labeled classification examples should do much better
 3. **Two-word output format** - have Stage 1 output "category: social" which forces a reasoning token before the label
 
-Next step: test numPredict=8 and numPredict=12 for Stage 1 and measure the accuracy/latency tradeoff.
+### Iteration: numPredict=8
+
+Hypothesis: 4 tokens wasn't enough for the model to "think" before committing to a class. Bumped to 8.
+
+Result: **worse**. Accuracy dropped from 71.9% to 69.3%, recall from 0.263 to 0.192. More tokens didn't help - the model still defaults to "social" when uncertain. But a new pattern emerged: scenarios that DID reach Stage 2 (`s1:claim->s2:decide`) still returned silent. The Stage 2 prompts were too stripped down - they lacked the examples and persona that make the monolithic gate effective.
+
+### Iteration: binary filter + monolithic fallback (v2 architecture)
+
+The 4-way classification was asking too much of Stage 1, and the stripped Stage 2 prompts were too weak. New approach: Stage 1 answers a simpler binary question ("social or attention?"), and Stage 2 IS the full monolithic prompt.
+
+The insight: the monolithic gate is 94.1% accurate. We shouldn't try to improve on it for the 5% case - we should keep it and only decompose the fast-exit path for the 95% social case.
+
+```
+Stage 0 (rule-based): direct address -> full monolithic prompt
+Stage 1 (LLM, numPredict=8): "social" or "attention"? (binary, simpler for 3B)
+  - social -> SILENT (fast exit, ~270ms)
+  - attention -> Stage 2
+Stage 2 (LLM, full monolithic prompt): the proven gate with all rules + examples
+```
+
+This should give us: fast exit for social (~270ms), full monolithic accuracy for non-social (~94.1%), and no regression on the speak path because Stage 2 IS the monolithic gate.
+
+Result (llama3.2, 3 runs, 140 scenarios):
+
+| Metric | Monolithic | Hier. v1 (4-way, np=4) | Hier. v1 (4-way, np=8) | Hier. v2 (binary+mono) |
+|--------|-----------|----------------------|----------------------|----------------------|
+| Accuracy | **94.1%** | 71.9% | 69.3% | 77.9% |
+| Precision | - | 0.932 | 0.909 | **1.000** |
+| Recall | - | 0.263 | 0.192 | 0.404 |
+| Specificity | - | 0.989 | 0.989 | **1.000** |
+| FPR | - | 0.011 | 0.011 | **0.000** |
+| F1 | - | 0.410 | 0.317 | 0.575 |
+| Avg latency | 536ms | 808ms | 1032ms | 1798ms |
+| P50 latency | 364ms | 404ms | 429ms | 451ms |
+
+v2 is strictly better than v1: perfect precision, zero false-speaks, and recall up from 0.263 to 0.404. But it still misses 60% of speak-worthy scenarios because Stage 1 classifies them as "social" before the monolithic prompt gets a chance.
+
+Key observations from the Stage traces:
+- Scenarios that reach Stage 2 (monolithic) behave correctly - the monolithic prompt works
+- The bottleneck is the binary "social or attention?" classifier at numPredict=8
+- Some obviously wrong facts ("brazil is in africa") get classified as "social"
+- The model can't reliably distinguish factual claims from social chatter in 8 tokens
+
+### Conclusion: decomposition hurts accuracy at 3B scale
+
+The monolithic gate works because classification and reasoning happen in one pass. The model sees "the eiffel tower is in london" and simultaneously recognizes (a) this is a factual claim, (b) it's wrong, and (c) here's the correction. Splitting this into "is this a claim?" then "is it wrong?" loses the interconnection that 3B models rely on.
+
+**What we learned:**
+1. A 3B model can't do reliable binary classification of "social vs needs-attention" at numPredict=4 or 8. It defaults to "social" when uncertain, which is safe but suppresses real speak triggers.
+2. Stripped-down Stage 2 prompts fail because they lack the examples and persona that teach the 3B model what a good response looks like. Using the full monolithic prompt as Stage 2 fixes this.
+3. The latency win on social scenarios is real (~270ms vs ~390ms) but the accuracy cost (~16pp) is not worth it for the current use case.
+4. Perfect precision (1.000) and zero false-speaks (FPR=0.000) in v2 show that the architecture is excessively cautious rather than fundamentally broken.
+
+### Next: additive dual-pass architecture
+
+Instead of decomposing the monolithic gate, augment it. Keep the proven gate as Pass 1, add a memory-recall specialist as Pass 2:
+
+```
+Pass 1: Monolithic gate (unchanged, proven 94.1%)
+  -> SPEAK? -> done, send response (~530ms)
+  -> SILENT? -> Pass 2
+
+Pass 2: Memory-recall check (only when Pass 1 said SILENT)
+  "Is someone asking about something from earlier in this conversation?"
+  -> NO? -> stay SILENT (done, ~1000ms total)
+  -> YES? -> retrieve facts from store, generate response (~1500ms total)
+```
+
+Why this is better than decomposition:
+- **Zero regression risk**: Pass 1 IS the current gate, byte-for-byte unchanged
+- **Additive capability**: memory-grounded queries are NEW functionality
+- **No classification bottleneck**: we don't need the 3B to classify in 8 tokens
+- **Honest latency profile**: ~530ms for everything that works now, ~1000-1500ms for memory queries (new capability with no baseline to regress against)
 
 ### Eval improvements in v3
 

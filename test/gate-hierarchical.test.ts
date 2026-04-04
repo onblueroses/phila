@@ -2,7 +2,7 @@ import { describe, it } from 'node:test'
 import * as assert from 'node:assert/strict'
 
 // Import the exported functions we can test without Ollama
-import { parseStage1, detectDirectAddress } from '../src/gate-hierarchical.ts'
+import { parseStage1, parseFilter, detectDirectAddress } from '../src/gate-hierarchical.ts'
 import type { Classification, GroupProfile, ConversationContext, ChatMessage } from '../src/types.ts'
 
 function msg(text: string): ChatMessage {
@@ -10,39 +10,28 @@ function msg(text: string): ChatMessage {
 }
 
 describe('parseStage1', () => {
-  it('parses "social" correctly', () => {
+  it('parses "social" as social', () => {
     assert.equal(parseStage1('social'), 'social')
   })
 
-  it('parses "claim" correctly', () => {
-    assert.equal(parseStage1('claim'), 'claim')
+  it('parses "attention" as claim', () => {
+    assert.equal(parseStage1('attention'), 'claim')
   })
 
-  it('parses "question" correctly', () => {
-    assert.equal(parseStage1('question'), 'question')
-  })
-
-  it('parses "memory" as memory-query', () => {
-    assert.equal(parseStage1('memory'), 'memory-query')
+  it('non-attention words default to social', () => {
+    // Binary filter: only "attention" triggers non-social path
+    assert.equal(parseStage1('claim'), 'social')
+    assert.equal(parseStage1('question'), 'social')
   })
 
   it('handles uppercase', () => {
     assert.equal(parseStage1('SOCIAL'), 'social')
-    assert.equal(parseStage1('CLAIM'), 'claim')
-    assert.equal(parseStage1('QUESTION'), 'question')
-    assert.equal(parseStage1('MEMORY'), 'memory-query')
+    assert.equal(parseStage1('ATTENTION'), 'claim')
   })
 
   it('handles whitespace and newlines', () => {
     assert.equal(parseStage1('  social  '), 'social')
-    assert.equal(parseStage1('\nclaim\n'), 'claim')
-    assert.equal(parseStage1(' question '), 'question')
-  })
-
-  it('handles preamble text by stripping non-alpha', () => {
-    // Model might output "I think this is social" - after stripping non-alpha
-    // we get "ithinkthisissocial" which doesn't match, defaults to social
-    assert.equal(parseStage1('I think social'), 'social')
+    assert.equal(parseStage1('\nattention\n'), 'claim')
   })
 
   it('defaults garbage to social (safe default)', () => {
@@ -53,8 +42,32 @@ describe('parseStage1', () => {
   })
 
   it('handles markdown-fenced responses', () => {
-    // After stripping non-alpha, "```social```" becomes "social"
     assert.equal(parseStage1('```social```'), 'social')
+  })
+})
+
+describe('parseFilter', () => {
+  it('parses "social" correctly', () => {
+    assert.equal(parseFilter('social'), 'social')
+  })
+
+  it('parses "attention" correctly', () => {
+    assert.equal(parseFilter('attention'), 'attention')
+  })
+
+  it('handles preamble containing "attention"', () => {
+    assert.equal(parseFilter('I think this needs attention'), 'attention')
+  })
+
+  it('defaults to social', () => {
+    assert.equal(parseFilter(''), 'social')
+    assert.equal(parseFilter('claim'), 'social')
+    assert.equal(parseFilter('question'), 'social')
+  })
+
+  it('handles uppercase', () => {
+    assert.equal(parseFilter('ATTENTION'), 'attention')
+    assert.equal(parseFilter('SOCIAL'), 'social')
   })
 })
 
