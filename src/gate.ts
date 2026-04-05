@@ -1,40 +1,59 @@
-import { chat } from './ollama.ts'
-import { GateAction } from './types.ts'
-import type { ChatMessage, ConversationContext, GateDecision, GroupProfile, PhilaConfig } from './types.ts'
+import { chat } from "./ollama.ts";
+import type {
+	ChatMessage,
+	ConversationContext,
+	GateDecision,
+	GroupProfile,
+	PhilaConfig,
+} from "./types.ts";
+import { GateAction } from "./types.ts";
 
-const SILENT: GateDecision = { action: GateAction.SILENT }
+const SILENT: GateDecision = { action: GateAction.SILENT };
 
-export function buildSystemPrompt(profile: GroupProfile, ctx?: ConversationContext): string {
-  let biasLine = ''
-  const b = profile.speakBias
-  if (b <= -0.15) {
-    biasLine = '\nthis group strongly prefers you stay silent. only speak when directly addressed.\n'
-  } else if (b <= -0.05) {
-    biasLine = '\nthis group prefers you stay quiet. only speak for rules 1 and 2.\n'
-  } else if (b > 0.07) {
-    biasLine = '\nthis group appreciates your contributions. feel comfortable sharing when relevant.\n'
-  } else if (b > 0.03) {
-    biasLine = '\nthis group is open to your input. speak up when you can help.\n'
-  }
+export function buildSystemPrompt(
+	profile: GroupProfile,
+	ctx?: ConversationContext,
+): string {
+	let biasLine = "";
+	const b = profile.speakBias;
+	if (b <= -0.15) {
+		biasLine =
+			"\nthis group strongly prefers you stay silent. only speak when directly addressed.\n";
+	} else if (b <= -0.05) {
+		biasLine =
+			"\nthis group prefers you stay quiet. only speak for rules 1 and 2.\n";
+	} else if (b > 0.07) {
+		biasLine =
+			"\nthis group appreciates your contributions. feel comfortable sharing when relevant.\n";
+	} else if (b > 0.03) {
+		biasLine =
+			"\nthis group is open to your input. speak up when you can help.\n";
+	}
 
-  let contextLines = ''
-  if (ctx) {
-    if (ctx.correctionHint) {
-      contextLines += '\nnote: someone may have already corrected an error in this conversation. check before correcting.\n'
-    }
-    if (ctx.messagesPerMinute != null && ctx.messagesPerMinute > 5) {
-      contextLines += '\nconversation is very active right now. be extra cautious about speaking.\n'
-    }
-    if (ctx.latestMessageHour != null && (ctx.latestMessageHour >= 23 || ctx.latestMessageHour < 7)) {
-      contextLines += "\nit's late at night. only speak if directly addressed (rule 1).\n"
-    }
-  }
+	let contextLines = "";
+	if (ctx) {
+		if (ctx.correctionHint) {
+			contextLines +=
+				"\nnote: someone may have already corrected an error in this conversation. check before correcting.\n";
+		}
+		if (ctx.messagesPerMinute != null && ctx.messagesPerMinute > 5) {
+			contextLines +=
+				"\nconversation is very active right now. be extra cautious about speaking.\n";
+		}
+		if (
+			ctx.latestMessageHour != null &&
+			(ctx.latestMessageHour >= 23 || ctx.latestMessageHour < 7)
+		) {
+			contextLines +=
+				"\nit's late at night. only speak if directly addressed (rule 1).\n";
+		}
+	}
 
-  const notesBlock = ctx?.groupNotes
-    ? `\ngroup context (things you know about this chat):\n${ctx.groupNotes}\n`
-    : ''
+	const notesBlock = ctx?.groupNotes
+		? `\ngroup context (things you know about this chat):\n${ctx.groupNotes}\n`
+		: "";
 
-  return `you are phila, a member of a group chat. your name is phila.
+	return `you are phila, a member of a group chat. your name is phila.
 your default is silence - you only speak when it matters.
 ${biasLine}${contextLines}${notesBlock}
 ALWAYS SPEAK (these override silence):
@@ -71,74 +90,85 @@ style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "h
 respond with ONLY json, no other text:
 {"action":"silent"}
 or
-{"action":"speak","reason":"why","response":"your message"}`
+{"action":"speak","reason":"why","response":"your message"}`;
 }
 
 export function parseDecision(raw: string): GateDecision {
-  // Strip markdown fences, then extract first JSON object if surrounded by prose
-  let cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, '').trim()
-  if (!cleaned.startsWith('{')) {
-    const start = cleaned.indexOf('{')
-    const end = cleaned.lastIndexOf('}')
-    if (start !== -1 && end > start) cleaned = cleaned.slice(start, end + 1)
-  }
+	// Strip markdown fences, then extract first JSON object if surrounded by prose
+	let cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, "").trim();
+	if (!cleaned.startsWith("{")) {
+		const start = cleaned.indexOf("{");
+		const end = cleaned.lastIndexOf("}");
+		if (start !== -1 && end > start) cleaned = cleaned.slice(start, end + 1);
+	}
 
-  try {
-    const parsed = JSON.parse(cleaned) as { action?: string; reason?: string; response?: string }
-    if (parsed.action === GateAction.SPEAK && parsed.reason && parsed.response) {
-      return { action: GateAction.SPEAK, reason: parsed.reason, response: parsed.response }
-    }
-    return SILENT
-  } catch {
-    return SILENT
-  }
+	try {
+		const parsed = JSON.parse(cleaned) as {
+			action?: string;
+			reason?: string;
+			response?: string;
+		};
+		if (
+			parsed.action === GateAction.SPEAK &&
+			parsed.reason &&
+			parsed.response
+		) {
+			return {
+				action: GateAction.SPEAK,
+				reason: parsed.reason,
+				response: parsed.response,
+			};
+		}
+		return SILENT;
+	} catch {
+		return SILENT;
+	}
 }
 
-const CORRECTION_PATTERN = /\b(actually|nope|that'?s wrong|that'?s not right|no it'?s|it'?s actually|correction)\b/i
+const CORRECTION_PATTERN =
+	/\b(actually|nope|that'?s wrong|that'?s not right|no it'?s|it'?s actually|correction)\b/i;
 
 export function detectCorrection(messages: ChatMessage[]): boolean {
-  for (let i = 1; i < messages.length; i++) {
-    if (!CORRECTION_PATTERN.test(messages[i].text)) continue
-    // Look back up to 3 messages for the claim being corrected
-    const lookback = Math.max(0, i - 3)
-    for (let j = i - 1; j >= lookback; j--) {
-      if (messages[j].sender !== messages[i].sender) return true
-    }
-  }
-  return false
+	for (let i = 1; i < messages.length; i++) {
+		if (!CORRECTION_PATTERN.test(messages[i].text)) continue;
+		// Look back up to 3 messages for the claim being corrected
+		const lookback = Math.max(0, i - 3);
+		for (let j = i - 1; j >= lookback; j--) {
+			if (messages[j].sender !== messages[i].sender) return true;
+		}
+	}
+	return false;
 }
 
 export function computeMomentum(messages: ChatMessage[]): number | null {
-  if (messages.length < 2) return null
-  const spanMs = messages[messages.length - 1].timestamp - messages[0].timestamp
-  if (spanMs <= 0) return null
-  return (messages.length / spanMs) * 60_000
+	if (messages.length < 2) return null;
+	const spanMs =
+		messages[messages.length - 1].timestamp - messages[0].timestamp;
+	if (spanMs <= 0) return null;
+	return (messages.length / spanMs) * 60_000;
 }
 
 export function extractHour(timestamp: number): number {
-  return new Date(timestamp).getHours()
+	return new Date(timestamp).getHours();
 }
 
 export function buildConversation(messages: ChatMessage[]): string {
-  const labels = new Map<string, string>()
-  const label = (name: string) => {
-    if (name === 'phila') return 'you'
-    if (!labels.has(name)) labels.set(name, `person${labels.size + 1}`)
-    return labels.get(name)!
-  }
-  return messages
-    .map((m) => `${label(m.sender)}: ${m.text}`)
-    .join('\n')
+	const labels = new Map<string, string>();
+	const label = (name: string) => {
+		if (name === "phila") return "you";
+		if (!labels.has(name)) labels.set(name, `person${labels.size + 1}`);
+		return labels.get(name)!;
+	};
+	return messages.map((m) => `${label(m.sender)}: ${m.text}`).join("\n");
 }
 
 export async function evaluate(
-  messages: ChatMessage[],
-  profile: GroupProfile,
-  config: PhilaConfig,
-  ctx?: ConversationContext,
+	messages: ChatMessage[],
+	profile: GroupProfile,
+	config: PhilaConfig,
+	ctx?: ConversationContext,
 ): Promise<GateDecision> {
-  const conversation = buildConversation(messages)
-  const raw = await chat(buildSystemPrompt(profile, ctx), conversation, config)
-  return parseDecision(raw)
+	const conversation = buildConversation(messages);
+	const raw = await chat(buildSystemPrompt(profile, ctx), conversation, config);
+	return parseDecision(raw);
 }
-

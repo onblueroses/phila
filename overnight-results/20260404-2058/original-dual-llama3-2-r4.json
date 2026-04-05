@@ -1,0 +1,1580 @@
+{
+	"config": {
+		"label": "single",
+		"model": "llama3.2",
+		"ollamaUrl": "http://localhost:11434",
+		"runs": 15,
+		"seed": null,
+		"temperature": 0.1,
+		"numPredict": 64,
+		"topP": 0.52
+	},
+	"gateMode": "dual",
+	"results": [
+		{
+			"name": "small talk",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3517, 273, 276, 298, 301, 302, 274, 285, 304, 287, 308, 319, 306, 297,
+				373
+			]
+		},
+		{
+			"name": "emotional",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3605, 285, 311, 311, 306, 315, 327, 323, 305, 297, 279, 295, 263, 338,
+				277
+			]
+		},
+		{
+			"name": "jokes",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3590, 359, 307, 373, 317, 333, 323, 360, 321, 321, 323, 362, 340, 349,
+				325
+			]
+		},
+		{
+			"name": "opinions",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3599, 300, 296, 295, 286, 269, 312, 321, 311, 327, 309, 315, 317, 322,
+				352
+			]
+		},
+		{
+			"name": "celebrating",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3545, 304, 283, 284, 271, 294, 281, 302, 323, 268, 279, 266, 286, 280,
+				269
+			]
+		},
+		{
+			"name": "gossip",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3655, 334, 285, 304, 286, 276, 311, 303, 294, 305, 288, 339, 285, 841,
+				318
+			]
+		},
+		{
+			"name": "venting",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3631, 292, 295, 303, 319, 331, 280, 309, 322, 290, 325, 354, 382, 362,
+				340
+			]
+		},
+		{
+			"name": "music opinions",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3558, 283, 288, 281, 333, 305, 339, 321, 303, 324, 345, 317, 319, 330,
+				307
+			]
+		},
+		{
+			"name": "complaining weather",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3519, 280, 297, 273, 368, 330, 347, 335, 328, 331, 358, 340, 308, 314,
+				305
+			]
+		},
+		{
+			"name": "emoji only conversation",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3550, 312, 335, 312, 293, 283, 282, 301, 305, 306, 299, 308, 321, 330,
+				293
+			]
+		},
+		{
+			"name": "inside joke",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3609, 279, 294, 310, 297, 306, 285, 300, 281, 299, 286, 297, 298, 293,
+				299
+			]
+		},
+		{
+			"name": "sarcastic agreement",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3666, 272, 296, 289, 279, 309, 321, 306, 298, 309, 302, 293, 304, 318,
+				334
+			]
+		},
+		{
+			"name": "relationship advice",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3592, 273, 310, 285, 292, 302, 322, 304, 322, 340, 355, 336, 377, 328,
+				321
+			]
+		},
+		{
+			"name": "workout chat",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3586, 258, 295, 292, 287, 307, 317, 342, 422, 295, 309, 320, 341, 303,
+				308
+			]
+		},
+		{
+			"name": "tv show spoilers",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3611, 301, 278, 281, 279, 286, 303, 253, 306, 290, 286, 320, 359, 312,
+				288
+			]
+		},
+		{
+			"name": "gaming",
+			"expect": "silent",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				7167, 7152, 7067, 7055, 7098, 7149, 7192, 7242, 7061, 7166, 7084, 7158,
+				7116, 7122, 7080
+			]
+		},
+		{
+			"name": "complimenting friend",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3570, 289, 291, 281, 293, 310, 302, 300, 301, 308, 328, 366, 274, 278,
+				290
+			]
+		},
+		{
+			"name": "debating with false claim as joke",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3678, 271, 280, 311, 284, 339, 324, 345, 302, 283, 293, 291, 286, 313,
+				321
+			]
+		},
+		{
+			"name": "long rambling thread",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3835, 305, 283, 298, 298, 298, 298, 306, 306, 287, 313, 310, 293, 287,
+				284
+			]
+		},
+		{
+			"name": "opinion that sounds like question",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3606, 285, 302, 311, 296, 283, 289, 291, 281, 305, 303, 299, 321, 301,
+				298
+			]
+		},
+		{
+			"name": "already answered",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3496, 267, 336, 318, 322, 316, 331, 378, 352, 330, 523, 341, 685, 313,
+				283
+			]
+		},
+		{
+			"name": "planning",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3609, 273, 292, 285, 290, 324, 296, 355, 301, 316, 341, 353, 299, 327,
+				301
+			]
+		},
+		{
+			"name": "making plans",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3579, 277, 314, 297, 280, 316, 351, 321, 298, 312, 283, 292, 305, 296,
+				313
+			]
+		},
+		{
+			"name": "coordinating rides",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3658, 302, 297, 298, 306, 307, 308, 298, 308, 302, 319, 285, 340, 299,
+				302
+			]
+		},
+		{
+			"name": "splitting a bill",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3532, 307, 279, 298, 296, 312, 344, 318, 325, 403, 308, 293, 276, 329,
+				276
+			]
+		},
+		{
+			"name": "sharing memes",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3593, 279, 319, 280, 303, 320, 325, 326, 311, 320, 325, 311, 290, 372,
+				333
+			]
+		},
+		{
+			"name": "link sharing",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3808, 309, 370, 322, 334, 302, 289, 324, 338, 363, 358, 385, 553, 385,
+				362
+			]
+		},
+		{
+			"name": "photo reactions",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3732, 312, 316, 308, 293, 292, 325, 318, 339, 360, 343, 330, 416, 348,
+				330
+			]
+		},
+		{
+			"name": "rhetorical question",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3544, 300, 304, 318, 320, 297, 310, 319, 309, 290, 303, 378, 291, 299,
+				339
+			]
+		},
+		{
+			"name": "self-answered",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3529, 346, 316, 298, 294, 292, 312, 297, 315, 296, 328, 306, 297, 348,
+				326
+			]
+		},
+		{
+			"name": "exasperated why",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3541, 314, 291, 293, 368, 300, 401, 339, 312, 335, 303, 313, 320, 343,
+				333
+			]
+		},
+		{
+			"name": "hypothetical question",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3599, 296, 289, 317, 285, 278, 368, 299, 330, 288, 294, 314, 313, 294,
+				294
+			]
+		},
+		{
+			"name": "already corrected explicit",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3616, 322, 304, 380, 298, 310, 292, 319, 316, 338, 333, 312, 289, 316,
+				294
+			]
+		},
+		{
+			"name": "already corrected nope",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3576, 302, 331, 344, 309, 361, 289, 312, 352, 330, 302, 338, 320, 355,
+				346
+			]
+		},
+		{
+			"name": "already corrected with gap",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3631, 333, 283, 298, 302, 281, 294, 395, 317, 305, 323, 299, 335, 310,
+				326
+			]
+		},
+		{
+			"name": "already corrected partial",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3582, 315, 309, 384, 367, 362, 337, 356, 332, 372, 365, 315, 300, 295,
+				304
+			]
+		},
+		{
+			"name": "already corrected polite",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3629, 280, 309, 314, 342, 324, 359, 295, 313, 297, 284, 305, 279, 306,
+				310
+			]
+		},
+		{
+			"name": "direct question",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3910, 717, 776, 774, 754, 774, 763, 809, 856, 829, 807, 750, 809, 806,
+				814
+			]
+		},
+		{
+			"name": "phila greeting",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3897, 720, 671, 668, 738, 651, 699, 706, 721, 709, 749, 672, 647, 647,
+				710
+			]
+		},
+		{
+			"name": "phila asked opinion",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4787, 1557, 1548, 1547, 1506, 1656, 1559, 1211, 1476, 1563, 1125, 1587,
+				1621, 1421, 1485
+			]
+		},
+		{
+			"name": "phila mid-sentence",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3946, 767, 737, 679, 736, 677, 686, 668, 755, 853, 833, 750, 744, 810,
+				730
+			]
+		},
+		{
+			"name": "phila lowercase in question",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4099, 771, 1108, 745, 1045, 1043, 820, 862, 743, 758, 754, 767, 741,
+				778, 899
+			]
+		},
+		{
+			"name": "phila with emoji",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3824, 713, 734, 770, 713, 724, 772, 724, 721, 726, 747, 740, 764, 778,
+				744
+			]
+		},
+		{
+			"name": "phila multi-question",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4550, 1346, 1300, 1310, 1325, 1370, 1323, 1381, 1382, 1475, 1413, 1403,
+				1431, 1391, 1506
+			]
+		},
+		{
+			"name": "factual error",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4174, 882, 990, 975, 930, 936, 891, 904, 924, 866, 896, 875, 896, 896,
+				795
+			]
+		},
+		{
+			"name": "wrong math",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4078, 907, 944, 948, 862, 919, 898, 901, 958, 887, 947, 942, 924, 924,
+				906
+			]
+		},
+		{
+			"name": "wrong animal fact",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4365, 1167, 1090, 1118, 1142, 1181, 1068, 1063, 1079, 1079, 1186, 1192,
+				1082, 1152, 1291
+			]
+		},
+		{
+			"name": "subtle wrong year",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3686, 297, 327, 311, 339, 327, 360, 353, 353, 400, 393, 407, 390, 373,
+				365
+			]
+		},
+		{
+			"name": "wrong attribution",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3612, 309, 368, 326, 312, 356, 323, 315, 322, 377, 333, 328, 367, 366,
+				374
+			]
+		},
+		{
+			"name": "unanswered question",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4109, 862, 813, 848, 781, 843, 822, 834, 792, 928, 748, 784, 860, 793,
+				757
+			]
+		},
+		{
+			"name": "unanswered buried in thread",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3799, 295, 287, 311, 304, 294, 345, 297, 347, 287, 309, 356, 293, 327,
+				334
+			]
+		},
+		{
+			"name": "unanswered with wrong guess",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4114, 869, 911, 847, 967, 974, 1007, 959, 921, 932, 981, 865, 878, 883,
+				844
+			]
+		},
+		{
+			"name": "weekend recap",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3628, 291, 297, 281, 321, 290, 287, 344, 317, 297, 286, 301, 369, 307,
+				297
+			]
+		},
+		{
+			"name": "food debate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3644, 276, 277, 279, 290, 282, 282, 271, 298, 289, 300, 295, 324, 285,
+				298
+			]
+		},
+		{
+			"name": "pet stories",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3543, 320, 326, 318, 335, 309, 285, 304, 279, 316, 326, 298, 372, 304,
+				299
+			]
+		},
+		{
+			"name": "class complaints",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3620, 312, 305, 300, 342, 305, 319, 306, 284, 293, 309, 306, 302, 306,
+				335
+			]
+		},
+		{
+			"name": "vacation stories",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3627, 344, 323, 295, 330, 306, 374, 341, 317, 323, 345, 321, 300, 306,
+				300
+			]
+		},
+		{
+			"name": "morning greetings",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3587, 278, 287, 309, 300, 319, 317, 308, 295, 301, 332, 303, 322, 309,
+				317
+			]
+		},
+		{
+			"name": "goodnight",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3631, 277, 313, 294, 303, 298, 280, 274, 291, 315, 300, 290, 321, 299,
+				309
+			]
+		},
+		{
+			"name": "debate with strong opinions",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3736, 328, 305, 284, 293, 300, 335, 314, 315, 345, 361, 360, 357, 412,
+				386
+			]
+		},
+		{
+			"name": "nostalgia",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3688, 335, 301, 296, 324, 308, 319, 321, 304, 312, 280, 288, 299, 287,
+				320
+			]
+		},
+		{
+			"name": "birthday wishes",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3621, 385, 349, 336, 333, 313, 323, 328, 313, 316, 327, 340, 327, 323,
+				303
+			]
+		},
+		{
+			"name": "work rant",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3636, 284, 314, 272, 297, 296, 292, 287, 298, 291, 303, 299, 282, 343,
+				275
+			]
+		},
+		{
+			"name": "cooking disaster",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3684, 321, 321, 307, 348, 305, 302, 299, 293, 299, 366, 313, 283, 308,
+				313
+			]
+		},
+		{
+			"name": "joke that sounds like wrong fact",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3632, 289, 305, 289, 297, 324, 346, 368, 333, 323, 320, 321, 377, 344,
+				330
+			]
+		},
+		{
+			"name": "exaggeration as humor",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3681, 302, 335, 340, 326, 310, 317, 326, 332, 314, 294, 342, 331, 303,
+				301
+			]
+		},
+		{
+			"name": "already corrected",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3560, 296, 325, 282, 303, 299, 291, 312, 308, 302, 302, 349, 298, 280,
+				322
+			]
+		},
+		{
+			"name": "already corrected with link",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3683, 328, 278, 330, 308, 292, 307, 322, 370, 324, 338, 312, 323, 353,
+				413
+			]
+		},
+		{
+			"name": "already corrected multi-person",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3674, 283, 286, 309, 315, 301, 286, 309, 270, 306, 342, 342, 306, 306,
+				282
+			]
+		},
+		{
+			"name": "grocery list",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3666, 340, 318, 309, 298, 302, 345, 293, 299, 371, 319, 344, 333, 324,
+				333
+			]
+		},
+		{
+			"name": "homework coordination",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3690, 276, 295, 305, 282, 299, 307, 322, 315, 290, 281, 283, 290, 304,
+				306
+			]
+		},
+		{
+			"name": "existential musing",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3618, 314, 290, 286, 307, 366, 342, 323, 318, 341, 392, 304, 337, 377,
+				355
+			]
+		},
+		{
+			"name": "hypothetical would you rather",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3715, 334, 336, 365, 357, 362, 362, 340, 337, 309, 360, 313, 293, 312,
+				318
+			]
+		},
+		{
+			"name": "song lyrics chain",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3667, 277, 306, 296, 297, 320, 327, 345, 325, 364, 352, 342, 385, 321,
+				350
+			]
+		},
+		{
+			"name": "wrong date",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3546, 287, 268, 273, 308, 287, 293, 336, 298, 333, 309, 331, 315, 307,
+				349
+			]
+		},
+		{
+			"name": "wrong geography",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4102, 807, 835, 815, 842, 825, 1475, 2321, 825, 873, 883, 942, 873, 910,
+				935
+			]
+		},
+		{
+			"name": "wrong science",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4196, 1009, 913, 905, 892, 929, 1005, 1024, 1001, 981, 916, 1012, 971,
+				1081, 960
+			]
+		},
+		{
+			"name": "wrong element",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3493, 288, 274, 296, 294, 313, 297, 314, 289, 288, 319, 315, 356, 349,
+				342
+			]
+		},
+		{
+			"name": "wrong speed of sound",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3621, 321, 308, 334, 303, 320, 345, 306, 302, 320, 299, 350, 297, 329,
+				304
+			]
+		},
+		{
+			"name": "phila help request",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4773, 1563, 1462, 1462, 1727, 1993, 1650, 1444, 1548, 1625, 1483, 1474,
+				1459, 1472, 1679
+			]
+		},
+		{
+			"name": "phila task",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3812, 686, 582, 643, 575, 600, 573, 599, 596, 559, 567, 601, 610, 603,
+				605
+			]
+		},
+		{
+			"name": "phila casual",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3956, 787, 840, 793, 781, 715, 749, 789, 695, 739, 765, 931, 793, 773,
+				775
+			]
+		},
+		{
+			"name": "phila after long silence",
+			"expect": "speak",
+			"passes": 14,
+			"fails": 1,
+			"errors": 0,
+			"latencies": [
+				4138, 869, 847, 831, 835, 932, 854, 838, 826, 851, 1934, 866, 825, 860,
+				1844
+			]
+		},
+		{
+			"name": "phila asked to verify",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4652, 1129, 931, 1200, 1045, 932, 1293, 956, 956, 1141, 1077, 1283,
+				1057, 933, 975
+			]
+		},
+		{
+			"name": "unanswered trivia",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4214, 903, 903, 926, 927, 935, 929, 905, 940, 897, 1062, 998, 908, 900,
+				973
+			]
+		},
+		{
+			"name": "unanswered science",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4512, 1309, 1237, 1170, 1287, 1277, 1329, 1623, 1448, 1361, 1271, 1293,
+				1336, 1256, 1289
+			]
+		},
+		{
+			"name": "unanswered history",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4205, 948, 898, 853, 905, 880, 922, 1037, 966, 931, 966, 963, 948, 944,
+				1007
+			]
+		},
+		{
+			"name": "near-miss philo not phila",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3542, 295, 286, 295, 287, 281, 312, 353, 294, 348, 326, 305, 296, 328,
+				293
+			]
+		},
+		{
+			"name": "near-miss philadelphia",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3550, 325, 321, 330, 377, 299, 347, 303, 301, 317, 313, 308, 312, 305,
+				314
+			]
+		},
+		{
+			"name": "phila in different context",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3565, 297, 310, 292, 303, 301, 301, 308, 278, 331, 286, 301, 308, 343,
+				289
+			]
+		},
+		{
+			"name": "looks like question but answered",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3556, 325, 291, 309, 277, 286, 288, 265, 327, 333, 284, 291, 317, 285,
+				271
+			]
+		},
+		{
+			"name": "wrong fact stated as joke",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3699, 282, 287, 313, 293, 294, 277, 315, 280, 318, 303, 293, 292, 286,
+				314
+			]
+		},
+		{
+			"name": "question directed at specific person",
+			"expect": "silent",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				6754, 6796, 6694, 6679, 6681, 6720, 6822, 6742, 6714, 6647, 6864, 6715,
+				6717, 6758, 6751
+			]
+		},
+		{
+			"name": "unanswered opinion not fact",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3541, 273, 306, 319, 314, 289, 320, 305, 320, 335, 310, 365, 330, 334,
+				310
+			]
+		},
+		{
+			"name": "factual claim in past tense",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3641, 303, 355, 324, 335, 324, 320, 281, 291, 321, 342, 327, 368, 352,
+				305
+			]
+		},
+		{
+			"name": "near-miss philanthropy",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3571, 286, 301, 305, 301, 316, 295, 314, 319, 305, 336, 315, 336, 343,
+				341
+			]
+		},
+		{
+			"name": "wrong fact but clearly sarcastic",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3595, 282, 302, 274, 302, 322, 294, 316, 303, 308, 302, 301, 317, 284,
+				324
+			]
+		},
+		{
+			"name": "question answered incorrectly then corrected",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3609, 350, 274, 269, 304, 319, 299, 295, 284, 308, 307, 308, 304, 309,
+				310
+			]
+		},
+		{
+			"name": "wrong fact with phila name nearby",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4585, 1208, 1140, 1157, 1214, 1124, 1226, 1306, 1239, 1194, 1241, 1204,
+				1100, 1286, 1207
+			]
+		},
+		{
+			"name": "single word message",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3392, 301, 292, 302, 313, 315, 290, 315, 327, 278, 308, 370, 298, 302,
+				294
+			]
+		},
+		{
+			"name": "empty-like conversation",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3485, 271, 333, 319, 293, 285, 322, 330, 308, 322, 307, 299, 287, 302,
+				288
+			]
+		},
+		{
+			"name": "where are we meeting",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				7163, 7205, 7144, 7090, 7280, 7156, 7161, 7181, 7125, 7071, 7170, 7099,
+				7168, 7099, 7137
+			]
+		},
+		{
+			"name": "what time again",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4497, 1012, 990, 967, 1112, 1160, 1138, 1149, 1116, 1072, 1064, 1138,
+				1032, 1047, 1074
+			]
+		},
+		{
+			"name": "which restaurant",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3673, 281, 285, 303, 285, 287, 304, 336, 297, 284, 289, 280, 312, 295,
+				293
+			]
+		},
+		{
+			"name": "what day was the party",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3725, 409, 327, 368, 331, 299, 343, 316, 306, 298, 295, 293, 281, 322,
+				296
+			]
+		},
+		{
+			"name": "who is bringing what",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3651, 294, 284, 289, 313, 274, 332, 294, 305, 308, 324, 346, 317, 311,
+				311
+			]
+		},
+		{
+			"name": "who is driving",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				6425, 6354, 6441, 6297, 6371, 6375, 6367, 6356, 6306, 6372, 6383, 6372,
+				6379, 6368, 6333
+			]
+		},
+		{
+			"name": "did anyone rsvp",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3629, 310, 293, 330, 336, 303, 397, 333, 324, 292, 301, 336, 336, 323,
+				341
+			]
+		},
+		{
+			"name": "allergy recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3675, 279, 274, 308, 310, 332, 300, 303, 288, 295, 290, 314, 305, 338,
+				308
+			]
+		},
+		{
+			"name": "where is the event",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4289, 872, 939, 880, 848, 918, 998, 867, 883, 939, 1048, 918, 917, 948,
+				934
+			]
+		},
+		{
+			"name": "what time is checkout",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				7044, 6999, 6945, 7124, 7023, 7034, 7063, 7018, 6989, 6990, 6938, 7034,
+				6920, 6954, 6931
+			]
+		},
+		{
+			"name": "flight number recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4722, 1186, 915, 904, 819, 1237, 1245, 904, 1281, 1180, 1172, 1260,
+				1272, 1125, 1248
+			]
+		},
+		{
+			"name": "who is picking up the cake",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				6991, 7369, 6972, 6922, 6930, 7002, 6985, 6949, 6940, 7045, 6894, 6999,
+				6933, 6960, 7012
+			]
+		},
+		{
+			"name": "who has the tickets",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3686, 291, 291, 268, 289, 284, 339, 274, 330, 296, 318, 295, 296, 291,
+				281
+			]
+		},
+		{
+			"name": "vegetarian recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				6586, 6586, 6506, 6600, 6553, 6579, 6511, 6525, 6528, 6564, 6527, 6503,
+				6516, 6491, 6554
+			]
+		},
+		{
+			"name": "birthday recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				7054, 6910, 6909, 6913, 6941, 7025, 6966, 6870, 6884, 6906, 6884, 6914,
+				7043, 7055, 6994
+			]
+		},
+		{
+			"name": "wrong planet count",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4147, 1222, 917, 994, 1113, 1310, 970, 987, 990, 912, 1009, 1363, 1081,
+				1072, 1048
+			]
+		},
+		{
+			"name": "wrong inventor",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4360, 1292, 1439, 1214, 1137, 1260, 1284, 1146, 1147, 1116, 1254, 1130,
+				942, 1157, 1204
+			]
+		},
+		{
+			"name": "wrong continent",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3997, 779, 851, 757, 767, 775, 763, 834, 813, 760, 753, 765, 790, 803,
+				868
+			]
+		},
+		{
+			"name": "travel planning opinions",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3627, 286, 326, 313, 316, 334, 300, 309, 330, 304, 308, 312, 295, 300,
+				356
+			]
+		},
+		{
+			"name": "movie night debate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3550, 284, 277, 286, 295, 304, 305, 312, 309, 293, 285, 308, 287, 306,
+				298
+			]
+		},
+		{
+			"name": "fitness banter",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3686, 295, 291, 308, 285, 276, 282, 270, 277, 289, 297, 360, 281, 308,
+				366
+			]
+		},
+		{
+			"name": "wrong fact as hypothetical",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3546, 323, 319, 335, 330, 322, 309, 300, 287, 323, 309, 315, 300, 302,
+				291
+			]
+		},
+		{
+			"name": "correct fact stated confidently wrong",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3659, 269, 299, 312, 321, 289, 303, 305, 285, 297, 294, 292, 286, 317,
+				339
+			]
+		},
+		{
+			"name": "already corrected with humor",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3613, 303, 287, 290, 289, 346, 306, 310, 269, 276, 280, 278, 283, 272,
+				301
+			]
+		},
+		{
+			"name": "unanswered chemistry",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3943, 679, 716, 721, 679, 683, 695, 706, 696, 786, 757, 761, 782, 793,
+				731
+			]
+		},
+		{
+			"name": "unanswered geography",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4326, 1023, 1147, 1135, 1036, 1038, 998, 1088, 1045, 1052, 1045, 1030,
+				1042, 1217, 1211
+			]
+		},
+		{
+			"name": "phila settle debate",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4523, 1274, 1419, 1461, 1183, 1169, 1156, 1209, 1308, 1286, 1278, 1190,
+				1215, 1246, 1342
+			]
+		},
+		{
+			"name": "phila recommendation",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				4342, 1140, 1260, 1421, 1184, 1243, 1212, 1211, 1178, 1381, 1555, 1209,
+				1116, 1251, 1188
+			]
+		},
+		{
+			"name": "ride sharing sorted",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3636, 265, 266, 289, 307, 304, 305, 390, 321, 315, 296, 307, 347, 322,
+				368
+			]
+		},
+		{
+			"name": "gift coordination",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3584, 296, 298, 276, 339, 297, 303, 312, 298, 292, 298, 360, 325, 338,
+				342
+			]
+		},
+		{
+			"name": "weekend brunch plans",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3562, 285, 299, 293, 327, 365, 371, 356, 355, 379, 394, 318, 303, 311,
+				315
+			]
+		},
+		{
+			"name": "concert excitement",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3550, 296, 339, 300, 298, 335, 301, 315, 303, 321, 344, 325, 330, 319,
+				316
+			]
+		},
+		{
+			"name": "weather small talk",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3561, 287, 283, 306, 323, 328, 333, 305, 330, 354, 359, 378, 334, 350,
+				381
+			]
+		},
+		{
+			"name": "dating advice",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3638, 319, 302, 314, 335, 317, 321, 310, 317, 309, 322, 328, 298, 355,
+				324
+			]
+		},
+		{
+			"name": "apartment hunting",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3678, 291, 330, 297, 332, 324, 314, 302, 282, 342, 302, 293, 304, 302,
+				317
+			]
+		},
+		{
+			"name": "late night ramble",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3582, 304, 275, 273, 300, 297, 313, 306, 324, 335, 301, 307, 360, 307,
+				351
+			]
+		},
+		{
+			"name": "wrong population",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				3604, 300, 311, 318, 319, 306, 317, 303, 305, 343, 327, 333, 356, 335,
+				311
+			]
+		},
+		{
+			"name": "question about opinion not fact",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3599, 288, 309, 306, 332, 295, 302, 313, 286, 319, 282, 297, 282, 290,
+				292
+			]
+		},
+		{
+			"name": "factual-sounding but subjective",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				3554, 280, 275, 301, 287, 277, 301, 322, 311, 294, 300, 314, 299, 318,
+				304
+			]
+		}
+	],
+	"summary": {
+		"accuracy": 87.8,
+		"totalPasses": 1844,
+		"totalRuns": 2100,
+		"avgLat": 1058,
+		"p50": 327,
+		"p95": 6491
+	},
+	"confusionMatrix": {
+		"truePositive": 554,
+		"trueNegative": 1290,
+		"falsePositive": 30,
+		"falseNegative": 226,
+		"precision": 0.9486301369863014,
+		"recall": 0.7102564102564103,
+		"specificity": 0.9772727272727273,
+		"falsePositiveRate": 0.022727272727272728,
+		"f1": 0.812316715542522,
+		"accuracy": 0.878095238095238
+	},
+	"holdoutCI": {
+		"lower": 0.8108108108108109,
+		"upper": 0.9585585585585586,
+		"mean": 0.890990990990991
+	}
+}

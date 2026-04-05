@@ -1,0 +1,1954 @@
+{
+	"config": {
+		"label": "single",
+		"model": "phila-ft-v2",
+		"ollamaUrl": "http://localhost:11434",
+		"runs": 15,
+		"seed": null,
+		"temperature": 0.1,
+		"numPredict": 64,
+		"topP": 0.52
+	},
+	"gateMode": "monolithic",
+	"results": [
+		{
+			"name": "gym closing time",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				9478, 320, 275, 290, 300, 304, 312, 296, 298, 306, 319, 323, 306, 333,
+				333
+			]
+		},
+		{
+			"name": "wrong oscar winner",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1383, 1225, 1154, 1163, 1194, 1161, 1152, 1222, 1146, 1196, 1180, 1184,
+				1273, 1160, 1102
+			]
+		},
+		{
+			"name": "lunch spot chat",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				669, 311, 307, 343, 361, 367, 419, 389, 376, 349, 403, 386, 355, 349,
+				369
+			]
+		},
+		{
+			"name": "wrong boiling point",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1221, 1012, 1035, 1059, 1071, 1080, 1038, 1041, 961, 923, 919, 1052,
+				958, 950, 938
+			]
+		},
+		{
+			"name": "pet name debate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				579, 320, 334, 322, 375, 311, 372, 340, 303, 321, 306, 304, 344, 326,
+				361
+			]
+		},
+		{
+			"name": "wrong shakespeare play",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				559, 305, 312, 281, 349, 320, 303, 330, 330, 329, 334, 399, 330, 349,
+				382
+			]
+		},
+		{
+			"name": "concert location recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1505, 1350, 980, 919, 908, 855, 1137, 892, 1044, 1002, 900, 967, 900,
+				1113, 846
+			]
+		},
+		{
+			"name": "sarcastic movie review",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				647, 310, 342, 346, 298, 319, 302, 315, 296, 328, 373, 331, 339, 308,
+				336
+			]
+		},
+		{
+			"name": "phila trivia",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				792, 692, 679, 646, 663, 660, 744, 796, 746, 974, 728, 664, 693, 707,
+				694
+			]
+		},
+		{
+			"name": "wrong country capital",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1251, 1098, 934, 952, 1009, 1086, 1139, 1104, 1047, 1029, 1006, 968,
+				1042, 1044, 1129
+			]
+		},
+		{
+			"name": "road trip snack duty",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				632, 308, 327, 325, 325, 319, 321, 322, 334, 343, 368, 355, 322, 401,
+				339
+			]
+		},
+		{
+			"name": "rent complaint",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				637, 345, 338, 359, 346, 352, 339, 334, 333, 354, 359, 334, 369, 311,
+				294
+			]
+		},
+		{
+			"name": "already corrected vitamin",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				593, 296, 302, 378, 314, 289, 313, 314, 328, 329, 351, 326, 389, 329,
+				323
+			]
+		},
+		{
+			"name": "coffee order recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1547, 1278, 1028, 1050, 1052, 1157, 936, 1012, 992, 884, 1032, 1039,
+				880, 1024, 910
+			]
+		},
+		{
+			"name": "phila weather",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1134, 894, 962, 1047, 993, 965, 951, 1019, 1054, 984, 922, 872, 814,
+				894, 867
+			]
+		},
+		{
+			"name": "wrong periodic table",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				617, 311, 312, 291, 309, 376, 310, 336, 369, 335, 326, 346, 390, 344,
+				334
+			]
+		},
+		{
+			"name": "potluck who brings what",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				694, 317, 326, 339, 314, 300, 315, 321, 305, 321, 332, 358, 318, 324,
+				330
+			]
+		},
+		{
+			"name": "fake conspiracy joke",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				661, 316, 335, 315, 333, 307, 328, 312, 307, 329, 339, 360, 392, 324,
+				305
+			]
+		},
+		{
+			"name": "unanswered dog breed",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1587, 1262, 1308, 1180, 1133, 1157, 1279, 1163, 1229, 957, 1182, 1189,
+				1168, 1140, 1226
+			]
+		},
+		{
+			"name": "wrong inventor phone",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1346, 1132, 1140, 1080, 1102, 1115, 1086, 1100, 1245, 1170, 1093, 1198,
+				1095, 1184, 1598
+			]
+		},
+		{
+			"name": "study group time recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1093, 888, 847, 827, 724, 739, 727, 716, 648, 707, 746, 757, 683, 670,
+				653
+			]
+		},
+		{
+			"name": "new album hype",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				596, 328, 310, 288, 325, 358, 303, 304, 309, 318, 318, 314, 330, 320,
+				317
+			]
+		},
+		{
+			"name": "already corrected gravity",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				623, 312, 316, 288, 321, 412, 306, 309, 305, 326, 326, 321, 316, 343,
+				330
+			]
+		},
+		{
+			"name": "lactose intolerant recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				729, 302, 311, 340, 368, 318, 317, 336, 300, 305, 317, 312, 297, 328,
+				304
+			]
+		},
+		{
+			"name": "rhetorical why me",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				634, 309, 307, 304, 327, 299, 318, 319, 334, 321, 344, 340, 349, 370,
+				320
+			]
+		},
+		{
+			"name": "phila settle argument",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1600, 1323, 1356, 1297, 1387, 1360, 1216, 1347, 1219, 1321, 1260, 1167,
+				1445, 1305, 1371
+			]
+		},
+		{
+			"name": "wrong blood type",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1371, 1427, 1327, 1242, 1270, 1226, 1118, 1330, 1407, 1211, 1207, 1232,
+				1396, 1246, 1275
+			]
+		},
+		{
+			"name": "uber eta recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1200, 1070, 1014, 1043, 996, 921, 1008, 1114, 985, 926, 1072, 1093,
+				1007, 987, 1034
+			]
+		},
+		{
+			"name": "breakup support",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				710, 344, 346, 357, 378, 389, 412, 348, 345, 325, 334, 329, 324, 1100,
+				322
+			]
+		},
+		{
+			"name": "wrong element symbol",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				528, 332, 336, 376, 336, 318, 340, 323, 320, 345, 343, 314, 314, 315,
+				316
+			]
+		},
+		{
+			"name": "birthday party venue recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				678, 342, 361, 317, 327, 341, 347, 323, 348, 329, 310, 315, 307, 295,
+				331
+			]
+		},
+		{
+			"name": "would you rather silly",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				642, 347, 369, 316, 322, 318, 319, 325, 331, 331, 335, 385, 342, 390,
+				345
+			]
+		},
+		{
+			"name": "wrong mars fact",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				517, 363, 324, 322, 306, 340, 324, 333, 335, 400, 347, 351, 366, 359,
+				333
+			]
+		},
+		{
+			"name": "moving day coordination done",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				701, 337, 323, 315, 294, 297, 295, 330, 313, 322, 323, 338, 328, 305,
+				324
+			]
+		},
+		{
+			"name": "song lyric chain beatles",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				692, 301, 317, 341, 356, 343, 305, 319, 310, 283, 311, 319, 303, 322,
+				319
+			]
+		},
+		{
+			"name": "wrong speed of light",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				604, 353, 296, 305, 306, 315, 320, 341, 312, 317, 319, 340, 325, 315,
+				332
+			]
+		},
+		{
+			"name": "airport pickup time recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1185, 791, 743, 762, 821, 766, 832, 777, 851, 798, 851, 847, 879, 837,
+				799
+			]
+		},
+		{
+			"name": "camping gear assignment",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				633, 319, 304, 311, 321, 304, 291, 303, 427, 286, 308, 302, 310, 318,
+				341
+			]
+		},
+		{
+			"name": "wrong vitamin c source",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1505, 1289, 1342, 1386, 1335, 1305, 1185, 1222, 1267, 1217, 1262, 1242,
+				1327, 1300, 1357
+			]
+		},
+		{
+			"name": "dnd session planning",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				634, 318, 333, 332, 345, 326, 319, 298, 361, 367, 318, 386, 349, 348,
+				384
+			]
+		},
+		{
+			"name": "phila history question",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				905, 853, 827, 902, 836, 820, 1011, 812, 866, 932, 973, 890, 935, 852,
+				869
+			]
+		},
+		{
+			"name": "passive aggressive roommate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				641, 327, 316, 329, 345, 363, 337, 332, 370, 356, 339, 317, 325, 305,
+				370
+			]
+		},
+		{
+			"name": "already corrected earth age",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				679, 324, 299, 299, 305, 313, 288, 328, 347, 379, 334, 319, 333, 332,
+				314
+			]
+		},
+		{
+			"name": "gluten free recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				660, 308, 325, 334, 317, 313, 327, 386, 316, 311, 300, 295, 327, 378,
+				302
+			]
+		},
+		{
+			"name": "wrong amendment",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				502, 320, 306, 303, 339, 291, 320, 294, 318, 340, 301, 289, 302, 320,
+				325
+			]
+		},
+		{
+			"name": "hiking meetup time",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				646, 328, 320, 313, 328, 331, 321, 294, 311, 338, 325, 299, 330, 384,
+				379
+			]
+		},
+		{
+			"name": "meme reaction chain",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				673, 343, 369, 336, 318, 331, 324, 300, 320, 321, 322, 300, 363, 299,
+				322
+			]
+		},
+		{
+			"name": "wrong first president",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1450, 1381, 1242, 1347, 1356, 1319, 1289, 1221, 1175, 1271, 1244, 1302,
+				1217, 1351, 1308
+			]
+		},
+		{
+			"name": "presentation slides duty",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				672, 323, 316, 318, 314, 359, 311, 304, 342, 316, 322, 354, 343, 343,
+				463
+			]
+		},
+		{
+			"name": "new phone excitement",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				701, 348, 343, 357, 373, 341, 356, 354, 333, 344, 325, 327, 350, 343,
+				321
+			]
+		},
+		{
+			"name": "wrong continent africa",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				557, 353, 334, 322, 322, 330, 324, 321, 332, 345, 344, 392, 367, 329,
+				340
+			]
+		},
+		{
+			"name": "philosophy not phila",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				522, 351, 331, 316, 343, 316, 319, 309, 330, 291, 324, 341, 324, 335,
+				336
+			]
+		},
+		{
+			"name": "complaining about traffic",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				621, 332, 333, 292, 314, 308, 305, 307, 287, 330, 313, 345, 350, 345,
+				333
+			]
+		},
+		{
+			"name": "unanswered element question",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1410, 1112, 1079, 1119, 1043, 1098, 1075, 1090, 1087, 1068, 1110, 1068,
+				1181, 1109, 1133
+			]
+		},
+		{
+			"name": "baby shower planning done",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				584, 321, 309, 345, 315, 364, 367, 331, 328, 362, 356, 373, 359, 314,
+				312
+			]
+		},
+		{
+			"name": "wrong dinosaur era",
+			"expect": "speak",
+			"passes": 8,
+			"fails": 7,
+			"errors": 0,
+			"latencies": [
+				505, 1151, 297, 379, 1063, 1030, 975, 1054, 1103, 308, 318, 309, 341,
+				1145, 1170
+			]
+		},
+		{
+			"name": "dentist appointment recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1235, 822, 889, 929, 864, 1104, 988, 940, 962, 890, 849, 933, 917, 837,
+				835
+			]
+		},
+		{
+			"name": "opinion on remote work",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				675, 489, 298, 300, 379, 355, 356, 335, 339, 323, 304, 344, 337, 305,
+				327
+			]
+		},
+		{
+			"name": "already corrected mount everest",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				591, 319, 301, 304, 316, 330, 328, 333, 315, 350, 303, 319, 319, 299,
+				316
+			]
+		},
+		{
+			"name": "phila explain concept",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1382, 1079, 1032, 1005, 1066, 1117, 1274, 1066, 1112, 1145, 1204, 1391,
+				1085, 1212, 1088
+			]
+		},
+		{
+			"name": "wrong planet order",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1283, 1120, 1144, 1218, 1156, 1124, 1101, 1155, 1120, 1136, 1028, 1046,
+				989, 1120, 1054
+			]
+		},
+		{
+			"name": "carpool driver recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				634, 360, 338, 346, 326, 310, 336, 316, 325, 335, 339, 328, 328, 311,
+				323
+			]
+		},
+		{
+			"name": "existential shower thought",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				689, 302, 372, 357, 377, 290, 327, 315, 333, 376, 399, 364, 334, 358,
+				333
+			]
+		},
+		{
+			"name": "wrong blood pressure",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1373, 1125, 1248, 1252, 1038, 1014, 1066, 1112, 1187, 1138, 1146, 1088,
+				1056, 1068, 1035
+			]
+		},
+		{
+			"name": "photo sharing vacation",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				614, 331, 327, 304, 304, 301, 318, 302, 322, 302, 292, 325, 309, 345,
+				332
+			]
+		},
+		{
+			"name": "unanswered deepest ocean",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1242, 1057, 1029, 1016, 1057, 1079, 1032, 1039, 1026, 1010, 1024, 1012,
+				995, 916, 977
+			]
+		},
+		{
+			"name": "wrong declaration year",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1233, 944, 970, 941, 905, 957, 984, 985, 921, 937, 994, 915, 968, 918,
+				921
+			]
+		},
+		{
+			"name": "vet appointment recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				927, 684, 655, 694, 632, 640, 705, 663, 686, 722, 698, 700, 668, 688,
+				648
+			]
+		},
+		{
+			"name": "game night snacks",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				587, 312, 376, 326, 335, 338, 329, 341, 327, 326, 351, 323, 336, 347,
+				325
+			]
+		},
+		{
+			"name": "tiktok drama",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				659, 387, 316, 317, 299, 318, 325, 336, 318, 313, 332, 308, 295, 284,
+				309
+			]
+		},
+		{
+			"name": "wrong ocean biggest",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1222, 1081, 1036, 963, 1001, 1064, 956, 995, 981, 988, 1069, 909, 918,
+				999, 1019
+			]
+		},
+		{
+			"name": "sarcastic flat earth",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				662, 349, 313, 334, 341, 313, 338, 312, 346, 317, 364, 325, 314, 348,
+				349
+			]
+		},
+		{
+			"name": "phila fun fact",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1150, 1053, 915, 923, 866, 1029, 962, 862, 881, 923, 902, 892, 836, 860,
+				823
+			]
+		},
+		{
+			"name": "doctor appointment not a question",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				543, 318, 314, 303, 404, 324, 336, 328, 317, 321, 320, 322, 297, 306,
+				327
+			]
+		},
+		{
+			"name": "wrong human chromosome",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				526, 330, 313, 365, 353, 322, 327, 319, 296, 301, 318, 295, 364, 312,
+				307
+			]
+		},
+		{
+			"name": "already corrected columbus",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				617, 311, 300, 331, 349, 314, 336, 328, 330, 371, 334, 321, 340, 298,
+				319
+			]
+		},
+		{
+			"name": "graduation party address recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1437, 1250, 1187, 1111, 1116, 1137, 1024, 1031, 1101, 1011, 1143, 1001,
+				1008, 1031, 1076
+			]
+		},
+		{
+			"name": "hypothetical million bucks",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				697, 304, 321, 342, 298, 331, 324, 318, 317, 326, 323, 341, 342, 364,
+				378
+			]
+		},
+		{
+			"name": "wrong tallest building",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1487, 1294, 1310, 1539, 1258, 1269, 1250, 1480, 1293, 1360, 1292, 1361,
+				1290, 1321, 1325
+			]
+		},
+		{
+			"name": "allergic to nuts recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1452, 1061, 1002, 1112, 1133, 1083, 1056, 1137, 1188, 1031, 1222, 1250,
+				1100, 1136, 1043
+			]
+		},
+		{
+			"name": "philharmonic tickets",
+			"expect": "silent",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				1151, 871, 943, 1043, 1025, 853, 1024, 1065, 1091, 874, 894, 859, 1022,
+				897, 992
+			]
+		},
+		{
+			"name": "meditation debate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				639, 308, 299, 314, 322, 329, 359, 348, 347, 365, 474, 424, 379, 318,
+				334
+			]
+		},
+		{
+			"name": "wrong speed limit",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1495, 1185, 1242, 1101, 1172, 1332, 1312, 1276, 1148, 1316, 1259, 1329,
+				1277, 1215, 1239
+			]
+		},
+		{
+			"name": "unanswered currency",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				923, 659, 703, 963, 881, 779, 740, 753, 730, 960, 740, 772, 781, 771,
+				705
+			]
+		},
+		{
+			"name": "movie ticket holder recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				605, 308, 308, 337, 333, 324, 328, 303, 347, 401, 325, 362, 311, 342,
+				312
+			]
+		},
+		{
+			"name": "complaining landlord",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				645, 325, 358, 333, 321, 348, 341, 379, 355, 359, 339, 382, 374, 338,
+				330
+			]
+		},
+		{
+			"name": "wrong country population",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				524, 330, 343, 325, 323, 318, 343, 320, 297, 312, 326, 352, 325, 320,
+				330
+			]
+		},
+		{
+			"name": "self answered question",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				577, 314, 321, 336, 325, 315, 318, 307, 355, 329, 298, 320, 325, 314,
+				339
+			]
+		},
+		{
+			"name": "wedding rsvp done",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				622, 347, 307, 321, 309, 334, 303, 329, 295, 325, 322, 326, 369, 314,
+				344
+			]
+		},
+		{
+			"name": "already corrected piano",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				560, 346, 324, 313, 349, 385, 322, 349, 337, 395, 382, 330, 372, 340,
+				330
+			]
+		},
+		{
+			"name": "wrong freezing point",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1355, 1153, 1072, 1115, 1160, 1097, 1012, 976, 988, 988, 1055, 1094,
+				1096, 1073, 1032
+			]
+		},
+		{
+			"name": "uber split confirmation",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				578, 342, 301, 324, 326, 301, 299, 321, 310, 310, 321, 320, 319, 319,
+				315
+			]
+		},
+		{
+			"name": "unanswered tallest animal",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1263, 1139, 1222, 1344, 1099, 1050, 1016, 1024, 1101, 1094, 1118, 1074,
+				1053, 983, 1109
+			]
+		},
+		{
+			"name": "phila mid convo",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1073, 726, 880, 817, 823, 712, 773, 760, 903, 777, 766, 894, 781, 729,
+				744
+			]
+		},
+		{
+			"name": "wrong continent south america",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1103, 927, 1014, 997, 990, 957, 923, 1043, 955, 898, 914, 890, 1007,
+				939, 910
+			]
+		},
+		{
+			"name": "reservation time recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1107, 751, 795, 808, 784, 751, 741, 736, 751, 719, 737, 746, 755, 722,
+				751
+			]
+		},
+		{
+			"name": "new job excitement",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				577, 325, 301, 378, 309, 319, 374, 365, 333, 338, 331, 346, 354, 357,
+				372
+			]
+		},
+		{
+			"name": "wrong number of continents",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1601, 963, 1419, 1501, 1533, 1591, 1528, 1472, 1453, 1554, 1109, 1148,
+				1446, 1699, 1424
+			]
+		},
+		{
+			"name": "vacation packing list",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				555, 306, 330, 305, 316, 354, 315, 323, 352, 364, 367, 411, 353, 391,
+				341
+			]
+		},
+		{
+			"name": "opinion sports goat",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				699, 373, 332, 328, 363, 305, 314, 306, 298, 306, 327, 309, 314, 338,
+				341
+			]
+		},
+		{
+			"name": "unanswered smallest country",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1296, 1038, 995, 974, 1157, 1071, 1012, 1145, 964, 912, 960, 959, 963,
+				926, 964
+			]
+		},
+		{
+			"name": "philanthropy discussion",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				540, 299, 319, 313, 317, 322, 351, 316, 320, 335, 336, 325, 356, 307,
+				319
+			]
+		},
+		{
+			"name": "wrong civil war date",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1208, 977, 1004, 999, 1006, 984, 951, 954, 972, 1039, 988, 955, 920,
+				1018, 1076
+			]
+		},
+		{
+			"name": "birthday party who brings cake",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				970, 618, 688, 647, 676, 635, 722, 663, 667, 660, 676, 709, 684, 743,
+				658
+			]
+		},
+		{
+			"name": "sibling rivalry joke",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				621, 293, 310, 289, 294, 300, 280, 322, 306, 361, 309, 334, 318, 327,
+				324
+			]
+		},
+		{
+			"name": "wrong organ largest",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1489, 1224, 1148, 1178, 1106, 1122, 1166, 1247, 1251, 1167, 1121, 1271,
+				1143, 1215, 1166
+			]
+		},
+		{
+			"name": "already corrected moon",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				585, 306, 327, 343, 312, 307, 306, 325, 307, 300, 328, 315, 308, 315,
+				321
+			]
+		},
+		{
+			"name": "checking in on friend",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				611, 301, 315, 338, 356, 345, 311, 344, 306, 337, 302, 299, 317, 310,
+				290
+			]
+		},
+		{
+			"name": "wrong human body water",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				494, 349, 303, 363, 305, 294, 303, 356, 303, 317, 320, 321, 310, 313,
+				319
+			]
+		},
+		{
+			"name": "unanswered flag colors",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				886, 794, 676, 743, 703, 632, 662, 693, 964, 661, 652, 705, 992, 861,
+				952
+			]
+		},
+		{
+			"name": "phila after silence",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1021, 749, 838, 758, 796, 692, 712, 707, 716, 699, 747, 689, 712, 809,
+				742
+			]
+		},
+		{
+			"name": "wrong language spoken",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				460, 293, 293, 289, 322, 295, 311, 319, 295, 302, 318, 295, 330, 302,
+				299
+			]
+		},
+		{
+			"name": "hotel checkout recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				706, 301, 312, 307, 317, 345, 287, 297, 300, 301, 316, 320, 338, 369,
+				314
+			]
+		},
+		{
+			"name": "dry humor chain",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				604, 329, 309, 316, 314, 330, 313, 298, 316, 330, 321, 371, 327, 314,
+				327
+			]
+		},
+		{
+			"name": "wrong vitamin d",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				537, 348, 346, 337, 336, 348, 395, 348, 356, 388, 422, 360, 321, 317,
+				378
+			]
+		},
+		{
+			"name": "question to specific person",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				604, 322, 303, 297, 310, 312, 332, 287, 309, 323, 353, 388, 361, 378,
+				363
+			]
+		},
+		{
+			"name": "already corrected hydrogen",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				601, 305, 291, 292, 299, 302, 300, 325, 351, 355, 313, 330, 343, 336,
+				328
+			]
+		},
+		{
+			"name": "grocery run duty",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				637, 338, 319, 329, 306, 310, 298, 321, 323, 382, 304, 331, 327, 327,
+				318
+			]
+		},
+		{
+			"name": "wrong number of moons",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				505, 314, 316, 307, 343, 333, 314, 297, 416, 353, 354, 312, 328, 303,
+				332
+			]
+		},
+		{
+			"name": "unanswered highest mountain africa",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1146, 872, 926, 1029, 912, 931, 865, 874, 934, 1658, 2093, 959, 1058,
+				1083, 1113
+			]
+		},
+		{
+			"name": "passive aggressive dishes",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				595, 346, 344, 350, 381, 330, 376, 342, 335, 326, 338, 347, 370, 331,
+				359
+			]
+		},
+		{
+			"name": "phillies game discussion",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				600, 387, 358, 470, 378, 373, 409, 370, 366, 340, 338, 360, 336, 343,
+				337
+			]
+		},
+		{
+			"name": "wrong bone count",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1368, 1118, 1126, 985, 943, 1084, 1158, 1067, 1008, 1100, 1035, 1022,
+				987, 1061, 1151
+			]
+		},
+		{
+			"name": "bus number recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1164, 801, 793, 754, 971, 811, 770, 970, 841, 786, 806, 744, 801, 746,
+				724
+			]
+		},
+		{
+			"name": "secret santa organizer",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				589, 333, 308, 317, 323, 345, 376, 327, 311, 330, 301, 305, 351, 358,
+				374
+			]
+		},
+		{
+			"name": "late night philosophy",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				634, 307, 320, 316, 319, 334, 334, 323, 359, 318, 328, 328, 341, 346,
+				395
+			]
+		},
+		{
+			"name": "wrong heart chambers",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1575, 1506, 1367, 1279, 1232, 1276, 1189, 1202, 1299, 1328, 1287, 1317,
+				1253, 1358, 1259
+			]
+		},
+		{
+			"name": "already corrected beatles",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				534, 348, 290, 339, 293, 298, 335, 331, 349, 335, 320, 353, 348, 327,
+				322
+			]
+		},
+		{
+			"name": "wedding registry coordinate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				653, 329, 351, 360, 420, 351, 315, 372, 316, 315, 315, 304, 357, 293,
+				310
+			]
+		},
+		{
+			"name": "wrong war duration",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1387, 1275, 1171, 1100, 1054, 1091, 1211, 1090, 1117, 1094, 1278, 1189,
+				1100, 1046, 1090
+			]
+		},
+		{
+			"name": "morning routine chat",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				672, 324, 308, 342, 319, 351, 301, 327, 302, 339, 354, 298, 317, 325,
+				386
+			]
+		},
+		{
+			"name": "unanswered vitamin",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1491, 1408, 1231, 1226, 1006, 1271, 1096, 1090, 1280, 1111, 1244, 1169,
+				882, 1183, 1420
+			]
+		},
+		{
+			"name": "wrong space fact",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1361, 1166, 1128, 1182, 1200, 1184, 1101, 1135, 1112, 1076, 1083, 1177,
+				1076, 1097, 1265
+			]
+		},
+		{
+			"name": "bridal shower coordinator recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				620, 309, 323, 312, 301, 304, 304, 294, 300, 337, 334, 329, 329, 358,
+				328
+			]
+		},
+		{
+			"name": "work deadline vent",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				649, 315, 349, 367, 356, 299, 303, 312, 332, 344, 304, 318, 323, 353,
+				298
+			]
+		},
+		{
+			"name": "unanswered capital japan",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				902, 719, 695, 687, 735, 694, 764, 768, 724, 749, 746, 721, 666, 694,
+				706
+			]
+		},
+		{
+			"name": "wrong continent egypt sometimes",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				587, 298, 301, 309, 288, 309, 366, 363, 309, 288, 290, 339, 305, 297,
+				307
+			]
+		},
+		{
+			"name": "paint color debate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				559, 325, 330, 325, 311, 297, 311, 308, 319, 300, 324, 337, 289, 305,
+				300
+			]
+		},
+		{
+			"name": "unanswered distance moon",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1050, 821, 943, 879, 976, 927, 833, 949, 1043, 1055, 925, 1034, 866,
+				853, 948
+			]
+		},
+		{
+			"name": "wrong amendment again",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				559, 382, 327, 331, 293, 331, 328, 341, 309, 298, 295, 323, 289, 319,
+				360
+			]
+		},
+		{
+			"name": "pickup basketball",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				661, 312, 288, 308, 304, 325, 362, 304, 311, 352, 347, 301, 320, 314,
+				380
+			]
+		},
+		{
+			"name": "wrong nobel",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				586, 325, 323, 315, 306, 319, 320, 332, 317, 324, 320, 308, 341, 298,
+				336
+			]
+		},
+		{
+			"name": "phila cooking help",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1389, 986, 1041, 1020, 1091, 1014, 977, 1030, 1015, 1121, 1008, 1009,
+				998, 1027, 1072
+			]
+		},
+		{
+			"name": "address recall house party",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1172, 875, 895, 775, 823, 837, 835, 728, 778, 790, 805, 1051, 752, 807,
+				767
+			]
+		},
+		{
+			"name": "already corrected oxygen",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				692, 291, 282, 311, 292, 363, 291, 302, 315, 322, 301, 346, 329, 329,
+				305
+			]
+		},
+		{
+			"name": "wrong cell count",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1255, 1140, 1028, 869, 988, 949, 1000, 933, 809, 840, 872, 899, 1106,
+				1035, 1032
+			]
+		},
+		{
+			"name": "unanswered longest bone",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1010, 829, 911, 874, 818, 816, 875, 823, 915, 870, 859, 851, 954, 845,
+				984
+			]
+		},
+		{
+			"name": "not a phila mention",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				583, 330, 340, 365, 327, 346, 340, 339, 304, 338, 322, 350, 371, 311,
+				306
+			]
+		},
+		{
+			"name": "sleep schedule brag",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				602, 320, 318, 307, 351, 353, 380, 350, 331, 344, 348, 405, 315, 317,
+				337
+			]
+		},
+		{
+			"name": "wrong diamond hardness",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				522, 311, 341, 324, 325, 305, 359, 345, 349, 372, 391, 353, 359, 330,
+				333
+			]
+		},
+		{
+			"name": "carwash duty recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				585, 300, 313, 341, 341, 382, 316, 338, 308, 321, 378, 307, 331, 325,
+				317
+			]
+		},
+		{
+			"name": "flight gate recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				977, 656, 665, 641, 678, 618, 648, 656, 675, 651, 686, 679, 721, 685,
+				676
+			]
+		},
+		{
+			"name": "wrong bone fact",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				487, 311, 344, 362, 339, 329, 327, 397, 326, 374, 344, 350, 316, 338,
+				317
+			]
+		},
+		{
+			"name": "morning person debate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				645, 330, 335, 335, 345, 328, 362, 360, 384, 394, 363, 344, 350, 351,
+				324
+			]
+		},
+		{
+			"name": "unanswered inventor",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1223, 1009, 1038, 1040, 1065, 924, 899, 960, 891, 869, 925, 888, 877,
+				923, 903
+			]
+		},
+		{
+			"name": "wrong eye color genetics",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				509, 298, 301, 300, 357, 323, 331, 381, 326, 370, 341, 324, 336, 343,
+				336
+			]
+		},
+		{
+			"name": "pizza order preferences recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				655, 318, 327, 344, 330, 311, 366, 323, 351, 335, 362, 336, 364, 332,
+				339
+			]
+		},
+		{
+			"name": "already corrected speed",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				663, 317, 322, 321, 322, 329, 314, 306, 341, 315, 310, 325, 313, 296,
+				413
+			]
+		},
+		{
+			"name": "new show recommendation",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				618, 336, 319, 326, 321, 373, 320, 370, 344, 365, 316, 332, 331, 323,
+				326
+			]
+		},
+		{
+			"name": "hypothetical time travel",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				643, 314, 338, 310, 310, 302, 328, 314, 312, 312, 329, 353, 342, 312,
+				318
+			]
+		},
+		{
+			"name": "wrong olympics year",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				499, 323, 327, 336, 322, 333, 356, 316, 313, 327, 305, 297, 318, 317,
+				345
+			]
+		},
+		{
+			"name": "interview prep support",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				630, 313, 353, 318, 297, 307, 381, 318, 320, 341, 353, 332, 329, 300,
+				310
+			]
+		},
+		{
+			"name": "wrong great wall length",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				507, 304, 389, 312, 303, 304, 331, 321, 309, 308, 312, 309, 334, 338,
+				322
+			]
+		},
+		{
+			"name": "subway line recall",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1229, 868, 953, 929, 876, 919, 993, 979, 884, 870, 858, 982, 880, 936,
+				891
+			]
+		},
+		{
+			"name": "nostalgia high school",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				605, 300, 294, 296, 286, 285, 288, 321, 307, 318, 346, 337, 291, 305,
+				311
+			]
+		},
+		{
+			"name": "wrong human temperature",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				546, 367, 291, 298, 290, 316, 337, 285, 292, 281, 334, 323, 311, 304,
+				311
+			]
+		},
+		{
+			"name": "karaoke song debate",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				620, 320, 286, 298, 323, 370, 322, 307, 322, 341, 323, 333, 321, 308,
+				331
+			]
+		},
+		{
+			"name": "philological study",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				583, 321, 329, 325, 318, 319, 306, 312, 304, 323, 322, 345, 338, 359,
+				403
+			]
+		},
+		{
+			"name": "unanswered biggest desert",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1879, 1580, 1364, 1673, 1694, 1155, 1465, 1685, 1624, 1564, 1481, 1438,
+				1639, 1868, 1481
+			]
+		},
+		{
+			"name": "wrong teeth count",
+			"expect": "speak",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				1122, 928, 957, 909, 909, 973, 945, 935, 956, 887, 909, 941, 884, 908,
+				947
+			]
+		},
+		{
+			"name": "early morning coffee ritual",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				654, 314, 310, 347, 311, 301, 288, 310, 312, 315, 328, 358, 393, 320,
+				301
+			]
+		},
+		{
+			"name": "who has the key recall",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				594, 303, 305, 331, 315, 322, 312, 313, 349, 328, 324, 393, 401, 354,
+				347
+			]
+		},
+		{
+			"name": "wrong continent india",
+			"expect": "speak",
+			"passes": 0,
+			"fails": 15,
+			"errors": 0,
+			"latencies": [
+				499, 336, 370, 335, 326, 321, 320, 323, 306, 320, 346, 308, 317, 322,
+				313
+			]
+		},
+		{
+			"name": "gym buddy motivation",
+			"expect": "silent",
+			"passes": 15,
+			"fails": 0,
+			"errors": 0,
+			"latencies": [
+				621, 327, 412, 309, 302, 325, 341, 317, 308, 314, 328, 313, 310, 336,
+				326
+			]
+		}
+	],
+	"summary": {
+		"accuracy": 76.7,
+		"totalPasses": 2003,
+		"totalRuns": 2610,
+		"avgLat": 600,
+		"p50": 353,
+		"p95": 1270
+	},
+	"confusionMatrix": {
+		"truePositive": 938,
+		"trueNegative": 1065,
+		"falsePositive": 15,
+		"falseNegative": 592,
+		"precision": 0.9842602308499475,
+		"recall": 0.6130718954248366,
+		"specificity": 0.9861111111111112,
+		"falsePositiveRate": 0.013888888888888888,
+		"f1": 0.7555376560612164,
+		"accuracy": 0.7674329501915709
+	},
+	"holdoutCI": {
+		"lower": 0,
+		"upper": 0,
+		"mean": 0
+	}
+}
