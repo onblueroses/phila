@@ -1,23 +1,49 @@
-// Generate memory extraction training data using Ollama on VPS.
+// Generate memory extraction training data using Step 3.5 Flash via OpenRouter.
 // Teaches the model to extract structured facts from group chat conversations.
 // Format: system=EXTRACT_SYSTEM, user=conversation, assistant=JSON array
 //
 // Usage: node --experimental-strip-types research/v3-finetune/gen-memory-extract.ts --out data/v3-finetune/memory-extract.jsonl --count 3000
 
-import { writeFileSync, appendFileSync, existsSync, readFileSync } from 'node:fs'
-import { parseArgs } from 'node:util'
+import {
+	appendFileSync,
+	existsSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
+import { parseArgs } from "node:util";
+
+// Load .env
+const envPath = new URL("../../.env", import.meta.url).pathname;
+if (existsSync(envPath)) {
+	for (const line of readFileSync(envPath, "utf-8").split("\n")) {
+		const m = line.match(/^(\w+)=(.*)$/);
+		if (m) process.env[m[1]!] = m[2]!;
+	}
+}
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+if (!OPENROUTER_API_KEY) {
+	console.error("OPENROUTER_API_KEY not set");
+	process.exit(1);
+}
 
 const { values: args } = parseArgs({
-  options: {
-    out: { type: 'string', default: 'data/v3-finetune/memory-extract.jsonl' },
-    count: { type: 'string', default: '3000' },
-  },
-})
+	options: {
+		out: { type: "string", default: "data/v3-finetune/memory-extract.jsonl" },
+		count: { type: "string", default: "3000" },
+		concurrency: { type: "string", default: "15" },
+	},
+});
 
-const TARGET = parseInt(args.count!)
-const OLLAMA_URL = process.env['PHILA_OLLAMA_URL'] ?? 'http://localhost:11434'
+const TARGET = parseInt(args.count!, 10);
+const CONCURRENCY = parseInt(args.concurrency!, 10);
 
-// Must match src/memory-extract.ts EXTRACT_SYSTEM exactly
+import {
+	callOpenRouter,
+	getStats,
+	rateLimitDelay,
+} from "./openrouter-client.ts";
+
 const EXTRACT_SYSTEM = `extract factual information from this group chat snippet.
 return a JSON array of objects. each object has:
 - "type": one of "logistics", "commitment", "preference", "personal"
@@ -26,172 +52,170 @@ return a JSON array of objects. each object has:
 
 only extract concrete facts. ignore opinions, jokes, emotions, greetings, banter.
 if no facts, return [].
-respond with ONLY the JSON array, no other text.`
+respond with ONLY the JSON array, no other text.`;
 
-// Scenarios that should produce DIFFERENT extraction outputs
-const EXTRACTION_TEMPLATES = [
-  // LOGISTICS - plans, times, places
-  { type: 'logistics', conversations: [
-    'person1: lets do dinner at the sushi place on oak street\nperson2: what time\nperson1: 7:30?\nperson2: perfect',
-    'person1: game starts at 3pm at the park\nperson2: which park\nperson1: riverside\nperson3: ill be there',
-    'person1: flight lands at terminal C gate 14 at 2:45pm\nperson2: ill pick you up\nperson3: safe travels',
-    'person1: meeting moved to conference room B at 10am\nperson2: got it\nperson3: thanks for the heads up',
-    'person1: party is saturday the 20th at my apartment\nperson2: bringing wine\nperson3: ill be there at 8',
-  ]},
-  // COMMITMENTS - who said they'd do what
-  { type: 'commitment', conversations: [
-    'person1: ill handle the decorations\nperson2: ill get the cake\nperson3: im on music',
-    'person1: i can drive tomorrow morning\nperson2: thanks youre the best\nperson3: shotgun',
-    'person1: ill send the invites by friday\nperson2: cool\nperson3: make sure to include alex',
-    'person1: ill cover your shift thursday\nperson2: you serious? thanks\nperson3: thats nice of you',
-    'person1: ill bring my projector for movie night\nperson2: sweet\nperson3: ill bring snacks',
-  ]},
-  // PREFERENCES
-  { type: 'preference', conversations: [
-    'person1: i always go with oat milk\nperson2: noted\nperson3: almond for me',
-    'person1: no spicy food for me please\nperson2: ok well pick somewhere mild\nperson3: thai has mild options',
-    'person1: i prefer window seats on flights\nperson2: same\nperson3: aisle all day',
-    'person1: i dont do horror movies\nperson2: noted\nperson3: comedy it is then',
-    'person1: im a morning person so earlier works better\nperson2: ok 9am then\nperson3: ugh fine',
-  ]},
-  // PERSONAL FACTS
-  { type: 'personal', conversations: [
-    'person1: im allergic to peanuts btw\nperson2: good to know\nperson3: well be careful ordering',
-    'person1: my birthday is june 12\nperson2: saved it\nperson3: well plan something',
-    'person1: im vegetarian so no meat options for me\nperson2: cool well make sure\nperson3: plenty of veggie options',
-    'person1: i have a nut allergy heads up\nperson2: thanks for telling us\nperson3: noted',
-    'person1: im lactose intolerant\nperson2: dairy free it is\nperson3: oat milk gang',
-  ]},
-  // NEGATIVE - social chat with NO extractable facts
-  { type: 'none', conversations: [
-    'person1: that movie was so good\nperson2: right?? the ending\nperson3: no spoilers!',
-    'person1: im so tired today\nperson2: same\nperson3: coffee is the answer\nperson1: already on my third',
-    'person1: did you see that tiktok\nperson2: which one\nperson1: the cat one\nperson2: lmaooo yes',
-    'person1: mondays am i right\nperson2: the worst\nperson3: at least its almost over',
-    'person1: who else is bored\nperson2: me\nperson3: same\nperson1: lets do something',
-  ]},
-]
+// Weighted type distribution: 30% logistics, 25% commitment, 15% preference, 15% personal, 15% none
+const TYPE_POOL = [
+	...Array(6).fill("logistics"),
+	...Array(5).fill("commitment"),
+	...Array(3).fill("preference"),
+	...Array(3).fill("personal"),
+	...Array(3).fill("none"),
+] as string[];
 
-const GEN_PROMPT = `Generate a realistic group chat conversation (3-6 messages, person1/person2/person3) about a SPECIFIC topic.
-The conversation must contain extractable facts of type: {TYPE}.
+const DOMAINS = [
+	"road trip planning",
+	"office lunch order",
+	"birthday party",
+	"apartment hunting",
+	"gym class schedule",
+	"book club meeting",
+	"camping trip",
+	"concert tickets",
+	"potluck dinner",
+	"study group",
+	"wedding planning",
+	"holiday gathering",
+	"sports tournament",
+	"hackathon project",
+	"moving day logistics",
+	"pet sitting",
+	"grocery shopping",
+	"flight booking",
+	"doctor appointment",
+	"job interview prep",
+	"garden project",
+	"karaoke night",
+	"beach day",
+	"board game night",
+	"restaurant reservation",
+	"carpool schedule",
+	"volunteer event",
+	"photography trip",
+];
+
+// callOpenRouter imported from shared client
+
+async function generateOne(
+	factType: string,
+	domain: string,
+): Promise<string | null> {
+	const prompt =
+		factType === "none"
+			? `Generate a casual group chat conversation (3-5 messages, person1/person2/person3) about "${domain}" that contains NO extractable facts - just social chat, opinions, jokes, reactions, emotions. No times, no places, no commitments, no personal facts.
+
+Respond with ONLY: {"conversation":"person1: ...\\nperson2: ..."}`
+			: `Generate a realistic group chat conversation (3-6 messages, person1/person2/person3) about "${domain}".
+The conversation must contain extractable facts of type: ${factType}.
 Use casual language - lowercase, abbreviations, slang.
-Make the topic DIFFERENT from these examples - be creative with domains (travel, work, school, hobbies, events, sports, food, health).
 
 Respond with ONLY a JSON object:
-{"conversation":"person1: ...\nperson2: ...\nperson3: ...","facts":[{"type":"TYPE","key":"short_key","value":"the fact"}]}`
+{"conversation":"person1: ...\\nperson2: ...\\nperson3: ...","facts":[{"type":"${factType}","key":"short_key","value":"the concrete fact"}]}`;
 
-async function generateOne(factType: string): Promise<string | null> {
-  const prompt = factType === 'none'
-    ? `Generate a casual group chat conversation (3-5 messages) that contains NO extractable facts - just social chat, opinions, jokes, reactions. Respond with ONLY: {"conversation":"person1: ...\nperson2: ..."}`
-    : GEN_PROMPT.replace(/\{TYPE\}/g, factType)
+	const raw = await callOpenRouter(
+		OPENROUTER_API_KEY!,
+		[
+			{
+				role: "system",
+				content:
+					"Generate group chat conversations with extractable facts. Respond with only valid JSON. No markdown, no code blocks.",
+			},
+			{ role: "user", content: prompt },
+		],
+		{ maxTokens: 500 },
+	);
+	if (!raw) return null;
 
-  try {
-    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(30_000),
-      body: JSON.stringify({
-        model: 'llama3.2',
-        messages: [
-          { role: 'system', content: 'Generate group chat conversations with extractable facts. JSON only.' },
-          { role: 'user', content: prompt },
-        ],
-        stream: false,
-        options: { temperature: 0.9, num_predict: 300, top_p: 0.95 },
-      }),
-    })
-    if (!res.ok) return null
+	try {
+		let cleaned = raw.replace(/```(?:json)?\s*|```\s*/g, "").trim();
+		if (!cleaned.startsWith("{")) {
+			const start = cleaned.indexOf("{");
+			const end = cleaned.lastIndexOf("}");
+			if (start !== -1 && end > start) cleaned = cleaned.slice(start, end + 1);
+		}
+		cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
 
-    interface OllamaResponse { message: { content: string } }
-    const data = (await res.json()) as OllamaResponse
-    let raw = data.message.content.replace(/```(?:json)?\s*|```\s*/g, '').trim()
-    if (!raw.startsWith('{')) {
-      const start = raw.indexOf('{')
-      const end = raw.lastIndexOf('}')
-      if (start !== -1 && end > start) raw = raw.slice(start, end + 1)
-    }
+		const parsed = JSON.parse(cleaned) as {
+			conversation?: string;
+			facts?: Array<{ type: string; key: string; value: string }>;
+		};
+		if (!parsed.conversation || parsed.conversation.length < 20) return null;
 
-    const parsed = JSON.parse(raw) as { conversation?: string; facts?: Array<{type: string; key: string; value: string}> }
-    if (!parsed.conversation) return null
+		let facts: Array<{ type: string; key: string; value: string }>;
+		if (factType === "none") {
+			facts = [];
+		} else {
+			facts = parsed.facts ?? [];
+			if (facts.length === 0) return null;
+			// Validate fact structure
+			for (const f of facts) {
+				if (!f.type || !f.key || !f.value) return null;
+			}
+		}
 
-    // Build assistant response (the extraction output)
-    const facts = factType === 'none' ? [] : (parsed.facts ?? [])
-    const assistantContent = JSON.stringify(facts)
-
-    const example = {
-      messages: [
-        { role: 'system', content: EXTRACT_SYSTEM },
-        { role: 'user', content: parsed.conversation },
-        { role: 'assistant', content: assistantContent },
-      ],
-    }
-    return JSON.stringify(example)
-  } catch {
-    return null
-  }
-}
-
-async function generateFromTemplate(template: { type: string; conversations: string[] }): Promise<string[]> {
-  const results: string[] = []
-  for (const conv of template.conversations) {
-    // For templates, we know the expected output format
-    const facts = template.type === 'none' ? '[]' : `[{"type":"${template.type}","key":"see_conversation","value":"extracted from context"}]`
-    const example = {
-      messages: [
-        { role: 'system', content: EXTRACT_SYSTEM },
-        { role: 'user', content: conv },
-        { role: 'assistant', content: facts },
-      ],
-    }
-    results.push(JSON.stringify(example))
-  }
-  return results
+		const example = {
+			messages: [
+				{ role: "system", content: EXTRACT_SYSTEM },
+				{ role: "user", content: parsed.conversation },
+				{ role: "assistant", content: JSON.stringify(facts) },
+			],
+		};
+		return JSON.stringify(example);
+	} catch {
+		return null;
+	}
 }
 
 async function main() {
-  let written = 0
-  if (existsSync(args.out!)) {
-    written = readFileSync(args.out!, 'utf-8').trim().split('\n').filter(Boolean).length
-    console.log(`Resuming from ${written}`)
-  } else {
-    writeFileSync(args.out!, '')
-  }
+	let written = 0;
+	if (existsSync(args.out!)) {
+		written = readFileSync(args.out!, "utf-8")
+			.trim()
+			.split("\n")
+			.filter(Boolean).length;
+		console.log(`Resuming from ${written}`);
+	} else {
+		writeFileSync(args.out!, "");
+	}
 
-  // Seed with templates first (25 high-quality examples)
-  if (written === 0) {
-    for (const template of EXTRACTION_TEMPLATES) {
-      const examples = await generateFromTemplate(template)
-      for (const ex of examples) {
-        appendFileSync(args.out!, ex + '\n')
-        written++
-      }
-    }
-    console.log(`Seeded ${written} template examples`)
-  }
+	let attempts = 0;
+	const startTime = Date.now();
 
-  // Generate rest via Ollama
-  const types = ['logistics', 'commitment', 'preference', 'personal', 'none']
-  let attempts = 0
+	while (written < TARGET && attempts < TARGET * 3) {
+		const batch = Array.from(
+			{ length: Math.min(CONCURRENCY, TARGET - written) },
+			() => {
+				const factType =
+					TYPE_POOL[Math.floor(Math.random() * TYPE_POOL.length)]!;
+				const domain = DOMAINS[Math.floor(Math.random() * DOMAINS.length)]!;
+				return generateOne(factType, domain);
+			},
+		);
 
-  while (written < TARGET && attempts < TARGET * 3) {
-    const factType = types[Math.floor(Math.random() * types.length)]!
-    attempts++
+		attempts += batch.length;
+		const results = await Promise.all(batch);
+		const valid = results.filter((r): r is string => r !== null);
 
-    const result = await generateOne(factType)
-    if (result) {
-      appendFileSync(args.out!, result + '\n')
-      written++
-      if (written % 100 === 0) {
-        console.log(`[${written}/${TARGET}] type=${factType} (${attempts} attempts, ${Math.round(written / attempts * 100)}% success)`)
-      }
-    }
-  }
+		for (const line of valid) {
+			appendFileSync(args.out!, `${line}\n`);
+			written++;
+		}
 
-  console.log(`\nDone: ${written} examples`)
-  console.log(`Output: ${args.out}`)
+		const elapsed = (Date.now() - startTime) / 1000;
+		const rate = written / elapsed;
+		const eta = Math.round((TARGET - written) / rate);
+		process.stdout.write(
+			`\r[${written}/${TARGET}] ${Math.round((written / attempts) * 100)}% ok | ${rate.toFixed(1)}/s | ETA ${eta}s | ${getStats()}    `,
+		);
+
+		await rateLimitDelay(CONCURRENCY);
+	}
+
+	console.log(`\n\nDone: ${written} examples, ${attempts} attempts`);
+	console.log(`Output: ${args.out}`);
 }
 
-main().catch(err => {
-  console.error(err instanceof Error ? err.message : err)
-  process.exit(1)
-})
+main().catch((err) => {
+	console.error(err instanceof Error ? err.message : err);
+	process.exit(1);
+});
