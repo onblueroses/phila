@@ -20,13 +20,16 @@ The gate is the entire product. Everything else is plumbing.
 
 | File | Role |
 |------|------|
-| `gate.ts` | Speak/silent decision engine. `buildSystemPrompt()` encodes the rules. `parseDecision()` extracts action + response from raw LLM output. Parse failures default to SILENT (load-bearing). |
-| `types.ts` | Shared types: `GateAction`, `GroupProfile`, `Message`, `GateResult` |
-| `memory.ts` | SQLite persistence. Conversation history, group profiles, asymmetric feedback loop (negative -0.05, positive +0.02). |
+| `gate.ts` | Monolithic speak/silent decision engine (Pass 1). `buildSystemPrompt()` encodes the rules. `parseDecision()` extracts action + response. Parse failures default to SILENT (load-bearing). |
+| `gate-dual.ts` | Dual-pass gate: Pass 1 monolithic + regex gate + Pass 2 memory-recall with injected facts. `MEMORY_CHECK_SYSTEM` prompt, `MEMORY_QUERY_PATTERNS` regex, `evaluateDual()`. Feature-flagged via `PHILA_GATE=dual`. |
+| `gate-hierarchical.ts` | Experimental hierarchical gate (kept as reference, not production). Binary filter + monolithic fallback. Benchmarked at 77.9% - decomposition hurts 3B accuracy. |
+| `memory-extract.ts` | Background fact extraction pipeline. `EXTRACT_SYSTEM` prompt, `parseExtraction()`. Extracts logistics, commitments, preferences, personal facts from conversations into SQLite. |
+| `types.ts` | Shared types: `GateAction`, `GateMode`, `Classification`, `HierarchicalDecision`, `FactType`, `ExtractedFact`, `GroupProfile`, `PhilaConfig` |
+| `memory.ts` | SQLite persistence. Conversation history, group profiles, asymmetric feedback, `extracted_facts` table with `storeFact()`/`getRecentFacts()`/`searchFacts()`. |
 | `voice.ts` | Post-processing: lowercase, strip AI-speak, enforce length. Safety net if the model slips. |
-| `ollama.ts` | Thin wrapper around Ollama chat API. |
-| `config.ts` | Env-var configuration with defaults. |
-| `index.ts` | Entry point. iMessage watcher, 3s batcher, pipeline orchestration. |
+| `ollama.ts` | Ollama chat API wrapper. `chat()` for standard calls, `chatFast()` (numPredict=8) for classification. |
+| `config.ts` | Env-var configuration. `PHILA_GATE` controls gate mode (monolithic/hierarchical/dual). |
+| `index.ts` | Entry point. iMessage watcher, 3s batcher, gate mode branching, background fact extraction, pipeline orchestration. |
 
 ## Test files (`test/`)
 
