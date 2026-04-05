@@ -88,12 +88,12 @@ else
 fi
 
 echo "=== Normalizing training data filename ==="
-# Prefer train-v2.jsonl over any pre-existing train.jsonl (older base data)
-if [ -f /workspace/train-v2.jsonl ]; then
-    mv -f /workspace/train-v2.jsonl /workspace/train.jsonl
-    echo "Moved train-v2.jsonl -> train.jsonl ($(wc -l < /workspace/train.jsonl) lines)"
+# Prefer train-v3.jsonl over any pre-existing train.jsonl (older base data)
+if [ -f /workspace/train-v3.jsonl ]; then
+    mv -f /workspace/train-v3.jsonl /workspace/train.jsonl
+    echo "Moved train-v3.jsonl -> train.jsonl ($(wc -l < /workspace/train.jsonl) lines)"
 else
-    echo "No train-v2.jsonl found, using existing train.jsonl if present"
+    echo "No train-v3.jsonl found, using existing train.jsonl if present"
 fi
 [ -f /workspace/train.jsonl ] || { echo "ERROR: /workspace/train.jsonl not found"; exit 1; }
 echo "Training data: $(wc -l < /workspace/train.jsonl) examples"
@@ -109,7 +109,7 @@ cd /workspace
 echo "Starting fine-tune: \$(date)" >> /workspace/run.log 2>&1
 python3 /workspace/finetune.py \
     --data /workspace/train.jsonl \
-    --out /workspace/phila-ft-v2 >> /workspace/run.log 2>&1
+    --out /workspace/phila-ft-v3 >> /workspace/run.log 2>&1
 EXIT_CODE=\$?
 
 echo "Fine-tune exited with code \$EXIT_CODE: \$(date)" >> /workspace/run.log 2>&1

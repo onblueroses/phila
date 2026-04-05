@@ -6,8 +6,15 @@
 				"noNonNullAssertion": "off"
 			},
 			"suspicious": {
-				"noExplicitAny": "off"
+				"noExplicitAny": "off",
+				"noImplicitAnyLet": "off"
+			},
+			"correctness": {
+				"noEmptyCharacterClassInRegex": "off"
 			}
 		}
+	},
+	"files": {
+		"ignoreUnknown": true
 	}
 }
