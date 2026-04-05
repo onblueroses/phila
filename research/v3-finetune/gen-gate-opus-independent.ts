@@ -1,8 +1,8 @@
-// Generate diverse gate training examples using Step 3.5 Flash via OpenRouter.
-// Targets weak categories from benchmark data with persona diversity.
-// Runs parallel requests for throughput.
+// Generate training examples matching the independent scenario distribution.
+// Closes the ~6pp distribution gap between synthetic training data and independent eval.
+// Uses OpenRouter (free models) with parallel requests.
 //
-// Usage: node --experimental-strip-types research/v3-finetune/gen-gate-synthetic.ts --out data/v3-finetune/gate-synthetic.jsonl --count 5000
+// Usage: node --experimental-strip-types research/v3-finetune/gen-gate-opus-independent.ts --count 1500
 
 import {
 	appendFileSync,
@@ -13,6 +13,11 @@ import {
 import { parseArgs } from "node:util";
 import { buildSystemPrompt } from "../../src/gate.ts";
 import type { GroupProfile } from "../../src/types.ts";
+import {
+	callOpenRouter,
+	getStats,
+	rateLimitDelay,
+} from "./openrouter-client.ts";
 
 // Load .env
 const envPath = new URL("../../.env", import.meta.url).pathname;
@@ -33,9 +38,9 @@ const { values: args } = parseArgs({
 	options: {
 		out: {
 			type: "string",
-			default: "data/v3-finetune/gate-synthetic-v3.jsonl",
+			default: "data/v3-finetune/gate-opus-independent.jsonl",
 		},
-		count: { type: "string", default: "2500" },
+		count: { type: "string", default: "1500" },
 		concurrency: { type: "string", default: "15" },
 	},
 });
@@ -49,80 +54,84 @@ const profile: GroupProfile = {
 };
 const systemPrompt = buildSystemPrompt(profile);
 
-import {
-	callOpenRouter,
-	getStats,
-	rateLimitDelay,
-} from "./openrouter-client.ts";
-
-// v3 weights target recall bottleneck: 40% speak-correction, 20% speak-unanswered,
-// 15% speak-memory, 15% silent-social (maintenance), 10% adversarial
+// Distribution matches independent-scenarios.json proportions (174 total)
 const CATEGORIES = [
 	{
-		name: "silent-social",
-		expect: "silent",
-		weight: 8,
-		desc: "casual chat between friends: weekend plans, food opinions, dating, gym, gaming, music, movies, work complaints, pets, weather, celebrations, venting. 3-5 messages. lowercase, slang, emoji ok.",
+		category: "speak-correction",
+		expect: "speak" as const,
+		weight: 26,
+		description:
+			"someone states a WRONG fact (wrong date, wrong name, wrong number, wrong science, wrong geography, wrong history) and NOBODY corrects them. the agent should correct the error.",
 	},
 	{
-		name: "silent-corrected",
-		expect: "silent",
-		weight: 3,
-		desc: 'someone states a wrong fact but ANOTHER person already corrected them. use words like "actually", "no its", "thats not right". 4-6 messages.',
+		category: "silent-social",
+		expect: "silent" as const,
+		weight: 21,
+		description:
+			"casual group chat: small talk, emotions, opinions, celebrations, jokes, banter, gossip, venting, compliments, dating talk, workout chat, food debates, weekend recaps, goodnight messages",
 	},
 	{
-		name: "silent-rhetorical",
-		expect: "silent",
-		weight: 2,
-		desc: 'rhetorical questions, hypotheticals, "would you rather", existential musings. nobody expects a factual answer. 3-4 messages.',
+		category: "speak-unanswered",
+		expect: "speak" as const,
+		weight: 9,
+		description:
+			'someone asks a factual question and nobody answers correctly. others say "idk", give wrong answers, or change the subject. the agent should answer.',
 	},
 	{
-		name: "silent-logistics",
-		expect: "silent",
-		weight: 2,
-		desc: "planning thats already resolved: ride sorted, bill split, time agreed. everyone confirmed. 3-5 messages.",
+		category: "speak-memory-logistics",
+		expect: "speak" as const,
+		weight: 9,
+		description:
+			'someone asks about plans/logistics discussed EARLIER in the conversation. e.g. "where are we meeting?", "what time again?", "which restaurant?" - the answer was stated earlier.',
 	},
 	{
-		name: "speak-correction",
-		expect: "speak",
-		weight: 25,
-		desc: 'someone states a WRONG fact (wrong date, name, number, science, geography, history) and nobody corrects them. the WRONG fact must be clearly, verifiably wrong. 3-4 messages. INCLUDE the correct answer in the "correct_response" field.',
-	},
-	{
-		name: "speak-unanswered",
-		expect: "speak",
-		weight: 15,
-		desc: 'someone asks a factual question nobody answers. others say "idk" or give wrong answers or change subject. 3-5 messages. INCLUDE the correct answer.',
-	},
-	{
-		name: "speak-direct",
-		expect: "speak",
-		weight: 10,
-		desc: 'someone addresses "phila" by name with a question or request. use "phila" clearly as addressing the bot. 2-3 messages.',
-	},
-	{
-		name: "adversarial-silent",
-		expect: "silent",
-		weight: 10,
-		desc: 'tricky edge cases: sarcastic wrong facts with lol/lmao, "philo"/"philadelphia"/"philanthropy" (NOT "phila"), opinions that sound factual, questions directed at a specific person not phila.',
-	},
-	{
-		name: "speak-memory-logistics",
-		expect: "speak",
-		weight: 10,
-		desc: 'someone asks about plans discussed EARLIER in the conversation. first part has the plan ("dinner at thai place 7pm"), later someone asks about it ("where are we eating?"). 5-7 messages. INCLUDE the answer from the earlier plan.',
-	},
-	{
-		name: "speak-memory-commitment",
-		expect: "speak",
-		weight: 8,
-		desc: 'someone asks WHO committed to do WHAT from earlier in conversation. first part has commitment ("ill bring drinks"), later someone asks ("whos bringing drinks?"). 5-7 messages.',
-	},
-	{
-		name: "speak-memory-personal",
-		expect: "speak",
+		category: "speak-memory-commitment",
+		expect: "speak" as const,
 		weight: 7,
-		desc: "someone asks about a personal fact mentioned earlier. first: someone says preference/allergy/restriction. later: someone asks about it. 5-7 messages.",
+		description:
+			'someone asks about WHO committed to doing WHAT, discussed earlier. e.g. "who said theyd bring drinks?", "whos driving?"',
+	},
+	{
+		category: "silent-corrected",
+		expect: "silent" as const,
+		weight: 7,
+		description:
+			'someone states a wrong fact BUT another person already corrected them. uses "actually", "no its", "thats not right"',
+	},
+	{
+		category: "speak-direct",
+		expect: "speak" as const,
+		weight: 5,
+		description:
+			'someone addresses "phila" by name - greeting, question, request. phila should respond.',
+	},
+	{
+		category: "adversarial",
+		expect: "silent" as const,
+		weight: 5,
+		description:
+			'edge cases: sarcastic wrong facts, jokes with false claims, "philo"/"philadelphia"/"philanthropy" (not "phila"), opinion questions, hypothetical wrong facts',
+	},
+	{
+		category: "silent-rhetorical",
+		expect: "silent" as const,
+		weight: 4,
+		description:
+			'rhetorical questions, hypotheticals, self-answered questions, existential musings, "would you rather" games',
+	},
+	{
+		category: "silent-logistics",
+		expect: "silent" as const,
+		weight: 4,
+		description:
+			"planning and coordination already handled: rides sorted, bills split, times agreed, tasks assigned",
+	},
+	{
+		category: "speak-memory-personal",
+		expect: "speak" as const,
+		weight: 3,
+		description:
+			"someone asks about a personal fact stated earlier. allergies, dietary restrictions, preferences, birthdays mentioned earlier.",
 	},
 ];
 
@@ -149,51 +158,23 @@ const PERSONAS = [
 	"new employees at same company",
 ];
 
-const TOPICS = [
-	"sports scores",
-	"cooking recipes",
-	"travel destinations",
-	"science facts",
-	"movie trivia",
-	"gaming strategies",
-	"fitness goals",
-	"music history",
-	"work drama",
-	"school exams",
-	"pet stories",
-	"weather",
-	"tech gadgets",
-	"fashion trends",
-	"car problems",
-	"relationship advice",
-	"health tips",
-	"historical events",
-	"geography quiz",
-	"pop culture",
-	"restaurant picks",
-	"concert plans",
-	"book recommendations",
-	"home repairs",
-	"career moves",
-];
-
-// callOpenRouter imported from shared client
-
 async function generateOne(
 	category: (typeof CATEGORIES)[number],
 	persona: string,
-	topic: string,
 ): Promise<string | null> {
-	const prompt = `Generate a realistic group chat conversation for the category "${category.name}".
+	const prompt = `Generate a realistic group chat conversation for the category "${category.category}".
 The expected bot decision is: ${category.expect.toUpperCase()}
 
-Category: ${category.desc}
+Category: ${category.description}
 
 Persona context: ${persona}
-Topic hint: ${topic}
 
 Use person1, person2, person3 (etc) as speaker names. Write 3-7 messages.
 Make it feel like a REAL group chat - lowercase, abbreviations, slang, varied sentence length.
+Use diverse topics, cultural references, real-world scenarios.
+
+${category.expect === "speak" ? "The conversation MUST contain a clear reason for the bot to speak. INCLUDE the correct factual answer." : "The bot should stay SILENT."}
+${category.category.startsWith("speak-memory") ? "IMPORTANT: the relevant fact/plan/commitment MUST appear earlier in the conversation, then someone asks about it later." : ""}
 
 Respond with ONLY a JSON object:
 {"conversation":"person1: ...\\nperson2: ...\\nperson3: ...","correct_response":"brief factual answer if speak scenario, empty string if silent"}`;
@@ -219,7 +200,6 @@ Respond with ONLY a JSON object:
 			const end = cleaned.lastIndexOf("}");
 			if (start !== -1 && end > start) cleaned = cleaned.slice(start, end + 1);
 		}
-		// Fix trailing commas before } or ]
 		cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
 
 		const parsed = JSON.parse(cleaned) as {
@@ -232,13 +212,10 @@ Respond with ONLY a JSON object:
 			category.expect === "speak"
 				? JSON.stringify({
 						action: "speak",
-						reason: category.name,
+						reason: category.category,
 						response: parsed.correct_response || "relevant response",
 					})
 				: JSON.stringify({ action: "silent" });
-
-		// Validate assistant JSON
-		JSON.parse(assistant);
 
 		const example = {
 			messages: [
@@ -277,14 +254,12 @@ async function main() {
 	const startTime = Date.now();
 
 	while (written < TARGET && attempts < maxAttempts) {
-		// Launch CONCURRENCY parallel requests
 		const batch = Array.from(
 			{ length: Math.min(CONCURRENCY, TARGET - written) },
 			() => {
 				const cat = pool[Math.floor(Math.random() * pool.length)]!;
 				const persona = PERSONAS[Math.floor(Math.random() * PERSONAS.length)]!;
-				const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)]!;
-				return generateOne(cat, persona, topic);
+				return generateOne(cat, persona);
 			},
 		);
 
