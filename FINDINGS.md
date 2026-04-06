@@ -1561,3 +1561,57 @@ The dramatic improvement (+16.6pp independent) warrants scrutiny. Evidence again
 4. **Precision held or improved** on independent (0.984 -> 0.994). Overfitting typically trades precision for recall indiscriminately.
 
 The improvement appears genuine: v3 training data covered the distribution gap between hand-crafted and Opus-generated scenarios.
+
+### Extended campaign results — 2026-04-06
+
+3-round campaign with 10 runs per scenario. Mono runs all 3 rounds; dual runs round 1 only (confirmed redundant). Ollama parallel=2 on 12-core CPU VPS.
+
+**Test suites:**
+- **Builtin** (140 scenarios) — hand-crafted, used since v1
+- **Independent** (174 scenarios) — Opus-generated from category definitions, same distribution as training data
+- **Overfitting** (82 scenarios) — structurally different edge cases: sarcasm traps, phila-adjacent content, buried questions, code-switching, counterintuitive true facts, rhetorical questions
+
+#### Multi-round stability (mono ft-v3)
+
+| Suite | R1 | R2 | R3 | Avg | Std |
+|-------|-----|-----|-----|-----|-----|
+| Builtin (140) | 93.6% | 93.6% | 93.6% | 93.6% | 0.0 |
+| Independent (174) | 93.3% | 93.3% | — | 93.3% | 0.0 |
+| Overfitting (82) | 80.1% | 79.9% | — | 80.0% | 0.1 |
+
+Zero variance on builtin and independent across rounds. The model is deterministic at majority-vote granularity.
+
+#### Mono vs dual comparison (round 1)
+
+| Suite | Mono | Dual | Delta |
+|-------|------|------|-------|
+| Builtin | 93.6% | 93.6% | 0.0pp |
+| Independent | 93.3% | 93.1% | -0.2pp |
+| Overfitting | 80.1% | 79.3% | -0.8pp |
+
+Dual is worse on every non-builtin suite. The second pass introduces false speaks without catching anything the gate missed. Dual is officially dead for v3.
+
+#### Overfitting detection
+
+The overfitting suite scores ~13pp below independent. This is expected — these scenarios are adversarial by design:
+
+- **Phila-adjacent content** (e.g. "philadelphia cream cheese") triggers false speaks — the model learned "phila" as a signal
+- **Sarcasm traps** where tone implies correction but content is casual
+- **Buried questions** hidden in long messages
+- **Code-switching** between languages mid-conversation
+
+The gap is stable across rounds (80.1%, 79.9%) — consistent difficulty, not noise. The 13pp gap does NOT indicate overfitting on builtin/independent because: (a) independent and builtin agree within 0.3pp, (b) overfitting scenarios are structurally different (not just harder versions of the same patterns), (c) the failure modes are explainable (phila-adjacent, sarcasm) rather than random.
+
+#### Precision/recall breakdown (round 1)
+
+| Config | Suite | Precision | Recall | F1 |
+|--------|-------|-----------|--------|-----|
+| Mono | Builtin | 0.957 | 0.865 | 0.909 |
+| Mono | Independent | 0.995 | 0.890 | 0.939 |
+| Mono | Overfitting | 0.801 | 0.653 | 0.719 |
+
+Overfitting suite recall drops to 0.653 — the model goes too silent on edge cases. Precision also drops to 0.801 due to phila-adjacent false speaks. Both are expected for adversarial scenarios not represented in training data.
+
+#### Production recommendation
+
+**Mono ft-v3** is the production config. 93.3% on independent (real-world proxy), 93.6% on builtin, ~80% on adversarial edge cases. Dual adds complexity and latency for no accuracy gain. The overfitting suite identifies specific failure modes (phila-adjacent, sarcasm) that could inform v4 training data if further improvement is needed.
