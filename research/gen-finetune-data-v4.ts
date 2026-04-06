@@ -475,23 +475,25 @@ Generate ${count} examples where someone states a WRONG FACT but another person 
 
 Rules:
 - person1 states a wrong fact
-- person2 (or another person) corrects it using words like "actually", "no that's wrong", "nope", "that's not right", "it's actually", "correction:", "no it's", "pretty sure it's"
+- person2 (or another person) corrects it — the correction message MUST contain one of these exact words or phrases: "actually", "nope", "that's wrong", "that's not right", "it's actually", "no it's", "pretty sure it's", "correction:", "wait no", "actually no"
 - Phila stays SILENT (action: "silent") — never piles on after a correction
 - The conversation may continue after the correction (more messages)
-- Vary correction styles: blunt corrections, gentle corrections, corrections with additional context
+- Vary which marker word is used across examples
+
+IMPORTANT: Every correction message MUST explicitly contain one of the marker words listed above. Do NOT generate implicit corrections like "1865, right after the civil war ended" — the correction must be unambiguous.
 
 Return ONLY a JSON array. No prose, no markdown. Each element:
 - "conversation": multi-line string, person1/person2/etc, \\n separated
 - "action": "silent"
 
 Example:
-{"conversation":"person1: rome is the capital of italy right\\nperson2: yeah totally\\nperson3: actually yeah rome is correct\\nperson1: oh sweet thanks"}
-
-Another:
 {"conversation":"person1: einstein won the nobel prize for relativity\\nperson2: nope, it was actually for the photoelectric effect\\nperson1: oh really? huh"}
 
 Another:
-{"conversation":"person1: mount everest is in nepal and china right\\nperson2: its actually on the border of nepal and tibet (which is china yes)\\nperson1: ahh ok makes sense"}`;
+{"conversation":"person1: mount everest is in nepal right\\nperson2: actually its on the border of nepal and tibet\\nperson1: ahh ok makes sense"}
+
+Another:
+{"conversation":"person1: the great wall of china is visible from space\\nperson2: wait no thats actually a myth, you cant see it from orbit\\nperson3: huh really\\nperson2: yeah its too narrow"}`;
 }
 
 // --- Record builder ---
@@ -663,6 +665,13 @@ const DEFAULT_COUNTS: Record<string, number> = {
 	"already-corrected": 150,
 };
 
+// facts-speak/silent use small batches so each batch gets a different fact pool
+// (8 pools total; batchSize=12 → 8+ batches for 100 examples = full pool coverage)
+const BATCH_SIZES: Record<string, number> = {
+	"facts-speak": 12,
+	"facts-silent": 12,
+};
+
 const { values } = parseArgs({
 	options: {
 		count: { type: "string" },
@@ -731,7 +740,7 @@ for (const cat of categories) {
 	if (dir) mkdirSync(dir, { recursive: true });
 
 	console.log(`\nGenerating ${count} examples for category: ${cat}`);
-	const records = generateCategory(cat, count);
+	const records = generateCategory(cat, count, BATCH_SIZES[cat] ?? 80);
 	console.log(`  Total records: ${records.length}`);
 
 	const jsonl = `${records.map((r) => JSON.stringify(r)).join("\n")}\n`;
