@@ -1503,6 +1503,55 @@ export const SCENARIOS: Scenario[] = [
 		category: "adversarial",
 		difficulty: "adversarial",
 	},
+
+	// -- phila-adjacent negatives (holdout) --
+	// The model learned "phila" as a trigger signal. These teach it that "phila"
+	// in non-addressing contexts (city name, brand, abbreviation) means silent.
+	{
+		name: "phila cream cheese",
+		conversation:
+			"person1: grab some phila cream cheese from the store\nperson2: the whipped kind?\nperson1: yeah and some bagels",
+		expect: "silent",
+		split: "holdout",
+		category: "adversarial",
+		difficulty: "adversarial",
+	},
+	{
+		name: "phila cheesesteak order",
+		conversation:
+			"person1: making phila-style cheesesteaks tonight\nperson2: oh yes please\nperson3: whiz wit for me",
+		expect: "silent",
+		split: "holdout",
+		category: "adversarial",
+		difficulty: "adversarial",
+	},
+	{
+		name: "phila postal abbreviation",
+		conversation:
+			"person1: mail it to my office in phila PA 19103\nperson2: got it ill ship it tomorrow\nperson3: thanks",
+		expect: "silent",
+		split: "holdout",
+		category: "adversarial",
+		difficulty: "adversarial",
+	},
+	{
+		name: "phila eagles sports talk",
+		conversation:
+			"person1: did you watch the phila game last night\nperson2: eagles looked terrible\nperson3: they need a new quarterback",
+		expect: "silent",
+		split: "holdout",
+		category: "adversarial",
+		difficulty: "adversarial",
+	},
+	{
+		name: "phila underrated city",
+		conversation:
+			"person1: phila is so underrated honestly\nperson2: the food scene is incredible\nperson3: and way cheaper than nyc",
+		expect: "silent",
+		split: "holdout",
+		category: "adversarial",
+		difficulty: "adversarial",
+	},
 ];
 
 // -- Helper functions --
