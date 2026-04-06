@@ -1479,3 +1479,85 @@ The 11pp gap between original and independent suites has two components:
 **Structural (~4-6pp):** 3B model capability limits. Subtle factual errors requiring world knowledge, multi-hop reasoning, edge-case sarcasm detection. No training data fixes this - it requires a larger model or architectural changes.
 
 The v3 fine-tune should close most of the distribution mismatch, bringing the independent suite accuracy from 80.9% toward 85-87%. Getting past that requires either more model parameters or more sophisticated architecture.
+
+## v3 Fine-Tune Results — 2026-04-06
+
+Gate-only fine-tune on 3,799 examples (59.3% speak, 40.7% silent). Trained on Vast.ai RTX 4090, QLoRA r=16 a=32. Training data: curated gate-synthetic-v3 + gate-opus-independent + gate-friends-silent (capped 600). Zero contamination verified (SHA-256 hash check against both test suites).
+
+### Initial benchmark (15 runs per scenario)
+
+| Config | Original Acc | Original F1 | Independent Acc | Independent F1 | Gap |
+|--------|-------------|-------------|-----------------|----------------|-----|
+| Mono ft-v2 | 90.3% | 0.850 | 76.7% | 0.755 | -13.6pp |
+| **Mono ft-v3** | **93.6%** | **0.909** | **93.3%** | **0.939** | **-0.3pp** |
+
+### Per-metric comparison (mono ft-v3 vs mono ft-v2)
+
+| Metric | v2 Original | v3 Original | v2 Independent | v3 Independent |
+|--------|------------|------------|----------------|----------------|
+| Precision | 1.000 | 0.957 | 0.984 | 0.994 |
+| Recall | 0.739 | 0.865 | 0.612 | 0.890 |
+| Specificity | 1.000 | 0.977 | 0.986 | 0.993 |
+| FPR | 0.000 | 0.023 | 0.014 | 0.007 |
+
+### What changed
+
+**1. Recall jumped massively.** Independent recall went from 0.612 to 0.890 (+27.8pp). The model is now catching speak-worthy moments it used to miss. This was the entire goal of v3.
+
+**2. The generalization gap nearly vanished.** From -13.6pp (v2) to -0.3pp (v3). The training data distribution now matches what the model sees in the wild. The original prediction was 85-87% - we overshot to 93.3%.
+
+**3. Precision traded slightly for recall.** Original precision dropped from 1.000 to 0.957 (a few more false-speaks). Independent precision actually improved from 0.984 to 0.994. The tradeoff is clearly worth it.
+
+**4. No contamination.** SHA-256 hash check confirms zero overlap between 3,799 training examples and 174 independent scenarios + 140 builtin scenarios.
+
+### Failures (mono ft-v3, 0/15 on all runs)
+
+Builtin (4 failures):
+- `unanswered opinion not fact` - asking for opinions, not factual questions
+- `wrong fact with phila name nearby` - "phila" in conversation text, not directed at agent
+- `did anyone rsvp` - memory recall, not gate
+- `question about opinion not fact` - opinion vs fact distinction
+
+Independent (11 failures):
+- `wrong shakespeare play`, `wrong element symbol`, `wrong mars fact`, `wrong continent africa`, `wrong human body water`, `wrong number of moons`, `wrong bone fact`, `wrong eye color genetics`, `wrong teeth count` - all subtle factual errors (model capability limit)
+- `uber eta recall` - memory recall, not gate
+- `movie ticket holder recall` - memory recall, not gate
+
+Pattern: failures are either (a) subtle factual errors requiring world knowledge the 3B model doesn't have, or (b) memory recall scenarios that the monolithic gate can't address (dual gate handles these).
+
+### Full comparison (v2 vs v3, all configs)
+
+| Config | Original Acc | Original F1 | Independent Acc | Independent F1 | Gap |
+|--------|-------------|-------------|-----------------|----------------|-----|
+| Mono base | 86.3% | 0.775 | 67.0% | 0.613 | -19.3pp |
+| Dual base | 87.2% | 0.802 | 67.4% | 0.623 | -19.8pp |
+| Mono ft-v2 | 90.3% | 0.850 | 76.7% | 0.755 | -13.6pp |
+| Dual ft-v2 | 91.9% | 0.880 | 80.9% | 0.808 | -11.0pp |
+| **Mono ft-v3** | **93.6%** | **0.909** | **93.3%** | **0.939** | **-0.3pp** |
+| **Dual ft-v3** | **93.6%** | **0.909** | **93.1%** | **0.938** | **-0.5pp** |
+
+### Dual ft-v3 detailed metrics
+
+| Metric | Dual v2 Original | Dual v3 Original | Dual v2 Independent | Dual v3 Independent |
+|--------|-----------------|-----------------|--------------------|--------------------|
+| Precision | 0.977 | 0.957 | 0.986 | 0.993 |
+| Recall | 0.800 | 0.865 | 0.684 | 0.890 |
+| Specificity | 0.989 | 0.977 | 0.986 | 0.991 |
+| FPR | 0.011 | 0.023 | 0.014 | 0.009 |
+
+### Key finding: dual pass no longer helps
+
+With v2, dual added +1.6pp original and +4.1pp independent over monolithic. With v3, dual adds 0pp original and -0.2pp independent. The gate is now strong enough that Pass 2 (memory recall) adds nothing - and the extra false-speak risk from the second pass slightly hurts independent accuracy.
+
+**Implication for production:** Monolithic ft-v3 is the optimal config. Simpler architecture, lower latency (715ms vs 1146ms avg), same or better accuracy. The dual architecture was compensating for v2's weak recall - v3 fixed the root cause.
+
+### Overfitting analysis
+
+The dramatic improvement (+16.6pp independent) warrants scrutiny. Evidence against overfitting:
+
+1. **Zero contamination** - hash-verified, no training/test overlap
+2. **Gap closure, not inflation** - original suite improved only +3.3pp while independent improved +16.6pp. If overfitting, both would inflate equally.
+3. **Failure pattern is sensible** - the 11 independent failures are all either world-knowledge limitations (subtle facts) or memory-recall scenarios. These are expected failure modes, not random.
+4. **Precision held or improved** on independent (0.984 -> 0.994). Overfitting typically trades precision for recall indiscriminately.
+
+The improvement appears genuine: v3 training data covered the distribution gap between hand-crafted and Opus-generated scenarios.

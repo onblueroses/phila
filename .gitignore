@@ -19,5 +19,11 @@ research/overnight-state.json
 test/research-reports/candidates/
 test/research-reports/rounds/
 
+# GGUF model files (too large for git)
+*.gguf
+
+# overnight campaign results (raw JSON, summarized in FINDINGS.md)
+overnight-results/
+
 # nested checkout artifact
 phila/
