@@ -1,0 +1,658 @@
+[
+  {
+    "name": "wrong fact buried in compliment",
+    "conversation": "person1: I love how Paris, the capital of Germany, looks in spring\nperson2: same, the architecture is gorgeous\nperson3: we should plan a trip",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "Paris is the capital of France, not Germany"
+  },
+  {
+    "name": "wrong bone count casual",
+    "conversation": "person1: did you know the human body has 204 bones\nperson2: thats wild\nperson3: i always forget anatomy stuff",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "206 bones, not 204"
+  },
+  {
+    "name": "wrong fact as parenthetical",
+    "conversation": "person1: my cousin is visiting from brazil (the largest country in africa) next week\nperson2: oh nice! what are you guys gonna do\nperson1: probably hit the beach",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "Brazil is in South America, not Africa"
+  },
+  {
+    "name": "wrong goldfish care advice",
+    "conversation": "person1: just got a goldfish for my kid\nperson2: nice! make sure you only feed it every 3 weeks, they dont need much\nperson1: ok good to know thanks",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "goldfish should be fed daily or every other day"
+  },
+  {
+    "name": "wrong planet count aside",
+    "conversation": "person1: space is so cool. with 9 planets in our solar system theres so much to explore\nperson2: i wanna see the northern lights first lol\nperson3: same tbh",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "8 planets since Pluto was reclassified in 2006"
+  },
+  {
+    "name": "wrong blood type claim",
+    "conversation": "person1: fun fact O negative is the rarest blood type\nperson2: oh really? i didnt know that\nperson3: i think im O positive",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "AB negative is the rarest, O negative is universal donor"
+  },
+  {
+    "name": "slightly wrong speed of light",
+    "conversation": "person1: light travels at like 300000 miles per second right\nperson2: yeah something crazy like that\nperson3: physics is wild",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "300000 km/s not miles/s - about 186000 miles per second"
+  },
+  {
+    "name": "wrong vitamin c scurvy timeline",
+    "conversation": "person1: sailors used to get scurvy because they didnt eat enough vitamin D on long voyages\nperson2: yeah thats why they brought limes eventually\nperson3: british navy stuff right",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "scurvy is caused by vitamin C deficiency, not vitamin D"
+  },
+  {
+    "name": "edison lightbulb myth",
+    "conversation": "person1: Thomas Edison invented the telephone, what a legend\nperson2: changed the world for sure\nperson3: imagine life without phones",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Alexander Graham Bell invented the telephone, Edison invented the phonograph and improved the lightbulb"
+  },
+  {
+    "name": "wrong quote attribution",
+    "conversation": "person1: \"be the change you wish to see in the world\" - Martin Luther King Jr\nperson2: such a powerful quote\nperson3: love that one",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "quote is attributed to Mahatma Gandhi"
+  },
+  {
+    "name": "wrong song artist",
+    "conversation": "person1: bohemian rhapsody by the rolling stones is the greatest rock song ever\nperson2: so good\nperson3: the guitar solo 🔥",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Bohemian Rhapsody is by Queen, not the Rolling Stones"
+  },
+  {
+    "name": "wrong historical date mashup",
+    "conversation": "person1: the berlin wall fell in 1991 right when the soviet union collapsed\nperson2: yeah crazy times in europe\nperson3: my parents remember watching it on tv",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Berlin Wall fell in 1989, Soviet Union collapsed in 1991"
+  },
+  {
+    "name": "wrong country for great wall",
+    "conversation": "person1: one day i wanna see the great wall of japan\nperson2: that would be incredible, its so long\nperson3: bucket list for sure",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Great Wall is in China, not Japan"
+  },
+  {
+    "name": "wrong painting museum",
+    "conversation": "person1: saw the mona lisa at the british museum last year, so much smaller than i expected\nperson2: everyone says that\nperson3: was it worth the trip?",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Mona Lisa is in the Louvre in Paris, not the British Museum"
+  },
+  {
+    "name": "wrong inventor of printing press",
+    "conversation": "person1: Benjamin Franklin invented the printing press and changed publishing forever\nperson2: true, books became so much more accessible\nperson3: imagine having to copy everything by hand",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Johannes Gutenberg invented the printing press"
+  },
+  {
+    "name": "nile in south america",
+    "conversation": "person1: the nile is the longest river in south america right?\nperson2: yeah i think so\nperson1: would love to do a boat tour on it someday",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Nile is in Africa; longest in South America is the Amazon"
+  },
+  {
+    "name": "buried question after topic shift",
+    "conversation": "person1: does anyone know how long you can keep cooked rice in the fridge\nperson2: oh speaking of food, did you see that new taco place opened\nperson3: yes! went yesterday, their al pastor is insane\nperson2: we should go friday\nperson3: im down\nperson1: cool lets do it",
+    "expect": "speak",
+    "category": "speak-unanswered-buried",
+    "difficulty": "hard",
+    "topic": "cooked rice keeps 4-6 days in the fridge"
+  },
+  {
+    "name": "question as wondering",
+    "conversation": "person1: i wonder what the tallest building in the world is now\nperson2: probably something in dubai\nperson3: they keep building taller ones lol\nperson1: crazy how fast things change",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "person2 is essentially correct - Burj Khalifa in Dubai"
+  },
+  {
+    "name": "question buried then self redirect",
+    "conversation": "person1: whats the minimum age to rent a car in the US?\nperson1: anyway totally different topic but did anyone watch the game last night\nperson2: yeah that last quarter was wild\nperson3: refs were terrible as usual",
+    "expect": "speak",
+    "category": "speak-unanswered-buried",
+    "difficulty": "hard",
+    "topic": "generally 25, though some companies allow 21 with surcharge"
+  },
+  {
+    "name": "question lost in long chat",
+    "conversation": "person1: how many calories are in an avocado roughly\nperson2: oh man i had the best guac yesterday\nperson3: recipe??\nperson2: just avocado lime salt cilantro jalapeño\nperson3: simple. i like it\nperson1: sounds amazing",
+    "expect": "speak",
+    "category": "speak-unanswered-buried",
+    "difficulty": "hard",
+    "topic": "about 240 calories per avocado"
+  },
+  {
+    "name": "indirect question never answered",
+    "conversation": "person1: i keep forgetting what temperature you're supposed to wash whites at\nperson2: i just throw everything in together lol\nperson3: same, lifes too short to sort laundry",
+    "expect": "speak",
+    "category": "speak-unanswered-buried",
+    "difficulty": "hard",
+    "topic": "whites are typically washed in hot water, around 130F/54C"
+  },
+  {
+    "name": "question rephrased as musing",
+    "conversation": "person1: is it true that you lose most of your body heat through your head\nperson2: my mom always told me that\nperson3: moms know best\nperson2: haha true",
+    "expect": "speak",
+    "category": "speak-unanswered-buried",
+    "difficulty": "hard",
+    "topic": "this is a myth - you lose heat proportional to exposed surface area"
+  },
+  {
+    "name": "question from 6 messages ago",
+    "conversation": "person1: what's the difference between baking soda and baking powder\nperson2: ooh i made cookies yesterday\nperson3: were they good?\nperson2: incredible. chocolate chip\nperson3: classic\nperson1: nice\nperson2: ill bring some tomorrow",
+    "expect": "speak",
+    "category": "speak-unanswered-buried",
+    "difficulty": "hard",
+    "topic": "baking soda is pure sodium bicarbonate, baking powder includes an acid"
+  },
+  {
+    "name": "venus day length true fact",
+    "conversation": "person1: a day on venus is longer than its year lol\nperson2: wait what thats impossible\nperson3: nah i think thats actually true, its rotation is super slow",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "this is actually true"
+  },
+  {
+    "name": "bananas are berries",
+    "conversation": "person1: did you know bananas are technically berries but strawberries arent\nperson2: thats the dumbest thing ive ever heard\nperson3: botany is weird like that",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "both claims are botanically correct"
+  },
+  {
+    "name": "oxford older than aztecs",
+    "conversation": "person1: oxford university is older than the aztec empire, how wild is that\nperson2: no way thats true\nperson3: pretty sure it is actually. oxford is like 1096 or something",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "true - Oxford ~1096, Aztec Empire ~1428"
+  },
+  {
+    "name": "cleopatra closer to moon landing",
+    "conversation": "person1: cleopatra lived closer to the moon landing than to the building of the pyramids\nperson2: that cant be right\nperson1: look it up its true",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "this is a true fact"
+  },
+  {
+    "name": "honey never expires",
+    "conversation": "person1: honey literally never expires. they found 3000 year old honey in egyptian tombs and it was still edible\nperson2: thats gotta be fake\nperson3: nah its real, honey is wild",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "this is true"
+  },
+  {
+    "name": "scotland national animal unicorn",
+    "conversation": "person1: scotlands national animal is the unicorn 😂\nperson2: lmao youre making that up\nperson3: no its actually real look it up",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "true - the unicorn is Scotland's national animal"
+  },
+  {
+    "name": "octopus three hearts weird phrasing",
+    "conversation": "person1: octopuses got a triple-heart setup, two for gills one for the body\nperson2: what\nperson3: yeah theyre basically aliens",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "correct - octopuses have 3 hearts"
+  },
+  {
+    "name": "pizza best food opinion",
+    "conversation": "person1: pizza is objectively the best food ever created\nperson2: facts\nperson3: you misspelled tacos",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "subjective opinion"
+  },
+  {
+    "name": "ugliest building claim",
+    "conversation": "person1: that new building downtown is the ugliest thing ever built\nperson2: its SO bad\nperson3: the architect should be ashamed honestly",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "aesthetic judgment"
+  },
+  {
+    "name": "confident market prediction",
+    "conversation": "person1: crypto is definitely going to crash hard by next quarter\nperson2: yeah the signs are all there\nperson3: been saying this for months",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "speculation not fact"
+  },
+  {
+    "name": "best decade ever",
+    "conversation": "person1: the 90s were the best decade for music period\nperson2: absolutely no contest\nperson3: 80s were better fight me",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "subjective preference"
+  },
+  {
+    "name": "worst movie ever made",
+    "conversation": "person1: that new marvel movie is literally the worst film ever made\nperson2: it was SO bad\nperson3: i kinda liked it ngl\nperson1: youre wrong",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "subjective opinion even if phrased as fact"
+  },
+  {
+    "name": "remote work is more productive",
+    "conversation": "person1: remote work is definitely more productive than office work\nperson2: 100 percent agree\nperson3: my boss disagrees lol",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "debatable claim with mixed evidence"
+  },
+  {
+    "name": "moon cheese sarcasm",
+    "conversation": "person1: oh yeah the moon is totally made of cheese everyone knows that 🧀\nperson2: lmaooo cheddar or gouda\nperson3: definitely brie",
+    "expect": "silent",
+    "category": "silent-sarcasm-trap",
+    "difficulty": "hard",
+    "topic": "obvious sarcasm"
+  },
+  {
+    "name": "einstein failed school sarcasm",
+    "conversation": "person1: wow einstein really struggled in school, total failure that guy\nperson2: yeah barely scraped by 😂\nperson3: couldnt even do basic math apparently",
+    "expect": "silent",
+    "category": "silent-sarcasm-trap",
+    "difficulty": "hard",
+    "topic": "ironic exaggeration - they know Einstein was brilliant"
+  },
+  {
+    "name": "flat earth sarcastic",
+    "conversation": "person1: the earth is flat obviously, do your research\nperson2: 💀💀\nperson3: wake up sheeple",
+    "expect": "silent",
+    "category": "silent-sarcasm-trap",
+    "difficulty": "hard",
+    "topic": "obvious sarcasm from context"
+  },
+  {
+    "name": "apparently sugar makes kids hyper",
+    "conversation": "person1: apparently sugar makes kids hyper\nperson2: ah yes \"science\"\nperson3: my mom swore by that one lol",
+    "expect": "silent",
+    "category": "silent-sarcasm-trap",
+    "difficulty": "hard",
+    "topic": "scare quotes and 'apparently' signal they know its a myth"
+  },
+  {
+    "name": "sarcastic goldfish memory",
+    "conversation": "person1: sure jan, goldfish have a 3 second memory 🙄\nperson2: right and we only use 10% of our brains\nperson3: and cracking your knuckles gives you arthritis lmao",
+    "expect": "silent",
+    "category": "silent-sarcasm-trap",
+    "difficulty": "hard",
+    "topic": "listing known myths sarcastically"
+  },
+  {
+    "name": "sarcastic columbus discovered america",
+    "conversation": "person1: oh right because columbus \"discovered\" america\nperson2: the millions of people already living there might disagree\nperson3: 😂 history class was wild",
+    "expect": "silent",
+    "category": "silent-sarcasm-trap",
+    "difficulty": "hard",
+    "topic": "air quotes signal awareness"
+  },
+  {
+    "name": "philadelphia city discussion",
+    "conversation": "person1: phila is so underrated as a city\nperson2: the food scene there is incredible\nperson3: cheesesteaks alone make it worth visiting",
+    "expect": "silent",
+    "category": "silent-phila-adjacent",
+    "difficulty": "hard",
+    "topic": "discussing Philadelphia the city, not addressing the bot"
+  },
+  {
+    "name": "philly eagles game",
+    "conversation": "person1: did you catch the phila game last night\nperson2: yeah the eagles looked rough\nperson3: they need a better offensive line",
+    "expect": "silent",
+    "category": "silent-phila-adjacent",
+    "difficulty": "hard",
+    "topic": "Philadelphia Eagles discussion"
+  },
+  {
+    "name": "fill a bucket idiom",
+    "conversation": "person1: can someone fill a bucket with ice for the drinks\nperson2: on it\nperson3: grab some cups too",
+    "expect": "silent",
+    "category": "silent-phila-adjacent",
+    "difficulty": "hard",
+    "topic": "phonetic near-match 'fill a'"
+  },
+  {
+    "name": "philly cheesesteak recipe",
+    "conversation": "person1: making phila-style cheesesteaks tonight who wants some\nperson2: 🙋‍♂️\nperson3: whiz wit please",
+    "expect": "silent",
+    "category": "silent-phila-adjacent",
+    "difficulty": "hard",
+    "topic": "Philadelphia-style food discussion"
+  },
+  {
+    "name": "philadelphia cream cheese",
+    "conversation": "person1: we need phila cream cheese for the recipe\nperson2: i can grab some from the store\nperson3: get the whipped kind",
+    "expect": "silent",
+    "category": "silent-phila-adjacent",
+    "difficulty": "hard",
+    "topic": "Philadelphia brand cream cheese"
+  },
+  {
+    "name": "who cares rhetorical",
+    "conversation": "person1: ugh another meeting about the same thing\nperson2: who even cares about this anymore\nperson3: not me thats for sure",
+    "expect": "silent",
+    "category": "silent-rhetorical-questions",
+    "difficulty": "hard",
+    "topic": "rhetorical complaint"
+  },
+  {
+    "name": "whats the point rhetorical",
+    "conversation": "person1: its supposed to rain all weekend\nperson2: whats the point of going then\nperson3: we could do something indoors instead",
+    "expect": "silent",
+    "category": "silent-rhetorical-questions",
+    "difficulty": "hard",
+    "topic": "rhetorical - not asking for weather data"
+  },
+  {
+    "name": "why do i bother rhetorical",
+    "conversation": "person1: my code broke again after the update\nperson2: why do i even bother writing tests\nperson3: lol mood\nperson1: gonna just revert",
+    "expect": "silent",
+    "category": "silent-rhetorical-questions",
+    "difficulty": "hard",
+    "topic": "venting not asking"
+  },
+  {
+    "name": "how hard can it be rhetorical",
+    "conversation": "person1: been on hold with customer service for 40 minutes\nperson2: how hard can it be to answer a phone\nperson3: last time i waited an hour smh",
+    "expect": "silent",
+    "category": "silent-rhetorical-questions",
+    "difficulty": "hard",
+    "topic": "rhetorical frustration"
+  },
+  {
+    "name": "when will they learn rhetorical",
+    "conversation": "person1: they pushed another broken update\nperson2: when will they learn to actually test things\nperson3: never apparently\nperson1: classic",
+    "expect": "silent",
+    "category": "silent-rhetorical-questions",
+    "difficulty": "hard",
+    "topic": "rhetorical complaint"
+  },
+  {
+    "name": "spanglish casual chat",
+    "conversation": "person1: oye vamos al cine tonight?\nperson2: si dale, which movie\nperson3: whatever pero no horror pls\nperson1: ok comedia then",
+    "expect": "silent",
+    "category": "silent-code-switching",
+    "difficulty": "hard",
+    "topic": "casual bilingual social planning"
+  },
+  {
+    "name": "emoji heavy chat",
+    "conversation": "person1: 🎉🎉🎉\nperson2: 🥳🥳\nperson3: 🍾🍾🍾 LFG\nperson1: 💪💪",
+    "expect": "silent",
+    "category": "silent-code-switching",
+    "difficulty": "hard",
+    "topic": "emoji celebration"
+  },
+  {
+    "name": "slang heavy convo",
+    "conversation": "person1: bruh that was lowkey bussin no cap\nperson2: fr fr on god\nperson3: deadass the vibes were immaculate\nperson1: we gotta run it back",
+    "expect": "silent",
+    "category": "silent-code-switching",
+    "difficulty": "hard",
+    "topic": "slang-heavy social chat"
+  },
+  {
+    "name": "french english mix casual",
+    "conversation": "person1: tu viens ce soir ou pas\nperson2: oui oui, what time\nperson3: genre 8h i think\nperson1: parfait see you there",
+    "expect": "silent",
+    "category": "silent-code-switching",
+    "difficulty": "hard",
+    "topic": "casual bilingual plans"
+  },
+  {
+    "name": "german english mix",
+    "conversation": "person1: das war echt gut gestern\nperson2: ja total, wanna do it again friday?\nperson3: bin dabei\nperson1: nice, same place?",
+    "expect": "silent",
+    "category": "silent-code-switching",
+    "difficulty": "hard",
+    "topic": "casual bilingual social"
+  },
+  {
+    "name": "quoting wrong fact to mock it",
+    "conversation": "person1: my coworker literally said the sun revolves around the earth today\nperson2: 💀 in 2026?\nperson3: some people man\nperson1: i didnt even know how to respond",
+    "expect": "silent",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "wrong fact is being reported/mocked, not stated as belief"
+  },
+  {
+    "name": "ask phila then self answer",
+    "conversation": "person1: hey phila what year did WW2 end\nperson1: wait nvm its 1945\nperson2: lol googled it faster than the bot",
+    "expect": "silent",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "addressed phila but immediately answered themselves"
+  },
+  {
+    "name": "two people argue one is right",
+    "conversation": "person1: the speed of sound is about 343 meters per second\nperson2: no its way faster than that, like 1000\nperson1: dude look it up, 343 m/s in air at room temp\nperson3: person1 is right",
+    "expect": "silent",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "wrong fact already corrected by another person"
+  },
+  {
+    "name": "meaning of life question",
+    "conversation": "person1: guys whats the meaning of life\nperson2: 42 obviously\nperson3: lol\nperson1: no but seriously",
+    "expect": "silent",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "philosophical question with no factual answer"
+  },
+  {
+    "name": "hypothetical wrong fact",
+    "conversation": "person1: imagine if gravity didnt exist and the earth was flat\nperson2: thatd be so weird\nperson3: wed all just float away lol",
+    "expect": "silent",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "hypothetical scenario not a factual claim"
+  },
+  {
+    "name": "wrong fact in a joke setup",
+    "conversation": "person1: ok so a horse walks into a bar on the moon\nperson2: 😂 go on\nperson1: and the bartender says theres no oxygen here sir\nperson3: lmaooo",
+    "expect": "silent",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "fiction/joke context, not factual claim"
+  },
+  {
+    "name": "corrected then new wrong fact",
+    "conversation": "person1: the great wall of china is visible from space\nperson2: thats actually a myth, you cant see it from space\nperson1: oh ok. well at least its the longest structure ever built at 20000 miles\nperson3: wow thats long",
+    "expect": "speak",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "Great Wall is about 13000 miles, not 20000"
+  },
+  {
+    "name": "wrong fact attributed to teacher",
+    "conversation": "person1: my teacher said that lightning never strikes the same place twice\nperson2: interesting\nperson3: i always heard that too",
+    "expect": "speak",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "lightning frequently strikes the same place, this is a myth"
+  },
+  {
+    "name": "question disguised as trivia game",
+    "conversation": "person1: ok trivia time. whats the deepest point in the ocean\nperson2: uhhh\nperson3: somewhere in the pacific right?\nperson2: idk the name tho",
+    "expect": "speak",
+    "category": "speak-unanswered-buried",
+    "difficulty": "hard",
+    "topic": "Mariana Trench, Challenger Deep"
+  },
+  {
+    "name": "wrong fact in positive review",
+    "conversation": "person1: just finished that book about how humans only use 10% of their brains, really eye opening\nperson2: oh whats it called\nperson1: cant remember but the science was fascinating\nperson3: sounds interesting",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "humans use virtually all of their brain, the 10% claim is a myth"
+  },
+  {
+    "name": "wrong cooking temperature advice",
+    "conversation": "person1: cooking chicken tonight\nperson2: just make sure the internal temp hits 145F and youre good\nperson3: yum what seasoning",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "chicken should reach 165F internal temp, 145F is for beef/pork"
+  },
+  {
+    "name": "almost wrong but actually true - sharks older than trees",
+    "conversation": "person1: sharks have been around longer than trees apparently\nperson2: that doesnt sound right at all\nperson3: idk biology is full of weird stuff",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "true - sharks ~450mya, trees ~350mya"
+  },
+  {
+    "name": "correct but weird - more stars than grains of sand",
+    "conversation": "person1: there are more stars in the universe than grains of sand on earth\nperson2: no way thats possible\nperson3: it does sound insane",
+    "expect": "silent",
+    "category": "silent-almost-wrong",
+    "difficulty": "hard",
+    "topic": "this is approximately true by current estimates"
+  },
+  {
+    "name": "prediction about AI phrased as fact",
+    "conversation": "person1: AI will replace all programmers within 5 years\nperson2: absolutely, its basically there already\nperson3: idk i think thats optimistic",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "prediction not verifiable fact"
+  },
+  {
+    "name": "declaring restaurant best in city",
+    "conversation": "person1: that sushi place on main st is the best restaurant in the entire city\nperson2: have you tried the one on broadway tho\nperson3: main st is fire but broadway is better imo",
+    "expect": "silent",
+    "category": "silent-opinion-as-fact",
+    "difficulty": "hard",
+    "topic": "subjective restaurant preference"
+  },
+  {
+    "name": "sarcastic with air quotes and emoji",
+    "conversation": "person1: oh yeah vaccines cause autism \"according to science\" 🙄\nperson2: lol dont get me started\nperson3: the facebook doctors strike again",
+    "expect": "silent",
+    "category": "silent-sarcasm-trap",
+    "difficulty": "hard",
+    "topic": "sarcasm with air quotes and eye roll emoji"
+  },
+  {
+    "name": "phila as abbreviation in address",
+    "conversation": "person1: send it to my office in phila, PA 19103\nperson2: got it ill drop it off tomorrow\nperson3: want me to come with",
+    "expect": "silent",
+    "category": "silent-phila-adjacent",
+    "difficulty": "hard",
+    "topic": "phila as postal abbreviation for Philadelphia"
+  },
+  {
+    "name": "why do bad things happen rhetorical",
+    "conversation": "person1: lost my wallet AND my keys today\nperson2: why do these things always happen at once\nperson3: bad luck comes in threes\nperson1: great so whats next",
+    "expect": "silent",
+    "category": "silent-rhetorical-questions",
+    "difficulty": "hard",
+    "topic": "rhetorical venting"
+  },
+  {
+    "name": "korean english mix",
+    "conversation": "person1: 오늘 뭐 먹을까\nperson2: lets get korean bbq\nperson3: 좋아 where tho\nperson1: the usual place",
+    "expect": "silent",
+    "category": "silent-code-switching",
+    "difficulty": "hard",
+    "topic": "bilingual casual food plans"
+  },
+  {
+    "name": "person corrects with wrong correction",
+    "conversation": "person1: the earth is about 4.5 billion years old\nperson2: no its way older, like 10 billion\nperson3: lol what, person1 is closer but idk exact number",
+    "expect": "silent",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "person1 is correct, person3 validated it, no intervention needed"
+  },
+  {
+    "name": "wrong fact in song lyrics discussion",
+    "conversation": "person1: love that line \"imagine all the people\" from John Lennon's Yesterday\nperson2: such a beautiful song\nperson3: timeless",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Imagine and Yesterday are different Beatles/Lennon songs"
+  },
+  {
+    "name": "multiple wrong facts only one matters",
+    "conversation": "person1: i think the amazon rainforest produces like 50% of the worlds oxygen\nperson2: yeah and its in central america right\nperson3: we really need to protect it",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "Amazon produces ~6% of O2 and is in South America, not Central America"
+  },
+  {
+    "name": "wrong fact presented as question but affirmed",
+    "conversation": "person1: wait isnt mount everest in china\nperson2: yeah i think so\nperson3: tallest mountain in the world right there",
+    "expect": "speak",
+    "category": "speak-correction-cultural",
+    "difficulty": "hard",
+    "topic": "Everest is on the Nepal-Tibet/China border, primarily associated with Nepal"
+  },
+  {
+    "name": "reading wrong fact from a menu",
+    "conversation": "person1: this menu says tequila is made from corn, interesting\nperson2: huh makes sense i guess\nperson3: never really thought about it",
+    "expect": "speak",
+    "category": "speak-correction-subtle",
+    "difficulty": "hard",
+    "topic": "tequila is made from agave, not corn"
+  },
+  {
+    "name": "direct address genuine question",
+    "conversation": "person1: hey phila whats the largest desert in the world\nperson2: sahara obviously\nperson3: pretty sure its actually antarctica",
+    "expect": "speak",
+    "category": "adversarial-edge",
+    "difficulty": "hard",
+    "topic": "addressed phila directly - must respond; Antarctica is technically largest desert"
+  }
+]
