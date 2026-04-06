@@ -11,6 +11,7 @@ import {
 import type {
 	ChatMessage,
 	ConversationContext,
+	ExtractedFact,
 	GroupProfile,
 } from "../src/types.ts";
 import { GateAction } from "../src/types.ts";
@@ -84,6 +85,137 @@ describe("gate", () => {
 			if (result.action === GateAction.SPEAK) {
 				assert.equal(result.response, "it's actually 100°C :)");
 			}
+		});
+
+		it("parses tools on SPEAK decision", () => {
+			const raw =
+				'{"action":"speak","reason":"wrong fact","response":"actually no","tools":["verify"]}';
+			const result = parseDecision(raw);
+			assert.equal(result.action, GateAction.SPEAK);
+			if (result.action === GateAction.SPEAK) {
+				assert.deepEqual(result.tools, ["verify"]);
+			}
+		});
+
+		it("parses tools on SILENT decision", () => {
+			const raw = '{"action":"silent","tools":["recall"]}';
+			const result = parseDecision(raw);
+			assert.equal(result.action, GateAction.SILENT);
+			assert.deepEqual(result.tools, ["recall"]);
+		});
+
+		it("drops unknown tools", () => {
+			const raw =
+				'{"action":"speak","reason":"r","response":"x","tools":["verify","inject_evil","recall"]}';
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.deepEqual(result.tools, ["verify", "recall"]);
+			}
+		});
+
+		it("missing tools field -> no tools property", () => {
+			const raw =
+				'{"action":"speak","reason":"direct address","response":"hey"}';
+			const result = parseDecision(raw);
+			assert.equal(result.action, GateAction.SPEAK);
+			if (result.action === GateAction.SPEAK) {
+				assert.equal(result.tools, undefined);
+			}
+		});
+
+		it("empty tools array -> no tools property", () => {
+			const raw = '{"action":"speak","reason":"r","response":"x","tools":[]}';
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.equal(result.tools, undefined);
+			}
+		});
+
+		it("all-unknown tools -> no tools property", () => {
+			const raw = '{"action":"silent","tools":["exec","eval"]}';
+			const result = parseDecision(raw);
+			assert.equal(result.action, GateAction.SILENT);
+			assert.equal(result.tools, undefined);
+		});
+
+		it("malformed JSON with tools -> SILENT with no tools", () => {
+			const raw = '{"action":"speak","tools":["verify"';
+			const result = parseDecision(raw);
+			assert.equal(result.action, GateAction.SILENT);
+			assert.equal(result.tools, undefined);
+		});
+
+		it("non-array tools field -> no tools property", () => {
+			const raw =
+				'{"action":"speak","reason":"r","response":"x","tools":"verify"}';
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.equal(result.tools, undefined);
+			}
+		});
+
+		// Adversarial inputs
+		it("duplicate tools deduplicated", () => {
+			const raw =
+				'{"action":"speak","reason":"r","response":"x","tools":["verify","verify","verify"]}';
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.deepEqual(result.tools, ["verify"]);
+			}
+		});
+
+		it("prototype pollution attempt filtered", () => {
+			const raw =
+				'{"action":"speak","reason":"r","response":"x","tools":["__proto__","constructor","verify"]}';
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.deepEqual(result.tools, ["verify"]);
+			}
+		});
+
+		it("mixed types in tools array -> only valid strings kept", () => {
+			const raw =
+				'{"action":"speak","reason":"r","response":"x","tools":[null,1,true,"verify",{}]}';
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.deepEqual(result.tools, ["verify"]);
+			}
+		});
+
+		it("both recall and verify in tools array preserved", () => {
+			const raw =
+				'{"action":"speak","reason":"r","response":"x","tools":["recall","verify"]}';
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.deepEqual(result.tools, ["recall", "verify"]);
+			}
+		});
+
+		it("very long tools array with one valid entry", () => {
+			const manyBad = Array.from({ length: 100 }, (_, i) => `tool${i}`);
+			const raw = JSON.stringify({
+				action: "speak",
+				reason: "r",
+				response: "x",
+				tools: [...manyBad, "recall"],
+			});
+			const result = parseDecision(raw);
+			if (result.action === GateAction.SPEAK) {
+				assert.deepEqual(result.tools, ["recall"]);
+			}
+		});
+
+		it("tools field as object -> no tools property", () => {
+			const raw = '{"action":"silent","tools":{"verify":true}}';
+			const result = parseDecision(raw);
+			assert.equal(result.action, GateAction.SILENT);
+			assert.equal(result.tools, undefined);
+		});
+
+		it("tools field as number -> no tools property", () => {
+			const raw = '{"action":"silent","tools":42}';
+			const result = parseDecision(raw);
+			assert.equal(result.tools, undefined);
 		});
 	});
 
@@ -250,6 +382,115 @@ describe("gate", () => {
 			assert.ok(prompt.includes("ALWAYS SPEAK"));
 			assert.ok(prompt.includes("STAY SILENT"));
 			assert.ok(prompt.includes("json"));
+		});
+
+		it("includes tools vocabulary with recall and verify examples", () => {
+			const prompt = buildSystemPrompt(baseProfile);
+			assert.ok(prompt.includes('"tools":["recall"]'));
+			assert.ok(prompt.includes('"tools":["verify"]'));
+		});
+
+		it("no facts param -> identical output to profile-only call", () => {
+			const withUndefined = buildSystemPrompt(
+				baseProfile,
+				undefined,
+				undefined,
+			);
+			const without = buildSystemPrompt(baseProfile);
+			assert.equal(withUndefined, without);
+		});
+
+		it("empty facts array -> identical output to no-facts call", () => {
+			const withEmpty = buildSystemPrompt(baseProfile, undefined, []);
+			const without = buildSystemPrompt(baseProfile);
+			assert.equal(withEmpty, without);
+		});
+
+		it("single fact appears in prompt", () => {
+			const facts: ExtractedFact[] = [
+				{
+					chatId: "c1",
+					type: "logistics",
+					key: "meeting_time",
+					value: "7pm friday",
+					messageId: 1,
+					timestamp: 1000,
+				},
+			];
+			const prompt = buildSystemPrompt(baseProfile, undefined, facts);
+			assert.ok(prompt.includes("you remember from this chat:"));
+			assert.ok(prompt.includes("- meeting_time: 7pm friday"));
+		});
+
+		it("multiple facts all appear in prompt", () => {
+			const facts: ExtractedFact[] = [
+				{
+					chatId: "c1",
+					type: "logistics",
+					key: "location",
+					value: "the thai place",
+					messageId: 1,
+					timestamp: 1000,
+				},
+				{
+					chatId: "c1",
+					type: "commitment",
+					key: "driver",
+					value: "person1",
+					messageId: 2,
+					timestamp: 2000,
+				},
+			];
+			const prompt = buildSystemPrompt(baseProfile, undefined, facts);
+			assert.ok(prompt.includes("- location: the thai place"));
+			assert.ok(prompt.includes("- driver: person1"));
+			assert.ok(
+				prompt.includes(
+					"if you remember relevant facts from this chat, use them in your response.",
+				),
+			);
+		});
+
+		it("facts block appears before ALWAYS SPEAK", () => {
+			const facts: ExtractedFact[] = [
+				{
+					chatId: "c1",
+					type: "preference",
+					key: "diet",
+					value: "vegetarian",
+					messageId: 1,
+					timestamp: 1000,
+				},
+			];
+			const prompt = buildSystemPrompt(baseProfile, undefined, facts);
+			const factsPos = prompt.indexOf("you remember from this chat:");
+			const rulesPos = prompt.indexOf("ALWAYS SPEAK");
+			assert.ok(
+				factsPos < rulesPos,
+				"facts block should appear before ALWAYS SPEAK",
+			);
+		});
+
+		it("facts combined with groupNotes both appear", () => {
+			const ctx: ConversationContext = {
+				correctionHint: false,
+				messagesPerMinute: null,
+				latestMessageHour: null,
+				groupNotes: "they often discuss sports.",
+			};
+			const facts: ExtractedFact[] = [
+				{
+					chatId: "c1",
+					type: "logistics",
+					key: "venue",
+					value: "the stadium",
+					messageId: 1,
+					timestamp: 1000,
+				},
+			];
+			const prompt = buildSystemPrompt(baseProfile, ctx, facts);
+			assert.ok(prompt.includes("they often discuss sports."));
+			assert.ok(prompt.includes("- venue: the stadium"));
 		});
 	});
 

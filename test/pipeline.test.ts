@@ -243,4 +243,50 @@ describe("pipeline integration", () => {
 			);
 		}
 	});
+
+	it("tools:['verify'] triggers verification path (parseDecision-based dispatch)", () => {
+		const raw =
+			'{"action":"speak","reason":"wrong fact","response":"actually paris","tools":["verify"]}';
+		const decision = parseDecision(raw);
+		assert.equal(decision.action, GateAction.SPEAK);
+		if (decision.action === GateAction.SPEAK) {
+			assert.ok(
+				decision.tools?.includes("verify"),
+				"verify tool should be present",
+			);
+		}
+	});
+
+	it("tools:['recall'] on SILENT parsed correctly for recall dispatch", () => {
+		const raw = '{"action":"silent","tools":["recall"]}';
+		const decision = parseDecision(raw);
+		assert.equal(decision.action, GateAction.SILENT);
+		assert.ok(
+			decision.tools?.includes("recall"),
+			"recall tool should be present",
+		);
+	});
+
+	it("SILENT without recall tools needs no extra work", () => {
+		const raw = '{"action":"silent"}';
+		const decision = parseDecision(raw);
+		assert.equal(decision.action, GateAction.SILENT);
+		assert.equal(decision.tools, undefined);
+	});
+
+	it("decision log records speak via logDecision", () => {
+		const id = mem.logDecision({
+			chatId: "c1",
+			decision: "speak",
+			reason: "direct address",
+			toolsUsed: ["verify"],
+			response: "hey",
+			timestamp: 1000,
+		});
+		assert.ok(id > 0);
+		const entries = mem.getRecentDecisions("c1", 10);
+		assert.equal(entries.length, 1);
+		assert.equal(entries[0].decision, "speak");
+		assert.deepEqual(entries[0].toolsUsed, ["verify"]);
+	});
 });

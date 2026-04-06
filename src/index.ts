@@ -13,7 +13,12 @@ import { evaluateHierarchical } from "./gate-hierarchical.ts";
 import { detectFeedback, Memory } from "./memory.ts";
 import { extractFacts } from "./memory-extract.ts";
 import { embed } from "./ollama.ts";
-import type { ChatMessage, ConversationContext } from "./types.ts";
+import { findRelevantFacts } from "./similarity.ts";
+import type {
+	ChatMessage,
+	ConversationContext,
+	ExtractedFact,
+} from "./types.ts";
 import { GateAction } from "./types.ts";
 import { verifyClaim } from "./verify.ts";
 import { constrain } from "./voice.ts";
@@ -111,48 +116,76 @@ const feed = createBatcher(
 					: "";
 
 			// Background extraction: fire-and-forget, never blocks gate response
-			if (config.gateMode === "dual") {
-				extractFacts(newMessages, config)
-					.then(async (facts) => {
-						for (const fact of facts) {
-							const stored = {
-								chatId,
-								type: fact.type,
-								key: fact.key,
-								value: fact.value,
-								messageId: 0,
-								timestamp: Date.now(),
-							};
-							try {
-								const embedding = await embed(
-									`${fact.key}: ${fact.value}`,
-									config,
-								);
-								memory.storeFactWithEmbedding(stored, embedding);
-							} catch {
-								memory.storeFact(stored);
-							}
+			extractFacts(newMessages, config)
+				.then(async (facts) => {
+					for (const fact of facts) {
+						const stored: ExtractedFact = {
+							chatId,
+							type: fact.type,
+							key: fact.key,
+							value: fact.value,
+							messageId: 0,
+							timestamp: Date.now(),
+						};
+						try {
+							const embedding = await embed(
+								`${fact.key}: ${fact.value}`,
+								config,
+							);
+							memory.storeFactWithEmbedding(stored, embedding);
+						} catch {
+							memory.storeFact(stored);
 						}
-						if (facts.length)
-							log(`extracted ${facts.length} facts from ${chatId.slice(0, 8)}`);
-					})
-					.catch((err) =>
+					}
+					if (facts.length)
+						log(`extracted ${facts.length} facts from ${chatId.slice(0, 8)}`);
+				})
+				.catch((err) =>
+					log(
+						`extraction error: ${err instanceof Error ? err.message : String(err)}`,
+					),
+				);
+
+			// Recall path: SILENT + tools:["recall"] -> embed and re-evaluate with facts
+			let finalDecision = decision;
+			if (
+				decision.action === GateAction.SILENT &&
+				decision.tools?.includes("recall")
+			) {
+				const factsWithEmbed = memory.getFactsWithEmbeddings(chatId, 20);
+				if (factsWithEmbed.length > 0) {
+					let bestFacts: ExtractedFact[] = [];
+					for (const text of newMessages.map((m) => m.text)) {
+						try {
+							const queryEmbed = await embed(text, config);
+							const found = findRelevantFacts(queryEmbed, factsWithEmbed);
+							if (found.length > bestFacts.length) bestFacts = found;
+						} catch {
+							// Embedding failed for this message, try next
+						}
+					}
+					if (bestFacts.length > 0) {
 						log(
-							`extraction error: ${err instanceof Error ? err.message : String(err)}`,
-						),
-					);
+							`recall: ${bestFacts.length} facts injected in ${chatId.slice(0, 8)}`,
+						);
+						finalDecision = await evaluate(
+							recent,
+							profile,
+							config,
+							ctx,
+							bestFacts,
+						);
+					}
+				}
 			}
 
-			if (decision.action === GateAction.SPEAK) {
-				let finalResponse = decision.response;
+			if (finalDecision.action === GateAction.SPEAK) {
+				let finalResponse = finalDecision.response;
 
-				// Verify wrong-fact corrections against external sources
-				if (
-					decision.reason?.includes("wrong") ||
-					decision.reason?.includes("fact")
-				) {
+				// Verify fact corrections via explicit tool request
+				if (finalDecision.tools?.includes("verify")) {
 					try {
-						const verified = await verifyClaim(decision.response);
+						const verified = await verifyClaim(finalDecision.response);
 						finalResponse = verified.response;
 						if (verified.verified) {
 							log(`verified (${verified.source}) in ${chatId.slice(0, 8)}`);
@@ -164,7 +197,7 @@ const feed = createBatcher(
 
 				const response = constrain(finalResponse);
 				log(
-					`speak (${decision.reason}) in ${chatId.slice(0, 8)}${stageTrace}: ${response}`,
+					`speak (${finalDecision.reason}) in ${chatId.slice(0, 8)}${stageTrace}: ${response}`,
 				);
 				await sdk.send(chatId, response);
 				memory.storeMessage({
@@ -173,10 +206,34 @@ const feed = createBatcher(
 					text: response,
 					timestamp: Date.now(),
 				});
+				memory.logDecision({
+					chatId,
+					decision: "speak",
+					reason: finalDecision.reason,
+					toolsUsed: finalDecision.tools,
+					response,
+					timestamp: Date.now(),
+				});
+				if (feedback) {
+					memory.linkFeedback(
+						chatId,
+						feedback.type,
+						feedback.context,
+						feedback.timestamp,
+					);
+				}
 			} else {
 				log(
 					`silent in ${chatId.slice(0, 8)} (${newMessages.length} msgs)${stageTrace}`,
 				);
+				if (feedback) {
+					memory.linkFeedback(
+						chatId,
+						feedback.type,
+						feedback.context,
+						feedback.timestamp,
+					);
+				}
 			}
 		} catch (err) {
 			log(`error: ${err instanceof Error ? err.message : String(err)}`);

@@ -1,18 +1,21 @@
 import { chat } from "./ollama.ts";
 import type {
+	AllowedTool,
 	ChatMessage,
 	ConversationContext,
+	ExtractedFact,
 	GateDecision,
 	GroupProfile,
 	PhilaConfig,
 } from "./types.ts";
-import { GateAction } from "./types.ts";
+import { ALLOWED_TOOLS, GateAction } from "./types.ts";
 
 const SILENT: GateDecision = { action: GateAction.SILENT };
 
 export function buildSystemPrompt(
 	profile: GroupProfile,
 	ctx?: ConversationContext,
+	facts?: ExtractedFact[],
 ): string {
 	let biasLine = "";
 	const b = profile.speakBias;
@@ -53,9 +56,14 @@ export function buildSystemPrompt(
 		? `\ngroup context (things you know about this chat):\n${ctx.groupNotes}\n`
 		: "";
 
+	const factsBlock =
+		facts && facts.length > 0
+			? `\nyou remember from this chat:\n${facts.map((f) => `- ${f.key}: ${f.value}`).join("\n")}\nif you remember relevant facts from this chat, use them in your response.\n`
+			: "";
+
 	return `you are phila, a member of a group chat. your name is phila.
 your default is silence - you only speak when it matters.
-${biasLine}${contextLines}${notesBlock}
+${biasLine}${contextLines}${notesBlock}${factsBlock}
 ALWAYS SPEAK (these override silence):
 1. someone says "phila" anywhere in a message (greeting, question, request) -> respond. even if combined with emoji or punctuation.
 2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> correct it
@@ -90,7 +98,13 @@ style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "h
 respond with ONLY json, no other text:
 {"action":"silent"}
 or
-{"action":"speak","reason":"why","response":"your message"}`;
+{"action":"speak","reason":"why","response":"your message"}
+
+optionally request tools by adding a "tools" field:
+{"action":"silent","tools":["recall"]} - search memory before deciding (use when someone asks about something discussed earlier)
+{"action":"speak","reason":"wrong fact","response":"...","tools":["verify"]} - verify a factual claim before sending
+
+only request tools when actually needed. most responses need no tools.`;
 }
 
 export function parseDecision(raw: string): GateDecision {
@@ -107,7 +121,23 @@ export function parseDecision(raw: string): GateDecision {
 			action?: string;
 			reason?: string;
 			response?: string;
+			tools?: unknown;
 		};
+
+		// Filter tools against allowlist - drop unknown, deduplicate, prevent prompt injection
+		const filteredTools = Array.isArray(parsed.tools)
+			? [
+					...new Set(
+						parsed.tools.filter(
+							(t): t is AllowedTool =>
+								typeof t === "string" &&
+								(ALLOWED_TOOLS as readonly string[]).includes(t),
+						),
+					),
+				]
+			: undefined;
+		const tools = filteredTools?.length ? filteredTools : undefined;
+
 		if (
 			parsed.action === GateAction.SPEAK &&
 			parsed.reason &&
@@ -117,9 +147,11 @@ export function parseDecision(raw: string): GateDecision {
 				action: GateAction.SPEAK,
 				reason: parsed.reason,
 				response: parsed.response,
+				...(tools && { tools }),
 			};
 		}
-		return SILENT;
+		// SILENT may also carry tools (e.g. tools:["recall"])
+		return tools ? { action: GateAction.SILENT, tools } : SILENT;
 	} catch {
 		return SILENT;
 	}
@@ -167,8 +199,14 @@ export async function evaluate(
 	profile: GroupProfile,
 	config: PhilaConfig,
 	ctx?: ConversationContext,
+	facts?: ExtractedFact[],
 ): Promise<GateDecision> {
 	const conversation = buildConversation(messages);
-	const raw = await chat(buildSystemPrompt(profile, ctx), conversation, config);
+	const raw = await chat(
+		buildSystemPrompt(profile, ctx, facts),
+		conversation,
+		config,
+		96,
+	);
 	return parseDecision(raw);
 }
