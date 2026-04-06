@@ -50,7 +50,7 @@ pip install --quiet 'unsloth==2026.3.18' trl peft bitsandbytes accelerate datase
 
 echo "=== Pre-installing llama.cpp deps and building (prevents interactive prompt during GGUF export) ==="
 # unsloth's install_llama_cpp calls input() to approve apt packages - must run in foreground, not nohup
-apt-get install -y libcurl4-openssl-dev libssl-dev cmake 2>&1 | tail -3
+apt-get install -y libcurl4-openssl-dev libssl-dev cmake g++ 2>&1 | tail -3
 python3 -c "
 import builtins, unsloth
 builtins.input = lambda prompt='': (print('<auto-accept>', flush=True), '')[1]
