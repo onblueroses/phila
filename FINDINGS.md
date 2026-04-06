@@ -1576,8 +1576,8 @@ The improvement appears genuine: v3 training data covered the distribution gap b
 | Suite | R1 | R2 | R3 | Avg | Std |
 |-------|-----|-----|-----|-----|-----|
 | Builtin (140) | 93.6% | 93.6% | 93.6% | 93.6% | 0.0 |
-| Independent (174) | 93.3% | 93.3% | — | 93.3% | 0.0 |
-| Overfitting (82) | 80.1% | 79.9% | — | 80.0% | 0.1 |
+| Independent (174) | 93.3% | 93.3% | 93.4% | 93.3% | 0.1 |
+| Overfitting (82) | 80.1% | 79.9% | 79.6% | 79.9% | 0.3 |
 
 Zero variance on builtin and independent across rounds. The model is deterministic at majority-vote granularity.
 
