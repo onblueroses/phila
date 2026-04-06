@@ -1,16 +1,15 @@
-// Dual-pass gate: additive architecture that keeps the monolithic gate
-// and adds memory-recall as a second pass.
+// @deprecated — v3 campaign (2026-04-06) proved dual adds nothing over mono.
+// Mono ft-v3: 93.3% independent, 93.6% builtin.
+// Dual ft-v3: 93.1% independent, 93.6% builtin (-0.2pp on independent).
+// The v3 gate is strong enough that Pass 2 never catches anything Pass 1 missed,
+// and the extra inference pass adds ~400ms latency + occasional false speaks.
 //
-// Pass 1: Monolithic gate (unchanged, proven 86.4% on 140 scenarios)
-//   -> SPEAK? -> done
-//   -> SILENT? -> Pass 2
+// Kept for backward compatibility with benchmark.ts --gate dual.
+// Do not use in production. Use monolithic gate (gate.ts evaluate()) instead.
 //
-// Pass 2: Memory-recall check (only when Pass 1 said SILENT)
-//   "Is someone asking about something from earlier in this conversation?"
-//   -> NO? -> stay SILENT
-//   -> YES? -> retrieve facts from store, generate response
-//
-// Zero regression risk: Pass 1 IS the current gate.
+// Original architecture:
+// Pass 1: Monolithic gate -> SPEAK? done. SILENT? -> Pass 2
+// Pass 2: Memory-recall check (semantic similarity + fact store)
 
 import { buildConversation, evaluate, parseDecision } from "./gate.ts";
 import type { Memory } from "./memory.ts";
