@@ -191,6 +191,7 @@ async function runHierarchicalBenchmark(
 	};
 	const philaConfig: PhilaConfig = {
 		model: config.model,
+		embedModel: "nomic-embed-text",
 		ollamaUrl: config.ollamaUrl,
 		batchWindowMs: 3000,
 		memoryWindowSize: 50,
@@ -270,6 +271,7 @@ async function runDualBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
 	};
 	const philaConfig: PhilaConfig = {
 		model: config.model,
+		embedModel: "nomic-embed-text",
 		ollamaUrl: config.ollamaUrl,
 		batchWindowMs: 3000,
 		memoryWindowSize: 50,

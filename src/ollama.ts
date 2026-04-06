@@ -4,6 +4,10 @@ interface OllamaResponse {
 	message: { content: string };
 }
 
+interface OllamaEmbedResponse {
+	embeddings: number[][];
+}
+
 async function attempt(
 	system: string,
 	user: string,
@@ -84,6 +88,38 @@ export async function chatFast(
 	} catch {
 		await new Promise((r) => setTimeout(r, 2000));
 		return attemptFast(system, user, config);
+	}
+}
+
+async function attemptEmbed(
+	input: string,
+	config: PhilaConfig,
+): Promise<Float32Array> {
+	const res = await fetch(`${config.ollamaUrl}/api/embed`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		signal: AbortSignal.timeout(15_000),
+		body: JSON.stringify({ model: config.embedModel, input }),
+	});
+
+	if (!res.ok) {
+		const body = await res.text().catch(() => "");
+		throw new Error(`ollama embed ${res.status}: ${body}`);
+	}
+
+	const data = (await res.json()) as OllamaEmbedResponse;
+	return new Float32Array(data.embeddings[0]);
+}
+
+export async function embed(
+	input: string,
+	config: PhilaConfig,
+): Promise<Float32Array> {
+	try {
+		return await attemptEmbed(input, config);
+	} catch {
+		await new Promise((r) => setTimeout(r, 2000));
+		return attemptEmbed(input, config);
 	}
 }
 

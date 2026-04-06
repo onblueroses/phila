@@ -14,7 +14,8 @@
 
 import { buildConversation, evaluate, parseDecision } from "./gate.ts";
 import type { Memory } from "./memory.ts";
-import { chat } from "./ollama.ts";
+import { chat, embed } from "./ollama.ts";
+import { findRelevantFacts } from "./similarity.ts";
 import type {
 	ChatMessage,
 	ConversationContext,
@@ -28,10 +29,9 @@ import { GateAction } from "./types.ts";
 
 const SILENT: GateDecision = { action: GateAction.SILENT };
 
+// @deprecated - kept for A/B benchmark comparison against semantic similarity
 // Regex gate: only allow Pass 2 when the last few messages look like a recall question.
-// Without this, Pass 2 fires on every silent scenario and the extraction finds
-// spurious "facts" from social chatter, causing false-speaks.
-const MEMORY_QUERY_PATTERNS = [
+export const MEMORY_QUERY_PATTERNS = [
 	/\bwhere\b.{0,30}(going|meeting|is it|the \w+)/i, // "where are we going tonight"
 	/\bwhat time\b/i, // "what time did we say"
 	/\bwho is\b.{0,20}(bringing|getting|picking|driving)/i, // "who is bringing drinks"
@@ -52,7 +52,8 @@ const MEMORY_QUERY_PATTERNS = [
 	/\bwho\b.{0,10}\b(has|got|bought)\b/i, // "who has the tickets"
 ];
 
-function looksLikeMemoryQuery(messages: ChatMessage[]): boolean {
+// @deprecated - kept for A/B benchmark comparison against semantic similarity
+export function looksLikeMemoryQuery(messages: ChatMessage[]): boolean {
 	// Check last 3 messages for recall patterns
 	const tail = messages.slice(-3);
 	return tail.some((m) => MEMORY_QUERY_PATTERNS.some((p) => p.test(m.text)));
@@ -124,21 +125,48 @@ export async function evaluateDual(
 		return { ...SILENT, stages, classification: "social" };
 	}
 
-	// Regex gate: skip Pass 2 entirely unless recent messages look like a recall question
-	if (!looksLikeMemoryQuery(messages)) {
-		stages.push("p2:skip-no-query-pattern");
+	// Semantic similarity gate: embed batch messages, find relevant facts by cosine similarity.
+	// Embed all messages in the batch (not just the last) to catch recall queries
+	// buried in a burst like ["what time again?", "lol"].
+	const chatId = messages[0]?.chatId ?? "";
+	const batchTexts = messages.map((m) => m.text);
+	let bestFacts: ExtractedFact[] = [];
+
+	const factsWithEmbeddings = memory.getFactsWithEmbeddings(chatId, 20);
+
+	if (factsWithEmbeddings.length > 0) {
+		// Try semantic similarity against each message in the batch
+		for (const text of batchTexts) {
+			try {
+				const queryEmbedding = await embed(text, config);
+				const found = findRelevantFacts(queryEmbedding, factsWithEmbeddings);
+				if (found.length > bestFacts.length) bestFacts = found;
+			} catch {
+				// Embedding failed for this message, try next
+			}
+		}
+	}
+
+	// Fallback: if no embedded facts exist (pre-migration or embed failures),
+	// check for non-embedded facts with the deprecated regex gate
+	if (factsWithEmbeddings.length === 0) {
+		if (looksLikeMemoryQuery(messages)) {
+			const fallbackFacts = memory.getRecentFacts(chatId, 20);
+			if (fallbackFacts.length > 0) {
+				bestFacts = fallbackFacts;
+				stages.push("p2:regex-fallback");
+			}
+		}
+	}
+
+	if (bestFacts.length === 0) {
+		stages.push("p2:skip-no-relevant-facts");
 		return { ...SILENT, stages, classification: "social" };
 	}
 
-	const facts = memory.getRecentFacts(messages[0]?.chatId ?? "", 20);
-	if (facts.length === 0) {
-		stages.push("p2:skip-no-facts");
-		return { ...SILENT, stages, classification: "social" };
-	}
-
-	stages.push(`p2:regex-match+${facts.length}-facts`);
+	stages.push(`p2:semantic-match+${bestFacts.length}-facts`);
 	const conversation = buildConversation(recent);
-	const userMsg = buildMemoryPrompt(conversation, facts);
+	const userMsg = buildMemoryPrompt(conversation, bestFacts);
 	const raw = await chat(MEMORY_CHECK_SYSTEM, userMsg, config);
 	stages.push("p2:memory-check");
 	const decision = parseDecision(raw);
