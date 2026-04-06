@@ -12,8 +12,10 @@ import { evaluateDual } from "./gate-dual.ts";
 import { evaluateHierarchical } from "./gate-hierarchical.ts";
 import { detectFeedback, Memory } from "./memory.ts";
 import { extractFacts } from "./memory-extract.ts";
+import { embed } from "./ollama.ts";
 import type { ChatMessage, ConversationContext } from "./types.ts";
 import { GateAction } from "./types.ts";
+import { verifyClaim } from "./verify.ts";
 import { constrain } from "./voice.ts";
 
 function toInternal(msg: Message): ChatMessage | null {
@@ -111,16 +113,25 @@ const feed = createBatcher(
 			// Background extraction: fire-and-forget, never blocks gate response
 			if (config.gateMode === "dual") {
 				extractFacts(newMessages, config)
-					.then((facts) => {
+					.then(async (facts) => {
 						for (const fact of facts) {
-							memory.storeFact({
+							const stored = {
 								chatId,
 								type: fact.type,
 								key: fact.key,
 								value: fact.value,
 								messageId: 0,
 								timestamp: Date.now(),
-							});
+							};
+							try {
+								const embedding = await embed(
+									`${fact.key}: ${fact.value}`,
+									config,
+								);
+								memory.storeFactWithEmbedding(stored, embedding);
+							} catch {
+								memory.storeFact(stored);
+							}
 						}
 						if (facts.length)
 							log(`extracted ${facts.length} facts from ${chatId.slice(0, 8)}`);
@@ -133,7 +144,25 @@ const feed = createBatcher(
 			}
 
 			if (decision.action === GateAction.SPEAK) {
-				const response = constrain(decision.response);
+				let finalResponse = decision.response;
+
+				// Verify wrong-fact corrections against external sources
+				if (
+					decision.reason?.includes("wrong") ||
+					decision.reason?.includes("fact")
+				) {
+					try {
+						const verified = await verifyClaim(decision.response);
+						finalResponse = verified.response;
+						if (verified.verified) {
+							log(`verified (${verified.source}) in ${chatId.slice(0, 8)}`);
+						}
+					} catch {
+						// Verification failed, use LLM response as-is
+					}
+				}
+
+				const response = constrain(finalResponse);
 				log(
 					`speak (${decision.reason}) in ${chatId.slice(0, 8)}${stageTrace}: ${response}`,
 				);

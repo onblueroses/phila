@@ -64,6 +64,7 @@ export interface ExtractedFact {
 
 export interface PhilaConfig {
 	model: string;
+	embedModel: string;
 	ollamaUrl: string;
 	batchWindowMs: number;
 	memoryWindowSize: number;

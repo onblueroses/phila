@@ -15,6 +15,7 @@ import { constrain } from "../src/voice.ts";
 
 const testConfig: PhilaConfig = {
 	model: "test",
+	embedModel: "nomic-embed-text",
 	ollamaUrl: "http://localhost:11434",
 	batchWindowMs: 3000,
 	memoryWindowSize: 50,

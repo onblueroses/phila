@@ -2,7 +2,7 @@
 
 A group chat agent whose default state is silence.
 
-It runs a local 3B language model, evaluates every message, and stays silent 95% of the time. When 660 prompt mutations couldn't fix its hardest failure mode, we trained a custom model. It works.
+Every AI agent in group chats makes the same mistake: it talks too much. Phila is a group chat participant, not an assistant. It observes every message, decides whether to act, and stays silent 95% of the time. When it does speak, it verifies facts against external sources and recalls information from conversation memory. It adapts its behavior per-group based on social feedback - no configuration, no prompting, just learned norms.
 
 **~650 lines** of TypeScript. **Local inference** via Ollama - messages never leave your device. **Custom QLoRA fine-tune** on 3,799 gate-only examples. **93.3% accuracy** on an independent test suite the model never trained against.
 
@@ -36,25 +36,113 @@ alex: blocked
                                         → phila: (silent)
 ```
 
-## the problem
+## how it works
 
-Every AI agent I've seen in group chats makes the same mistake: it talks too much. You add a bot, it becomes the loudest one in the room. Someone mutes it within a day.
+Phila runs a continuous observe-decide-act-learn loop:
 
-Agents are designed as servants - you ask, they answer. That works in 1:1. A group chat is different. It has its own rhythm, unspoken rules about who talks when. Nobody asked for a personal assistant to join the friend group.
+```
+               ┌─────────────────────────────────────────┐
+               │            OBSERVE                       │
+               │  iMessage watcher polls for new messages │
+               │  batcher collects burst, waits 3s quiet  │
+               └──────────────┬──────────────────────────┘
+                              │
+               ┌──────────────▼──────────────────────────┐
+               │            DECIDE                        │
+               │  speak gate: local LLM evaluates batch   │
+               │  93.3% accuracy (custom fine-tuned 3B)   │
+               └──────┬─────────────────┬────────────────┘
+                      │                 │
+               SILENT (95%)        SPEAK (5%)
+                      │                 │
+               ┌──────▼────┐    ┌───────▼───────────────┐
+               │  RECALL   │    │       ACT              │
+               │  semantic  │    │  verify claim against  │
+               │  memory    │    │  external sources      │
+               │  search    │    │  voice filter: enforce │
+               │  (embed +  │    │  personality           │
+               │  cosine)   │    │  send response         │
+               └──────┬─────┘    └───────────────────────┘
+                      │
+               has relevant facts?
+                yes → respond from memory
+                 no → stay silent
+                              │
+               ┌──────────────▼──────────────────────────┐
+               │            LEARN                         │
+               │  extract facts → embed → store in SQLite │
+               │  detect feedback → adjust speak bias     │
+               │  prune old messages → summarize context  │
+               └─────────────────────────────────────────┘
+```
 
-Phila is a group chat participant, not an assistant. Its default state is silence. It speaks roughly 5% of the time - and even that might be too much.
-
-The core is a "speak gate" - it evaluates every batch of messages and almost always returns SILENT. It only speaks when it has something useful to add:
+The gate evaluates every batch of messages and almost always returns SILENT. It only speaks when:
 
 - A factual claim is wrong and nobody corrected it
 - A factual question went unanswered
 - Someone addressed phila directly
 
-Everything else gets silence. Emotional conversations, jokes, banter, small talk, gossip, opinions, agreement - phila stays out of it. It never says "great question." It doesn't offer unsolicited advice or restate what someone already said.
+Everything else gets silence. Emotional conversations, jokes, banter, small talk, gossip, opinions - phila stays out of it. It never says "great question." It doesn't offer unsolicited advice.
 
 This is harder than it sounds. Language models are trained to respond. Teaching one to not respond - to recognize that the best thing it can do right now is nothing - that's the design challenge.
 
-## the capability wall
+### tool use
+
+Phila uses two tools in its decision loop:
+
+**Semantic memory recall.** When the gate says SILENT, phila checks whether someone is asking about something discussed earlier. It embeds the message using `nomic-embed-text`, computes cosine similarity against stored fact embeddings in SQLite, and if relevant facts are found, responds from memory. This catches questions like "where are we meeting?" or "who said they'd drive?" without hardcoded patterns - the similarity search generalizes to any recall query.
+
+**Fact verification.** When the gate says SPEAK for a wrong-fact correction, phila verifies the claim against external sources (DuckDuckGo Instant Answer API, Wikipedia) before responding. If the search confirms the correction, it responds with confidence. If it contradicts the LLM's answer, it uses the verified information instead. If search returns nothing, it falls back to the LLM response. The verification never blocks for more than 3 seconds.
+
+### the stack
+
+TypeScript, `@photon-ai/imessage-kit`, Ollama, `better-sqlite3`
+
+| Infrastructure | Value |
+|----------------|-------|
+| Test scenarios | 140 original + 174 independent (Opus-generated) |
+| Unit + integration tests | 174+ |
+| Architecture iterations | 8 (3 hierarchical, 4 dual-pass, 1 monolithic baseline) |
+| Optimizer generations | 660+ |
+| Fine-tune training examples | 3,799 gate-only (v3) |
+| Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16 a=32 |
+| Fine-tuned model | [onblueroses/phila-ft-v3-GGUF](https://huggingface.co/onblueroses/phila-ft-v3-GGUF) |
+| Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
+
+## social learning
+
+Your work chat and your college friends chat have completely different norms. You know this intuitively. Phila learns it - without configuration, without prompting, without being told.
+
+When someone says "thanks phila" or "good one," phila gets slightly more willing to speak in that group. When someone says "not now" or "shut up," that carries 2.5x the weight. This asymmetry is deliberate: people say "thanks" casually, they don't say "shut up" casually.
+
+```
+jordan: phila shut up nobody asked
+                        → speak bias: -0.05 (quieter in this group)
+
+...later...
+
+alex: thanks phila that was helpful
+                        → speak bias: +0.02 (slightly more willing)
+```
+
+Over time each group chat develops its own version of phila. The one in your cooking group might speak up about recipes. The one in your sports chat might have learned to stay completely quiet during game threads.
+
+Beyond bias adjustment, phila extracts and stores factual information from conversations (logistics, commitments, preferences) and builds summarized group notes from pruned message history. Each group accumulates its own context that informs future decisions.
+
+All stored locally in SQLite. No cloud, no syncing. The learning stays on your machine, like the conversations it came from.
+
+## privacy
+
+Phila runs a local language model through Ollama. Messages never leave your device. No API calls to OpenAI, no cloud, no telemetry. The only external calls are fact verification lookups against DuckDuckGo and Wikipedia when phila detects a wrong-fact claim - and even those queries contain only the factual claim itself, never the conversation or participants.
+
+Trust comes from the architecture, not a privacy policy.
+
+## building the gate
+
+<details>
+<summary>Building the gate</summary>
+
+### the capability wall
 
 The hardest failure was the buried-thread case: someone asks a factual question, five people change the subject, nobody answers. Phila should speak - but didn't.
 
@@ -64,7 +152,7 @@ Nothing beat the baseline. A dedicated probe across 4 models, 4 prompt variants,
 
 The 3B models don't scan full conversation history when relevant signal is several messages back and recent context is unrelated noise. This is a model capability limitation, not a prompt problem.
 
-## training a custom model
+### fine-tuning
 
 Fine-tuning fixed it.
 
@@ -86,48 +174,6 @@ But v2 had a problem: it only reached 80.9% on an independent test suite of 174 
 
 The recall jump (+27.8pp on independent) was the whole point - the model was defaulting to silence too aggressively, missing speak-worthy moments. v3 catches them without sacrificing precision.
 
-## how it works
-
-```
-group chat message arrives
-        |
-        v
-    [batcher] -- collects burst messages, waits 3s for quiet
-        |
-        v
-    [memory] -- stores message, loads conversation window
-        |
-        v
-    [gate] -- Pass 1: local LLM speak/silent decision
-        |
-   SILENT (95%)                    SPEAK (5%)
-     |                                |
-   [memory recall] -- Pass 2       [voice] -- enforce personality
-     |                                |
-   has relevant facts?           [send reply]
-     |           |
-    NO          YES
-     |           |
-   (nothing)  [respond from memory]
-```
-
-With v3, the monolithic gate is strong enough that the dual-pass architecture no longer helps (mono and dual score identically). The simpler single-pass design is now the production configuration - lower latency (715ms vs 1146ms avg), same accuracy.
-
-**Stack**: TypeScript, `@photon-ai/imessage-kit`, Ollama, `better-sqlite3`
-
-What went into it:
-
-| Infrastructure | Value |
-|----------------|-------|
-| Test scenarios | 140 original + 174 independent (Opus-generated) |
-| Unit + integration tests | 165+ |
-| Architecture iterations | 8 (3 hierarchical, 4 dual-pass, 1 monolithic baseline) |
-| Optimizer generations | 660+ |
-| Fine-tune training examples | 3,799 gate-only (v3) |
-| Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16 a=32 |
-| Fine-tuned model | [onblueroses/phila-ft-v3-GGUF](https://huggingface.co/onblueroses/phila-ft-v3-GGUF) |
-| Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
-
 ### cross-suite validation (15 runs per config)
 
 | configuration | original suite | independent suite | generalization gap |
@@ -139,31 +185,7 @@ What went into it:
 
 The independent suite uses 174 scenarios generated by Claude Opus from category definitions alone - no examples from the original test set. v3 closed the generalization gap almost entirely by training on data that matches the independent distribution.
 
-## social learning
-
-Your work chat and your college friends chat have completely different norms. You know this intuitively. Phila learns it.
-
-When someone says "thanks phila" or "good one," phila gets slightly more willing to speak in that group. When someone says "not now" or "shut up," that carries 2.5x the weight. People say "thanks" casually. They don't say "shut up" casually.
-
-```
-jordan: phila shut up nobody asked
-                        → speak bias: -0.05 (quieter in this group)
-
-...later...
-
-alex: thanks phila that was helpful
-                        → speak bias: +0.02 (slightly more willing)
-```
-
-Over time each group chat develops its own version of phila. The one in your cooking group might speak up about recipes. The one in your sports chat might have learned to stay completely quiet during game threads.
-
-All stored locally in SQLite. No cloud, no syncing. The learning stays on your machine, like the conversations it came from.
-
-## privacy
-
-Phila runs a local language model through Ollama. Messages never leave your device. No API calls to OpenAI, no cloud, no telemetry. Trust comes from the architecture, not a privacy policy.
-
-## what i learned
+### what i learned
 
 Silence is easy. Talking at the right time is hard.
 
@@ -171,33 +193,26 @@ Running llama3.2 against the test scenarios, it nails every silence case on the 
 
 Simplifying the prompt made things worse. Smaller models need more structure, not less. Priority ordering ("ALWAYS SPEAK for these, STAY SILENT for everything else") outperformed percentage-based framing ("stay silent 95% of the time"). Clear rules beat vibes. And the parse-failure-to-silence default is load-bearing - when the model outputs malformed JSON, treating it as silence means the worst failure mode is being too quiet, never too loud.
 
-### decomposition doesn't work at 3B
+**Decomposition doesn't work at 3B.** I tried splitting the monolithic gate into stages: a fast classifier ("is this social or does it need attention?") followed by a specialized handler. Three iterations, benchmarked each one. The classifier at numPredict=4 collapsed to 26% recall - it defaulted to "social" when uncertain. A binary filter with the full monolithic prompt as fallback got to 78% accuracy but still lost 16pp vs the monolithic gate. At 3B scale, classification and reasoning are coupled in one pass. Splitting that into separate stages breaks the interconnection the small model relies on.
 
-I tried splitting the monolithic gate into stages: a fast classifier ("is this social or does it need attention?") followed by a specialized handler. Three iterations, benchmarked each one. The classifier at numPredict=4 collapsed to 26% recall - it defaulted to "social" when uncertain. At numPredict=8, it got worse. A binary filter with the full monolithic prompt as fallback got to 78% accuracy but still lost 16pp vs the monolithic gate.
-
-The reason: at 3B scale, classification and reasoning are coupled in one pass. The model sees "the eiffel tower is in london" and simultaneously recognizes it's a factual claim, it's wrong, and here's the correction. Splitting that into separate stages breaks the interconnection the small model relies on.
-
-The solution was additive, not decomposing. Keep the monolithic gate (it works) and add a memory-recall pass that handles a new category of queries - questions about earlier conversation context. No regression risk because Pass 1 is byte-for-byte the same gate that's been benchmarked across 660+ optimizer generations.
-
-### your test suite is lying to you
-
-The 91.9% accuracy on our hand-crafted test scenarios dropped to 80.8% on an independent suite of 174 scenarios generated by a different model from category definitions alone. A 11pp gap. The hand-crafted scenarios were easier because they came from the same distribution as the gate prompt and fine-tuning data.
-
-The independent suite is the honest number. Cross-suite validation should be standard for any agent eval - single-source test sets overstate real-world performance.
+**Your test suite is lying to you.** The 91.9% accuracy on our hand-crafted test scenarios dropped to 80.8% on an independent suite of 174 scenarios generated by a different model from category definitions alone. An 11pp gap. The hand-crafted scenarios were easier because they came from the same distribution as the gate prompt and fine-tuning data. Cross-suite validation should be standard for any agent eval - single-source test sets overstate real-world performance.
 
 Full research log and methodology: [FINDINGS.md](FINDINGS.md)
+
+</details>
 
 ## setup
 
 **Requirements**: macOS, [Ollama](https://ollama.com), Node.js 22.6+
 
 ```bash
-# install ollama and pull the model
-ollama pull llama3.2  # base model works out of the box
+# install ollama and pull models
+ollama pull llama3.2          # base gate model
+ollama pull nomic-embed-text  # embedding model for memory recall
 
 # to use the fine-tuned model (93% gate accuracy vs 88% base):
-# download from https://huggingface.co/onblueroses/phila-ft-v2-GGUF
-# then: ollama create phila-ft-v2 -f Modelfile
+# download from https://huggingface.co/onblueroses/phila-ft-v3-GGUF
+# then: ollama create phila-ft-v3 -f Modelfile
 
 # clone and install
 git clone https://github.com/onblueroses/phila.git && cd phila
@@ -216,12 +231,13 @@ npm start
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PHILA_MODEL` | `llama3.2` | Ollama model name |
+| `PHILA_EMBED_MODEL` | `nomic-embed-text` | Ollama embedding model for memory recall |
 | `PHILA_OLLAMA_URL` | `http://localhost:11434` | Ollama endpoint |
 | `PHILA_BATCH_WINDOW` | `3000` | ms to wait for message burst to settle |
 | `PHILA_MEMORY_WINDOW` | `50` | number of recent messages to include as context |
 | `PHILA_DB_PATH` | `phila.db` | SQLite database path |
 | `PHILA_PRUNE_DAYS` | `7` | Auto-delete messages older than N days |
-| `PHILA_GATE` | `monolithic` | Gate mode: `monolithic` (single pass), `dual` (monolithic + memory recall) |
+| `PHILA_GATE` | `monolithic` | Gate mode: `monolithic` (single pass), `dual` (monolithic + semantic memory recall) |
 
 </details>
 
@@ -232,7 +248,6 @@ npm start
 ## open questions
 
 - Should phila ever initiate? "Hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - but that's a different trust equation entirely.
-- The 11pp generalization gap between hand-crafted and independent scenarios suggests the model is partially overfitting to the test distribution. v3 fine-tuning targets this with broader training data from real corpora + synthetic generation.
-- Memory-recall Pass 2 catches some conversation-grounded queries but misses others where the extraction doesn't capture the relevant fact. The extraction prompt needs iteration.
+- Memory extraction captures structured facts well but misses implicit context. "I can't eat that" doesn't always get extracted as a dietary restriction. The extraction prompt needs iteration.
 
 More in [FINDINGS.md](FINDINGS.md).
