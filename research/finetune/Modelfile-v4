@@ -1,0 +1,2 @@
+FROM ./phila-ft-v4-unsloth.Q4_K_M.gguf
+PARAMETER num_predict 96
