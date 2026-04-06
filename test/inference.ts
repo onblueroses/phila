@@ -21,7 +21,7 @@ export async function infer(
 	const res = await fetch(`${ollamaUrl}/api/chat`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		signal: AbortSignal.timeout(30_000),
+		signal: AbortSignal.timeout(120_000),
 		body: JSON.stringify({
 			model: config.model,
 			messages: [
