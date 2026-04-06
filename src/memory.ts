@@ -67,6 +67,11 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_facts_chat_key ON extracted_facts (chat_id, key);
 `;
 
+// Migration: add embedding column to extracted_facts (safe to run multiple times)
+const MIGRATION_EMBEDDING = `
+  ALTER TABLE extracted_facts ADD COLUMN embedding BLOB;
+`;
+
 interface MessageRow {
 	chat_id: string;
 	sender: string;
@@ -133,9 +138,11 @@ export class Memory {
 	private selectNotes: Database.Statement;
 	private upsertNotes: Database.Statement;
 	private insertFact: Database.Statement;
+	private insertFactWithEmbedding: Database.Statement;
 	private selectRecentFacts: Database.Statement;
 	private selectFactsByType: Database.Statement;
 	private selectFactsByKey: Database.Statement;
+	private selectFactsWithEmbeddings: Database.Statement;
 	private config: PhilaConfig;
 	private pruneIntervalMs: number;
 	private lastPruneAt = 0;
@@ -144,6 +151,7 @@ export class Memory {
 		this.db = new Database(config.dbPath);
 		this.db.pragma("journal_mode = WAL");
 		this.db.exec(SCHEMA);
+		this.migrateEmbedding();
 
 		this.insertMsg = this.db.prepare(
 			"INSERT INTO messages (chat_id, sender, text, timestamp) VALUES (?, ?, ?, ?)",
@@ -182,6 +190,9 @@ export class Memory {
 		this.insertFact = this.db.prepare(
 			"INSERT INTO extracted_facts (chat_id, type, key, value, message_id, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
 		);
+		this.insertFactWithEmbedding = this.db.prepare(
+			"INSERT INTO extracted_facts (chat_id, type, key, value, message_id, timestamp, embedding) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		);
 		this.selectRecentFacts = this.db.prepare(
 			"SELECT chat_id, type, key, value, message_id, timestamp FROM extracted_facts WHERE chat_id = ? ORDER BY timestamp DESC LIMIT ?",
 		);
@@ -190,6 +201,9 @@ export class Memory {
 		);
 		this.selectFactsByKey = this.db.prepare(
 			"SELECT chat_id, type, key, value, message_id, timestamp FROM extracted_facts WHERE chat_id = ? AND key = ? ORDER BY timestamp DESC LIMIT ?",
+		);
+		this.selectFactsWithEmbeddings = this.db.prepare(
+			"SELECT chat_id, type, key, value, message_id, timestamp, embedding FROM extracted_facts WHERE chat_id = ? AND embedding IS NOT NULL ORDER BY timestamp DESC LIMIT ?",
 		);
 		this.config = config;
 		this.pruneIntervalMs = config.pruneAfterDays * 24 * 60 * 60 * 1000;
@@ -427,6 +441,62 @@ export class Memory {
 			messageId: r.message_id,
 			timestamp: r.timestamp,
 		}));
+	}
+
+	storeFactWithEmbedding(
+		fact: import("./types.ts").ExtractedFact,
+		embedding: Float32Array,
+	): void {
+		this.insertFactWithEmbedding.run(
+			fact.chatId,
+			fact.type,
+			fact.key,
+			fact.value,
+			fact.messageId,
+			fact.timestamp,
+			Buffer.from(embedding.buffer),
+		);
+	}
+
+	getFactsWithEmbeddings(
+		chatId: string,
+		limit = 20,
+	): Array<import("./types.ts").ExtractedFact & { embedding: Float32Array }> {
+		interface FactRowWithEmbed {
+			chat_id: string;
+			type: string;
+			key: string;
+			value: string;
+			message_id: number;
+			timestamp: number;
+			embedding: Buffer;
+		}
+		const rows = this.selectFactsWithEmbeddings.all(
+			chatId,
+			limit,
+		) as FactRowWithEmbed[];
+		return rows.map((r) => ({
+			chatId: r.chat_id,
+			type: r.type as import("./types.ts").FactType,
+			key: r.key,
+			value: r.value,
+			messageId: r.message_id,
+			timestamp: r.timestamp,
+			embedding: new Float32Array(
+				r.embedding.buffer,
+				r.embedding.byteOffset,
+				r.embedding.byteLength / 4,
+			),
+		}));
+	}
+
+	private migrateEmbedding(): void {
+		const columns = this.db
+			.prepare("PRAGMA table_info(extracted_facts)")
+			.all() as Array<{ name: string }>;
+		if (!columns.some((c) => c.name === "embedding")) {
+			this.db.exec(MIGRATION_EMBEDDING);
+		}
 	}
 
 	close(): void {
