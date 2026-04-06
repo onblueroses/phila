@@ -84,7 +84,7 @@ async function evalScenarios(
 	const config: InferenceConfig = {
 		model,
 		temperature: 0.1,
-		numPredict: 64,
+		numPredict: 96,
 		topP: 0.52,
 	};
 	const profile: GroupProfile = {
