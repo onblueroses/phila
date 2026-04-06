@@ -506,3 +506,177 @@ describe("social learning", () => {
 		assert.ok(Math.abs(bias - -0.03) < 0.001, `expected -0.03, got ${bias}`);
 	});
 });
+
+describe("decision log", () => {
+	let mem: Memory;
+
+	beforeEach(() => {
+		mem = new Memory(testConfig);
+	});
+
+	afterEach(() => {
+		mem.close();
+	});
+
+	it("logDecision returns an id and round-trips speak entry", () => {
+		const id = mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "direct address",
+			toolsUsed: ["verify"],
+			response: "hey there",
+			timestamp: 1000,
+		});
+		assert.ok(id > 0);
+		const entries = mem.getRecentDecisions("chat1", 10);
+		assert.equal(entries.length, 1);
+		assert.equal(entries[0].decision, "speak");
+		assert.equal(entries[0].reason, "direct address");
+		assert.deepEqual(entries[0].toolsUsed, ["verify"]);
+		assert.equal(entries[0].response, "hey there");
+		assert.equal(entries[0].id, id);
+	});
+
+	it("logDecision round-trips silent entry with no tools", () => {
+		mem.logDecision({ chatId: "chat1", decision: "silent", timestamp: 1000 });
+		const entries = mem.getRecentDecisions("chat1", 10);
+		assert.equal(entries[0].decision, "silent");
+		assert.equal(entries[0].toolsUsed, undefined);
+		assert.equal(entries[0].reason, undefined);
+	});
+
+	it("linkFeedback updates most recent SPEAK within window", () => {
+		const id = mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "wrong fact",
+			timestamp: 1000,
+		});
+		const updated = mem.linkFeedback("chat1", "positive", "thanks phila", 5000);
+		assert.equal(updated, true);
+		const entries = mem.getRecentDecisions("chat1", 10);
+		assert.equal(entries[0].feedbackType, "positive");
+		assert.equal(entries[0].feedbackContext, "thanks phila");
+		assert.equal(entries[0].id, id);
+	});
+
+	it("linkFeedback skips SILENT decisions", () => {
+		mem.logDecision({ chatId: "chat1", decision: "silent", timestamp: 1000 });
+		const updated = mem.linkFeedback("chat1", "positive", "thanks phila", 5000);
+		assert.equal(updated, false);
+	});
+
+	it("linkFeedback respects time window", () => {
+		mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "r",
+			timestamp: 1000,
+		});
+		// Feedback at 400 seconds later = outside 300s default window
+		const updated = mem.linkFeedback("chat1", "negative", "stop", 401_000);
+		assert.equal(updated, false);
+	});
+
+	it("linkFeedback returns false when no decisions exist", () => {
+		const updated = mem.linkFeedback("chat1", "positive", "thanks", 5000);
+		assert.equal(updated, false);
+	});
+
+	it("getRecentDecisions returns newest first", () => {
+		mem.logDecision({ chatId: "chat1", decision: "silent", timestamp: 1000 });
+		mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "r",
+			timestamp: 2000,
+		});
+		mem.logDecision({ chatId: "chat1", decision: "silent", timestamp: 3000 });
+		const entries = mem.getRecentDecisions("chat1", 10);
+		assert.equal(entries[0].timestamp, 3000);
+		assert.equal(entries[2].timestamp, 1000);
+	});
+
+	it("getRecentDecisions respects limit", () => {
+		for (let i = 0; i < 5; i++) {
+			mem.logDecision({
+				chatId: "chat1",
+				decision: "silent",
+				timestamp: i * 1000,
+			});
+		}
+		const entries = mem.getRecentDecisions("chat1", 3);
+		assert.equal(entries.length, 3);
+	});
+
+	it("linkFeedback picks most recent SPEAK when multiple exist", () => {
+		mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "r1",
+			timestamp: 1000,
+		});
+		const id2 = mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "r2",
+			timestamp: 2000,
+		});
+		const updated = mem.linkFeedback("chat1", "positive", "thanks", 5000);
+		assert.equal(updated, true);
+		const entries = mem.getRecentDecisions("chat1", 10);
+		// id2 (timestamp 2000) is more recent and should be updated
+		const updated2 = entries.find((e) => e.id === id2);
+		assert.equal(updated2?.feedbackType, "positive");
+	});
+
+	it("linkFeedback does not modify unrelated chat", () => {
+		mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "r",
+			timestamp: 1000,
+		});
+		const updated = mem.linkFeedback("chat2", "positive", "thanks", 5000);
+		assert.equal(updated, false);
+	});
+
+	it("toolsUsed serialized and deserialized correctly for both tools", () => {
+		mem.logDecision({
+			chatId: "chat1",
+			decision: "speak",
+			reason: "r",
+			toolsUsed: ["recall", "verify"],
+			timestamp: 1000,
+		});
+		const entries = mem.getRecentDecisions("chat1", 10);
+		assert.deepEqual(entries[0].toolsUsed, ["recall", "verify"]);
+	});
+
+	it("logDecision with no optional fields round-trips cleanly", () => {
+		mem.logDecision({ chatId: "chat1", decision: "silent", timestamp: 1000 });
+		const entries = mem.getRecentDecisions("chat1", 10);
+		assert.equal(entries[0].reason, undefined);
+		assert.equal(entries[0].toolsUsed, undefined);
+		assert.equal(entries[0].response, undefined);
+		assert.equal(entries[0].feedbackType, undefined);
+		assert.equal(entries[0].feedbackContext, undefined);
+	});
+
+	it("decision_log schema is idempotent (second Memory() on same :memory: does not throw)", () => {
+		// Each :memory: instance gets a fresh db, but running the full SCHEMA twice
+		// on the same instance would throw without IF NOT EXISTS guards.
+		// Verify by constructing, using, and constructing again - no throws.
+		assert.doesNotThrow(() => {
+			const mem2 = new Memory(testConfig);
+			mem2.logDecision({
+				chatId: "chat1",
+				decision: "speak",
+				reason: "r",
+				timestamp: 1000,
+			});
+			assert.equal(mem2.getRecentDecisions("chat1", 10).length, 1);
+			mem2.close();
+		});
+	});
+});

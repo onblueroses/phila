@@ -12,6 +12,7 @@ async function attempt(
 	system: string,
 	user: string,
 	config: PhilaConfig,
+	numPredict = 64,
 ): Promise<string> {
 	const res = await fetch(`${config.ollamaUrl}/api/chat`, {
 		method: "POST",
@@ -24,7 +25,7 @@ async function attempt(
 				{ role: "user", content: user },
 			],
 			stream: false,
-			options: { temperature: 0.1, num_predict: 64, top_p: 0.52 },
+			options: { temperature: 0.1, num_predict: numPredict, top_p: 0.52 },
 		}),
 	});
 
@@ -40,12 +41,13 @@ export async function chat(
 	system: string,
 	user: string,
 	config: PhilaConfig,
+	numPredict?: number,
 ): Promise<string> {
 	try {
-		return await attempt(system, user, config);
+		return await attempt(system, user, config, numPredict);
 	} catch {
 		await new Promise((r) => setTimeout(r, 2000));
-		return attempt(system, user, config);
+		return attempt(system, user, config, numPredict);
 	}
 }
 
