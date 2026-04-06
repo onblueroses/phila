@@ -600,7 +600,8 @@ interface ScenarioResult {
 	expectedTools: string[] | null;
 	recallHitRate: number;
 	verifyHitRate: number;
-	falsePositiveRate: number;
+	recallFpRate: number;
+	verifyFpRate: number;
 	rawRuns: Array<{ action: string; tools: string[] | undefined; raw: string }>;
 }
 
@@ -651,11 +652,17 @@ async function runEval(
 				? rawRuns.filter((r) => r.tools?.includes("verify")).length / runs
 				: 0;
 
-		const falsePositiveRate =
-			scenario.category === "tools-false-positive" ||
-			scenario.category === "recall-negative" ||
-			scenario.category === "verify-negative"
-				? rawRuns.filter((r) => r.tools && r.tools.length > 0).length / runs
+		// Per-tool false-positive rates on non-trigger scenarios.
+		// recallFpRate: did the model falsely emit recall when it shouldn't?
+		// verifyFpRate: did the model falsely emit verify when it shouldn't?
+		const recallFpRate =
+			scenario.category !== "recall-trigger"
+				? rawRuns.filter((r) => r.tools?.includes("recall")).length / runs
+				: 0;
+
+		const verifyFpRate =
+			scenario.category !== "verify-trigger"
+				? rawRuns.filter((r) => r.tools?.includes("verify")).length / runs
 				: 0;
 
 		process.stdout.write(
@@ -663,7 +670,7 @@ async function runEval(
 				? `recall=${(recallHitRate * 100).toFixed(0)}%\n`
 				: scenario.category === "verify-trigger"
 					? `verify=${(verifyHitRate * 100).toFixed(0)}%\n`
-					: `fp=${(falsePositiveRate * 100).toFixed(0)}%\n`,
+					: `recall-fp=${(recallFpRate * 100).toFixed(0)}% verify-fp=${(verifyFpRate * 100).toFixed(0)}%\n`,
 		);
 
 		results.push({
@@ -672,7 +679,8 @@ async function runEval(
 			expectedTools: scenario.expectedTools,
 			recallHitRate,
 			verifyHitRate,
-			falsePositiveRate,
+			recallFpRate,
+			verifyFpRate,
 			rawRuns,
 		});
 	}
@@ -686,17 +694,14 @@ function printReport(
 ): {
 	recallRate: number;
 	verifyRate: number;
-	falsePositiveRate: number;
+	recallFpRate: number;
+	verifyFpRate: number;
 	passed: boolean;
 } {
 	const recallTrigger = results.filter((r) => r.category === "recall-trigger");
 	const verifyTrigger = results.filter((r) => r.category === "verify-trigger");
-	const negatives = results.filter(
-		(r) =>
-			r.category === "tools-false-positive" ||
-			r.category === "recall-negative" ||
-			r.category === "verify-negative",
-	);
+	const nonRecall = results.filter((r) => r.category !== "recall-trigger");
+	const nonVerify = results.filter((r) => r.category !== "verify-trigger");
 
 	const recallRate =
 		recallTrigger.reduce((s, r) => s + r.recallHitRate, 0) /
@@ -704,8 +709,11 @@ function printReport(
 	const verifyRate =
 		verifyTrigger.reduce((s, r) => s + r.verifyHitRate, 0) /
 		verifyTrigger.length;
-	const falsePositiveRate =
-		negatives.reduce((s, r) => s + r.falsePositiveRate, 0) / negatives.length;
+	// Average per-scenario FP rates across all non-trigger scenarios
+	const recallFpRate =
+		nonRecall.reduce((s, r) => s + r.recallFpRate, 0) / nonRecall.length;
+	const verifyFpRate =
+		nonVerify.reduce((s, r) => s + r.verifyFpRate, 0) / nonVerify.length;
 
 	console.log("\n=== Tools Eval Results ===");
 	console.log(`  Runs per scenario: ${runs}`);
@@ -718,7 +726,10 @@ function printReport(
 		`  Verify trigger rate:   ${(verifyRate * 100).toFixed(1)}% (target: ≥80%) ${verifyRate >= 0.8 ? "✓ PASS" : "✗ FAIL"}`,
 	);
 	console.log(
-		`  Tools false positive:  ${(falsePositiveRate * 100).toFixed(1)}% (target: <5%)  ${falsePositiveRate < 0.05 ? "✓ PASS" : "✗ FAIL"}`,
+		`  Recall false positive: ${(recallFpRate * 100).toFixed(1)}% (target: <5%)  ${recallFpRate < 0.05 ? "✓ PASS" : "✗ FAIL"}`,
+	);
+	console.log(
+		`  Verify false positive: ${(verifyFpRate * 100).toFixed(1)}% (target: <5%)  ${verifyFpRate < 0.05 ? "✓ PASS" : "✗ FAIL"}`,
 	);
 
 	// Per-category table
@@ -736,31 +747,22 @@ function printReport(
 		if (catResults.length === 0) continue;
 		const metric =
 			cat === "recall-trigger"
-				? `${(
-						(catResults.reduce((s, r) => s + r.recallHitRate, 0) /
-							catResults.length) *
-							100
-					).toFixed(1)}% recall`
+				? `${((catResults.reduce((s, r) => s + r.recallHitRate, 0) / catResults.length) * 100).toFixed(1)}% recall`
 				: cat === "verify-trigger"
-					? `${(
-							(catResults.reduce((s, r) => s + r.verifyHitRate, 0) /
-								catResults.length) *
-								100
-						).toFixed(1)}% verify`
-					: `${(
-							(catResults.reduce((s, r) => s + r.falsePositiveRate, 0) /
-								catResults.length) *
-								100
-						).toFixed(1)}% fp`;
+					? `${((catResults.reduce((s, r) => s + r.verifyHitRate, 0) / catResults.length) * 100).toFixed(1)}% verify`
+					: `recall-fp=${((catResults.reduce((s, r) => s + r.recallFpRate, 0) / catResults.length) * 100).toFixed(1)}% verify-fp=${((catResults.reduce((s, r) => s + r.verifyFpRate, 0) / catResults.length) * 100).toFixed(1)}%`;
 		console.log(
 			`    ${cat.padEnd(24)} ${catResults.length} scenarios  ${metric}`,
 		);
 	}
 
 	const passed =
-		recallRate >= 0.7 && verifyRate >= 0.8 && falsePositiveRate < 0.05;
+		recallRate >= 0.7 &&
+		verifyRate >= 0.8 &&
+		recallFpRate < 0.05 &&
+		verifyFpRate < 0.05;
 	console.log(`\n  Overall: ${passed ? "PASS" : "FAIL"}`);
-	return { recallRate, verifyRate, falsePositiveRate, passed };
+	return { recallRate, verifyRate, recallFpRate, verifyFpRate, passed };
 }
 
 // --- Entry point ---
@@ -806,10 +808,8 @@ console.log(
 console.log(`Ollama: ${OLLAMA_URL}\n`);
 
 const results = await runEval(scenarios, config, RUNS, OLLAMA_URL);
-const { recallRate, verifyRate, falsePositiveRate, passed } = printReport(
-	results,
-	RUNS,
-);
+const { recallRate, verifyRate, recallFpRate, verifyFpRate, passed } =
+	printReport(results, RUNS);
 
 // Write JSON report
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -826,11 +826,12 @@ writeFileSync(
 			summary: {
 				recallRate,
 				verifyRate,
-				falsePositiveRate,
+				recallFpRate,
+				verifyFpRate,
 				passed,
 				recallTarget: 0.7,
 				verifyTarget: 0.8,
-				falsePositiveTarget: 0.05,
+				fpTarget: 0.05,
 			},
 			scenarios: results.map((r) => ({
 				name: r.name,
@@ -838,7 +839,8 @@ writeFileSync(
 				expectedTools: r.expectedTools,
 				recallHitRate: r.recallHitRate,
 				verifyHitRate: r.verifyHitRate,
-				falsePositiveRate: r.falsePositiveRate,
+				recallFpRate: r.recallFpRate,
+				verifyFpRate: r.verifyFpRate,
 			})),
 		},
 		null,
