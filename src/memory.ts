@@ -3,11 +3,12 @@ import { buildConversation } from "./gate.ts";
 import { summarize } from "./ollama.ts";
 import type {
 	ChatMessage,
+	DecisionLogEntry,
 	FeedbackSignal,
 	GroupProfile,
 	PhilaConfig,
 } from "./types.ts";
-import { FeedbackType } from "./types.ts";
+import { FeedbackType, GateAction } from "./types.ts";
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS messages (
@@ -65,6 +66,19 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_facts_chat_type ON extracted_facts (chat_id, type, timestamp);
   CREATE INDEX IF NOT EXISTS idx_facts_chat_key ON extracted_facts (chat_id, key);
+
+  CREATE TABLE IF NOT EXISTS decision_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    decision TEXT NOT NULL,
+    reason TEXT,
+    tools_used TEXT,
+    response TEXT,
+    feedback_type TEXT,
+    feedback_context TEXT,
+    timestamp INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_decision_log_chat_time ON decision_log (chat_id, timestamp);
 `;
 
 // Migration: add embedding column to extracted_facts (safe to run multiple times)
@@ -143,6 +157,10 @@ export class Memory {
 	private selectFactsByType: Database.Statement;
 	private selectFactsByKey: Database.Statement;
 	private selectFactsWithEmbeddings: Database.Statement;
+	private insertDecision: Database.Statement;
+	private updateDecisionFeedback: Database.Statement;
+	private selectRecentDecisionLog: Database.Statement;
+	private selectRecentSpeak: Database.Statement;
 	private config: PhilaConfig;
 	private pruneIntervalMs: number;
 	private lastPruneAt = 0;
@@ -204,6 +222,23 @@ export class Memory {
 		);
 		this.selectFactsWithEmbeddings = this.db.prepare(
 			"SELECT chat_id, type, key, value, message_id, timestamp, embedding FROM extracted_facts WHERE chat_id = ? AND embedding IS NOT NULL ORDER BY timestamp DESC LIMIT ?",
+		);
+		this.insertDecision = this.db.prepare(
+			`INSERT INTO decision_log (chat_id, decision, reason, tools_used, response, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+		);
+		this.updateDecisionFeedback = this.db.prepare(
+			`UPDATE decision_log SET feedback_type = ?, feedback_context = ?
+       WHERE id = ?`,
+		);
+		this.selectRecentDecisionLog = this.db.prepare(
+			`SELECT id, chat_id, decision, reason, tools_used, response, feedback_type, feedback_context, timestamp
+       FROM decision_log WHERE chat_id = ? ORDER BY timestamp DESC LIMIT ?`,
+		);
+		this.selectRecentSpeak = this.db.prepare(
+			`SELECT id, decision, timestamp FROM decision_log
+       WHERE chat_id = ? AND decision = ? AND timestamp <= ? AND timestamp >= ?
+       ORDER BY timestamp DESC LIMIT 1`,
 		);
 		this.config = config;
 		this.pruneIntervalMs = config.pruneAfterDays * 24 * 60 * 60 * 1000;
@@ -487,6 +522,72 @@ export class Memory {
 				r.embedding.byteOffset,
 				r.embedding.byteLength / 4,
 			),
+		}));
+	}
+
+	logDecision(entry: DecisionLogEntry): number {
+		const result = this.insertDecision.run(
+			entry.chatId,
+			entry.decision,
+			entry.reason ?? null,
+			entry.toolsUsed ? JSON.stringify(entry.toolsUsed) : null,
+			entry.response ?? null,
+			entry.timestamp,
+		);
+		return Number(result.lastInsertRowid);
+	}
+
+	// Links feedback to the most recent SPEAK decision within withinMs of the feedback timestamp.
+	// Returns true if a matching decision was found and updated, false otherwise.
+	linkFeedback(
+		chatId: string,
+		type: string,
+		context: string,
+		feedbackTimestamp: number,
+		withinMs = 300_000,
+	): boolean {
+		interface DecisionRow {
+			id: number;
+			decision: string;
+			timestamp: number;
+		}
+		const row = this.selectRecentSpeak.get(
+			chatId,
+			GateAction.SPEAK,
+			feedbackTimestamp,
+			feedbackTimestamp - withinMs,
+		) as DecisionRow | undefined;
+		if (!row) return false;
+		this.updateDecisionFeedback.run(type, context, row.id);
+		return true;
+	}
+
+	getRecentDecisions(chatId: string, limit = 10): DecisionLogEntry[] {
+		interface DecisionRow {
+			id: number;
+			chat_id: string;
+			decision: string;
+			reason: string | null;
+			tools_used: string | null;
+			response: string | null;
+			feedback_type: string | null;
+			feedback_context: string | null;
+			timestamp: number;
+		}
+		const rows = this.selectRecentDecisionLog.all(
+			chatId,
+			limit,
+		) as DecisionRow[];
+		return rows.map((r) => ({
+			id: r.id,
+			chatId: r.chat_id,
+			decision: r.decision as "speak" | "silent",
+			reason: r.reason ?? undefined,
+			toolsUsed: r.tools_used ? JSON.parse(r.tools_used) : undefined,
+			response: r.response ?? undefined,
+			feedbackType: r.feedback_type ?? undefined,
+			feedbackContext: r.feedback_context ?? undefined,
+			timestamp: r.timestamp,
 		}));
 	}
 

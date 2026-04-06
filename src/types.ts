@@ -12,9 +12,29 @@ export const GateAction = {
 
 export type GateAction = (typeof GateAction)[keyof typeof GateAction];
 
+export const ALLOWED_TOOLS = ["verify", "recall"] as const;
+export type AllowedTool = (typeof ALLOWED_TOOLS)[number];
+
 export type GateDecision =
-	| { action: typeof GateAction.SILENT }
-	| { action: typeof GateAction.SPEAK; reason: string; response: string };
+	| { action: typeof GateAction.SILENT; tools?: AllowedTool[] }
+	| {
+			action: typeof GateAction.SPEAK;
+			reason: string;
+			response: string;
+			tools?: AllowedTool[];
+	  };
+
+export interface DecisionLogEntry {
+	id?: number;
+	chatId: string;
+	decision: "speak" | "silent";
+	reason?: string;
+	toolsUsed?: AllowedTool[];
+	response?: string;
+	feedbackType?: string;
+	feedbackContext?: string;
+	timestamp: number;
+}
 
 export interface GroupProfile {
 	chatId: string;

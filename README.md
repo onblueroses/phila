@@ -107,7 +107,7 @@ TypeScript, `@photon-ai/imessage-kit`, Ollama, `better-sqlite3`
 | Fine-tune training examples | 3,799 gate-only (v3) |
 | Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16 a=32 |
 | Fine-tuned model | [onblueroses/phila-ft-v3-GGUF](https://huggingface.co/onblueroses/phila-ft-v3-GGUF) |
-| Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
+| Optimal inference params | temperature 0.1, topP 0.52, numPredict 96 (gate), 64 (other callers) |
 
 ## social learning
 
