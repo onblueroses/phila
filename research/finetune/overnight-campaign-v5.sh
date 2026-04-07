@@ -55,13 +55,40 @@ node --experimental-strip-types test/benchmark.ts \
 echo "Split benchmark saved to $LOGDIR/benchmark-split-v3gate-v5resp.json"
 echo ""
 
+# Auto-select winner: compare v5 solo vs split holdout accuracy
+echo "=== Selecting optimizer config ==="
+SOLO_ACC=$(node --experimental-strip-types -e "
+const d = JSON.parse(require('fs').readFileSync('$LOGDIR/benchmark-v5.json','utf-8'));
+const h = d.holdoutCI?.mean ?? d.summary?.accuracy/100 ?? 0;
+console.log(h);
+" 2>/dev/null || echo "0")
+SPLIT_ACC=$(node --experimental-strip-types -e "
+const d = JSON.parse(require('fs').readFileSync('$LOGDIR/benchmark-split-v3gate-v5resp.json','utf-8'));
+const h = d.holdoutCI?.mean ?? d.summary?.accuracy/100 ?? 0;
+console.log(h);
+" 2>/dev/null || echo "0")
+echo "v5 solo holdout: $SOLO_ACC | split holdout: $SPLIT_ACC"
+
+USE_SPLIT=$(node --experimental-strip-types -e "console.log(Number($SPLIT_ACC) > Number($SOLO_ACC) ? 'yes' : 'no')" 2>/dev/null)
+
+if [ "$USE_SPLIT" = "yes" ]; then
+    echo "WINNER: split ($GATE_MODEL gate + $MODEL response)"
+    OPT_GATE_FLAG="--gate-model $GATE_MODEL"
+    BENCH_GATE_FLAG="--gate-model $GATE_MODEL"
+else
+    echo "WINNER: v5 solo (monolithic)"
+    OPT_GATE_FLAG=""
+    BENCH_GATE_FLAG=""
+fi
+echo ""
+
 # Phase 4+5 loop: optimize -> verify -> repeat until manually stopped
 LOOP=1
 while true; do
     echo "=== Phase 4: Continuous optimizer (500 generations, loop $LOOP) ==="
     echo "Holdout guard: cross-validation every 10 gens, paired t-test significance"
     node --experimental-strip-types test/continuous-optimize.ts \
-        --model "$MODEL" --runs 3 --generations 500 \
+        --model "$MODEL" $OPT_GATE_FLAG --runs 3 --generations 500 \
         --cv-interval 10 \
         --checkpoint "$LOGDIR/checkpoint-v5.json" 2>&1
     echo "Optimizer loop $LOOP complete"
@@ -69,7 +96,7 @@ while true; do
 
     echo "=== Phase 5: Post-optimization holdout verification (loop $LOOP) ==="
     node --experimental-strip-types test/benchmark.ts \
-        --model "$MODEL" --runs 5 \
+        --model "$MODEL" $BENCH_GATE_FLAG --runs 5 \
         --out "$LOGDIR/benchmark-v5-post-loop${LOOP}.json" 2>&1
     echo "Post-optimization benchmark saved (loop $LOOP)"
     echo ""
