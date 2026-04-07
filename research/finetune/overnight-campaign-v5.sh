@@ -7,7 +7,7 @@
 set -uo pipefail
 
 MODEL="phila-ft-v5"
-BASELINE="phila-ft-v4"
+BASELINE="llama3.2"
 LOGDIR="/srv/phila/v5-campaign-results"
 CAMPAIGN_LOG="/srv/phila/v5-campaign.log"
 export PHILA_OLLAMA_URL="http://localhost:11434"
