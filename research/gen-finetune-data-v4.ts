@@ -16,7 +16,7 @@
 //
 // Always run with CLAUDECODE='' to suppress claude-code env detection.
 
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
@@ -186,16 +186,25 @@ function makeRecord(
 }
 
 function callClaude(prompt: string): string {
-	try {
-		return execFileSync("claude", ["--print", prompt], {
-			encoding: "utf8",
-			maxBuffer: 20 * 1024 * 1024,
-			env: { ...process.env, CLAUDECODE: "" },
-		});
-	} catch (e) {
-		console.warn("claude --print failed:", e instanceof Error ? e.message : e);
-		return "";
+	const result = spawnSync("claude", ["--print", prompt], {
+		encoding: "utf8",
+		maxBuffer: 20 * 1024 * 1024,
+		env: { ...process.env, CLAUDECODE: "" },
+	});
+
+	// In this sandbox, spawnSync can report EPERM even when claude exits 0 and
+	// returns stdout. Treat that combination as success instead of dropping data.
+	if (result.status === 0 && typeof result.stdout === "string") {
+		return result.stdout;
 	}
+
+	if (result.error) {
+		console.warn("claude --print failed:", result.error.message);
+	}
+	if (typeof result.stderr === "string" && result.stderr.trim()) {
+		console.warn(result.stderr.trim());
+	}
+	return "";
 }
 
 function stripFences(raw: string): string {
@@ -303,21 +312,32 @@ ${SYSTEM_PROMPT}
 
 Generate ${count} examples where phila should respond WITHOUT requesting memory recall. Mix of silent and speak.
 
+CRITICAL: Many examples must show the answer clearly stated earlier IN THE SAME CONVERSATION, and someone asks about it. Phila SPEAKS from reading the conversation — NO recall tool needed. The distinction from recall-trigger: the info is RIGHT THERE in the visible messages.
+
 Rules:
-- Include questions about GENERAL KNOWLEDGE (capitals, dates, facts) → phila may SPEAK if directly asked or if question is unanswered by others, but NO recall needed
-- Include questions where the ANSWER IS IN THE CURRENT CONVERSATION (person1 just said something, person3 asks about it) → no recall needed
-- Include SOCIAL CHATTER where no recall is relevant → SILENT
-- Include "phila what is X" direct-address questions about facts → SPEAK (rule 1)
+- About 60% of examples should use this dominant pattern: the answer is already visible in the current conversation, then someone asks about it, and phila answers directly from what it can read
+- Example pattern to repeat often: person1 says "meeting at 7pm at olive garden", then person3 asks "what time are we meeting" → phila speaks "7pm at olive garden". No recall. No tools.
+- Also include questions about GENERAL KNOWLEDGE (capitals, dates, facts) → phila may SPEAK if directly asked or if question is unanswered by others, but NO recall needed
+- Also include SOCIAL CHATTER where no recall is relevant → SILENT
+- Include some "phila what is X" direct-address questions about facts → SPEAK (rule 1)
+- The answer-in-context pattern must dominate over general knowledge and chatter
+- The information must be visible in the current batch of messages, not hidden in scrolled-away history
 - Do NOT generate anything that references "earlier" or "before" or implies scrolled-away context
 - No "tools" field in any response
 
 Return ONLY a JSON array. No prose, no markdown. Each element:
 - "conversation": multi-line string, person1/person2/etc, \\n separated
 - "action": "silent" or "speak"
-- "reason": required if speak (e.g. "direct address", "unanswered question")
+- "reason": required if speak (e.g. "direct answer from context", "direct address", "unanswered question")
 - "response": required if speak — lowercase, 1-2 sentences, casual
 
-Example (speak, direct address):
+Example (speak, answer visible in same conversation):
+{"conversation":"person1: meeting is at 7pm at olive garden\\nperson2: perfect\\nperson3: wait what time are we meeting again","action":"speak","reason":"direct answer from context","response":"7pm at olive garden"}
+
+Another example (speak, answer visible in same conversation):
+{"conversation":"person1: jen said shes bringing dessert\\nperson2: nice\\nperson3: whos bringing dessert","action":"speak","reason":"direct answer from context","response":"jen said shes bringing dessert"}
+
+Another example (speak, direct address):
 {"conversation":"person1: hey guys\\nperson2: sup\\nperson1: phila what country is the nile in","action":"speak","reason":"direct address","response":"it runs through several countries but mostly egypt"}
 
 Example (silent, general chatter):
@@ -475,25 +495,32 @@ Generate ${count} examples where someone states a WRONG FACT but another person 
 
 Rules:
 - person1 states a wrong fact
-- person2 (or another person) corrects it — the correction message MUST contain one of these exact words or phrases: "actually", "nope", "that's wrong", "that's not right", "it's actually", "no it's", "pretty sure it's", "correction:", "wait no", "actually no"
+- person2 (or another person) corrects it
+- Focus on SOFT/IMPLICIT corrections (70% of examples): "pretty sure thats not true", "i dont think thats right", "i thought it was X", "hmm i think you mean X", "wasnt it actually", "isnt it more like", "nah its more like", "i read somewhere it was actually"
+- Remaining 30% use explicit corrections: "actually", "nope", "that's wrong", "wait no"
 - Phila stays SILENT (action: "silent") — never piles on after a correction
-- The conversation may continue after the correction (more messages)
-- Vary which marker word is used across examples
+- Phila stays SILENT either way — any correction, explicit or soft, means the error is handled
+- IMPORTANT: At least 40% of examples must show conversation CONTINUING for 2-3 messages AFTER the correction (topic changes, people react, chat moves on). Phila stays silent throughout.
+- Include some examples where a THIRD person corrects and the original speaker hasn't acknowledged yet
+- Vary the wording across examples
 
-IMPORTANT: Every correction message MUST explicitly contain one of the marker words listed above. Do NOT generate implicit corrections like "1865, right after the civil war ended" — the correction must be unambiguous.
+IMPORTANT:
+- The correction must be clear enough that a human reader can tell the wrong fact is already being challenged or fixed
+- Do NOT make phila speak after either explicit or soft corrections
+- Show that phila stays silent even when the conversation moves on after the correction
 
 Return ONLY a JSON array. No prose, no markdown. Each element:
 - "conversation": multi-line string, person1/person2/etc, \\n separated
 - "action": "silent"
 
-Example:
-{"conversation":"person1: einstein won the nobel prize for relativity\\nperson2: nope, it was actually for the photoelectric effect\\nperson1: oh really? huh"}
+Example (soft correction, conversation continues):
+{"conversation":"person1: einstein won the nobel prize for relativity\\nperson2: i think it was actually for the photoelectric effect\\nperson1: oh really\\nperson3: yeah thats right\\nperson2: anyway are we still on for dinner","action":"silent"}
 
-Another:
-{"conversation":"person1: mount everest is in nepal right\\nperson2: actually its on the border of nepal and tibet\\nperson1: ahh ok makes sense"}
+Another (soft correction, third party):
+{"conversation":"person1: mount everest is entirely in nepal\\nperson2: sounds right\\nperson3: hmm i think you mean its on the nepal-tibet border","action":"silent"}
 
-Another:
-{"conversation":"person1: the great wall of china is visible from space\\nperson2: wait no thats actually a myth, you cant see it from orbit\\nperson3: huh really\\nperson2: yeah its too narrow"}`;
+Another (explicit, post-correction continuation):
+{"conversation":"person1: the great wall of china is visible from space\\nperson2: wait no thats actually a myth, you cant see it from orbit\\nperson3: huh really\\nperson2: yeah its too narrow\\nperson1: learn something new every day\\nperson3: lol same","action":"silent"}`;
 }
 
 // --- Record builder ---
@@ -656,13 +683,13 @@ const CATEGORIES = [
 ];
 
 const DEFAULT_COUNTS: Record<string, number> = {
-	"recall-trigger": 200,
-	"recall-negative": 100,
+	"recall-trigger": 400,
+	"recall-negative": 300,
 	"verify-new": 200,
 	"facts-speak": 100,
 	"facts-silent": 50,
 	"direct-address-question": 100,
-	"already-corrected": 150,
+	"already-corrected": 300,
 };
 
 // facts-speak/silent use small batches so each batch gets a different fact pool

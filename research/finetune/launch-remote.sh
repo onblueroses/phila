@@ -88,12 +88,18 @@ else
 fi
 
 echo "=== Normalizing training data filename ==="
-# Prefer train-v4.jsonl over any pre-existing train.jsonl (older base data)
-if [ -f /workspace/train-v4.jsonl ]; then
+# Prefer compiled filenames (phila-ft-v*-train.jsonl), then short names (train-v*.jsonl)
+if [ -f /workspace/phila-ft-v5-train.jsonl ]; then
+    mv -f /workspace/phila-ft-v5-train.jsonl /workspace/train.jsonl
+    echo "Moved phila-ft-v5-train.jsonl -> train.jsonl ($(wc -l < /workspace/train.jsonl) lines)"
+elif [ -f /workspace/train-v5.jsonl ]; then
+    mv -f /workspace/train-v5.jsonl /workspace/train.jsonl
+    echo "Moved train-v5.jsonl -> train.jsonl ($(wc -l < /workspace/train.jsonl) lines)"
+elif [ -f /workspace/train-v4.jsonl ]; then
     mv -f /workspace/train-v4.jsonl /workspace/train.jsonl
     echo "Moved train-v4.jsonl -> train.jsonl ($(wc -l < /workspace/train.jsonl) lines)"
 else
-    echo "No train-v4.jsonl found, using existing train.jsonl if present"
+    echo "No phila-ft-v5-train.jsonl, train-v5.jsonl, or train-v4.jsonl found, using existing train.jsonl if present"
 fi
 [ -f /workspace/train.jsonl ] || { echo "ERROR: /workspace/train.jsonl not found"; exit 1; }
 echo "Training data: $(wc -l < /workspace/train.jsonl) examples"
@@ -109,7 +115,7 @@ cd /workspace
 echo "Starting fine-tune: \$(date)" >> /workspace/run.log 2>&1
 python3 /workspace/finetune.py \
     --data /workspace/train.jsonl \
-    --out /workspace/phila-ft-v4 >> /workspace/run.log 2>&1
+    --out /workspace/phila-ft-v5 >> /workspace/run.log 2>&1
 EXIT_CODE=\$?
 
 echo "Fine-tune exited with code \$EXIT_CODE: \$(date)" >> /workspace/run.log 2>&1
@@ -134,7 +140,7 @@ try:
     print('=== Uploading to HuggingFace: ' + repo_id + ' ===')
     api.create_repo(repo_id, repo_type='model', private=True, exist_ok=True)
     print('  Repo ready')
-    gguf_files = sorted(glob.glob('/workspace/phila-ft*.gguf'))
+    gguf_files = sorted(glob.glob('/workspace/phila-ft*.gguf') + glob.glob('/workspace/phila-ft*_gguf/*.gguf'))
     if gguf_files:
         gguf = gguf_files[0]
         api.upload_file(path_or_fileobj=gguf, path_in_repo=os.path.basename(gguf), repo_id=repo_id, repo_type='model')
