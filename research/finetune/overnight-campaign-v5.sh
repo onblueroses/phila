@@ -55,28 +55,27 @@ node --experimental-strip-types test/benchmark.ts \
 echo "Split benchmark saved to $LOGDIR/benchmark-split-v3gate-v5resp.json"
 echo ""
 
-# Phase 4: Continuous optimize with hard holdout guard
-# - 500 generations, 3 runs each
-# - Cross-validation every 10 generations (detects reward hacking / overfitting)
-# - Checkpoint saved continuously
-echo "=== Phase 4: Continuous optimizer (500 generations) ==="
-echo "Holdout guard: cross-validation every 10 gens, paired t-test significance"
-node --experimental-strip-types test/continuous-optimize.ts \
-    --model "$MODEL" --runs 3 --generations 500 \
-    --cv-interval 10 \
-    --checkpoint "$LOGDIR/checkpoint-v5.json" 2>&1
-echo "Optimizer complete"
-echo ""
+# Phase 4+5 loop: optimize -> verify -> repeat until manually stopped
+LOOP=1
+while true; do
+    echo "=== Phase 4: Continuous optimizer (500 generations, loop $LOOP) ==="
+    echo "Holdout guard: cross-validation every 10 gens, paired t-test significance"
+    node --experimental-strip-types test/continuous-optimize.ts \
+        --model "$MODEL" --runs 3 --generations 500 \
+        --cv-interval 10 \
+        --checkpoint "$LOGDIR/checkpoint-v5.json" 2>&1
+    echo "Optimizer loop $LOOP complete"
+    echo ""
 
-# Phase 5: Post-optimization holdout verification
-# Run final benchmark to confirm no overfitting
-echo "=== Phase 5: Post-optimization holdout verification ==="
-node --experimental-strip-types test/benchmark.ts \
-    --model "$MODEL" --runs 5 \
-    --out "$LOGDIR/benchmark-v5-post.json" 2>&1
-echo "Post-optimization benchmark saved"
-echo ""
+    echo "=== Phase 5: Post-optimization holdout verification (loop $LOOP) ==="
+    node --experimental-strip-types test/benchmark.ts \
+        --model "$MODEL" --runs 5 \
+        --out "$LOGDIR/benchmark-v5-post-loop${LOOP}.json" 2>&1
+    echo "Post-optimization benchmark saved (loop $LOOP)"
+    echo ""
 
-echo "=== Campaign complete: $(date) ==="
-echo "Results in: $LOGDIR/"
-ls -la "$LOGDIR/"
+    echo "=== Loop $LOOP complete: $(date) ==="
+    ls -la "$LOGDIR/"
+    echo ""
+    LOOP=$((LOOP + 1))
+done
