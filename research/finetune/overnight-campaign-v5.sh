@@ -7,6 +7,7 @@
 set -uo pipefail
 
 MODEL="phila-ft-v5"
+GATE_MODEL="llama3.2"
 BASELINE="llama3.2"
 LOGDIR="/root/phila/v5-campaign-results"
 CAMPAIGN_LOG="/root/phila/v5-campaign.log"
@@ -42,6 +43,16 @@ node --experimental-strip-types test/benchmark.ts \
     --model "$BASELINE" --runs 5 \
     --out "$LOGDIR/benchmark-v4.json" 2>&1
 echo "Baseline benchmark saved to $LOGDIR/benchmark-v4.json"
+echo ""
+
+# Phase 3.5: Split-model benchmark (llama3.2 gate + v5 response)
+# llama3.2 base had 94.1% gate accuracy with zero false-speaks.
+# v5 handles response generation where its fine-tuning helps.
+echo "=== Phase 3.5: Split benchmark ($GATE_MODEL gate + $MODEL response, 5 runs) ==="
+node --experimental-strip-types test/benchmark.ts \
+    --model "$MODEL" --gate-model "$GATE_MODEL" --runs 5 \
+    --out "$LOGDIR/benchmark-split-v3gate-v5resp.json" 2>&1
+echo "Split benchmark saved to $LOGDIR/benchmark-split-v3gate-v5resp.json"
 echo ""
 
 # Phase 4: Continuous optimize with hard holdout guard
