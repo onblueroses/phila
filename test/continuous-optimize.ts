@@ -22,6 +22,7 @@ import type { EvalResult, HackingState } from "./eval-shared.ts";
 import {
 	detectRewardHacking,
 	evaluate,
+	evaluateSplit,
 	pairedTTest,
 	T_TEST_THRESHOLD,
 } from "./eval-shared.ts";
@@ -39,6 +40,7 @@ const { values: args } = parseArgs({
 		"cv-interval": { type: "string", default: "10" },
 		"no-cv": { type: "boolean", default: false },
 		model: { type: "string" }, // restrict to a single model (e.g. --model llama3.2)
+		"gate-model": { type: "string" }, // split mode: gate model classifies, --model generates responses
 	},
 });
 
@@ -49,6 +51,54 @@ const CHECKPOINT_PATH = args.checkpoint!;
 const CV_INTERVAL = Number(args["cv-interval"]) || 10;
 const CV_ENABLED = !args["no-cv"];
 const MODEL_FILTER = args.model ?? null;
+const GATE_MODEL = args["gate-model"] ?? null;
+const SPLIT_MODE = GATE_MODEL !== null;
+
+function buildGateOnlyPrompt(profile: GroupProfile): string {
+	let biasLine = "";
+	const b = profile.speakBias;
+	if (b <= -0.15) {
+		biasLine =
+			"\nthis group strongly prefers you stay silent. only speak when directly addressed.\n";
+	} else if (b <= -0.05) {
+		biasLine =
+			"\nthis group prefers you stay quiet. only speak for rules 1 and 2.\n";
+	}
+
+	return `you are a classifier for a group chat agent called phila.
+your ONLY job is to decide: should phila speak or stay silent?
+you do NOT generate responses. just classify.
+${biasLine}
+SPEAK when:
+1. someone says "phila" anywhere in a message (greeting, question, request) -> speak
+2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> speak
+   BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> SILENT
+3. a factual question goes unanswered by others -> speak
+
+SILENT for everything else:
+- small talk, emotions, jokes, banter, opinions, debates, gossip, drama
+- someone already corrected the error
+- rhetorical questions, sarcasm (even with wrong facts)
+- questions directed at a specific person
+- hypothetical questions, exaggerations
+
+respond with ONLY json:
+{"action":"silent"}
+or
+{"action":"speak","reason":"why"}`;
+}
+
+const RESPONSE_PROMPT_TEMPLATE = `you are phila, a member of a group chat. your name is phila.
+another system already decided you should speak. your job is to write the response.
+reason you're speaking: \${reason}
+
+style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "happy to help".
+if correcting a wrong fact, be direct but friendly.
+if answering a question, be concise and accurate.
+if someone addressed you, respond naturally.
+
+respond with ONLY json:
+{"action":"speak","reason":"\${reason}","response":"your message"}`;
 
 // -- Scenarios --
 
@@ -454,18 +504,46 @@ process.on("SIGTERM", () => {
 	console.log("\nshutting down after current trial...");
 });
 
+// Evaluate wrapper: uses split or monolithic depending on mode
+async function evalScenarios(
+	prompt: string,
+	config: InferenceConfig,
+	scenarios: typeof train,
+	runs: number,
+) {
+	if (SPLIT_MODE) {
+		const gateConfig: InferenceConfig = { ...config, model: GATE_MODEL! };
+		return evaluateSplit(
+			prompt,
+			gateConfig,
+			RESPONSE_PROMPT_TEMPLATE,
+			config,
+			scenarios,
+			runs,
+			BASE_URL,
+		);
+	}
+	return evaluate(prompt, config, scenarios, runs, BASE_URL);
+}
+
 async function main() {
 	const profile: GroupProfile = {
 		chatId: "bench",
 		speakBias: 0.0,
 		updatedAt: Date.now(),
 	};
-	const basePrompt = buildSystemPrompt(profile);
+	const basePrompt = SPLIT_MODE
+		? buildGateOnlyPrompt(profile)
+		: buildSystemPrompt(profile);
 	const models = MODEL_FILTER ? [MODEL_FILTER] : await getAvailableModels();
 
 	const allScenarios = [...train, ...holdout];
 	console.log("=== phila continuous optimizer ===");
-	console.log(`models: ${models.join(", ")}`);
+	console.log(
+		SPLIT_MODE
+			? `mode: split (gate: ${GATE_MODEL}, response: ${MODEL_FILTER ?? "auto"})`
+			: `models: ${models.join(", ")}`,
+	);
 	console.log(
 		`scenarios: ${allScenarios.length} total (${train.length} train, ${holdout.length} holdout)`,
 	);
@@ -510,22 +588,15 @@ async function main() {
 		};
 
 		console.log("--- baseline (train) ---");
-		const baseline = await evaluate(
-			basePrompt,
-			bestConfig,
-			train,
-			RUNS,
-			BASE_URL,
-		);
+		const baseline = await evalScenarios(basePrompt, bestConfig, train, RUNS);
 		printResult(baseline);
 
 		console.log("--- baseline (holdout) ---");
-		const holdoutBaseline = await evaluate(
+		const holdoutBaseline = await evalScenarios(
 			basePrompt,
 			bestConfig,
 			holdout,
 			RUNS,
-			BASE_URL,
 		);
 		printResult(holdoutBaseline);
 
@@ -576,19 +647,17 @@ async function main() {
 		console.log(`--- gen ${generation} [${mutationType}] ---`);
 
 		try {
-			const trainResult = await evaluate(
+			const trainResult = await evalScenarios(
 				trialPrompt,
 				trialConfig,
 				train,
 				RUNS,
-				BASE_URL,
 			);
-			const holdoutResult = await evaluate(
+			const holdoutResult = await evalScenarios(
 				trialPrompt,
 				trialConfig,
 				holdout,
 				RUNS,
-				BASE_URL,
 			);
 
 			printResult(trainResult);
