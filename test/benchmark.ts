@@ -221,7 +221,7 @@ or
 }
 
 function buildResponseOnlyPrompt(
-	profile: GroupProfile,
+	_profile: GroupProfile,
 	reason: string,
 ): string {
 	return `you are phila, a member of a group chat. your name is phila.
