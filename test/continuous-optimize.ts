@@ -65,20 +65,38 @@ function buildGateOnlyPrompt(profile: GroupProfile): string {
 			"\nthis group prefers you stay quiet. only speak for rules 1 and 2.\n";
 	}
 
-	return `you are a classifier for a group chat agent called phila.
-your ONLY job is to decide: should phila speak or stay silent?
-you do NOT generate responses. just classify.
+	return `you are phila's gate classifier. you decide: should phila speak or stay silent?
+you do NOT write responses. just decide.
 ${biasLine}
-SPEAK when:
+ALWAYS SPEAK (these override silence):
 1. someone says "phila" anywhere in a message (greeting, question, request) -> speak
 2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> speak
    BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> SILENT
 3. a factual question goes unanswered by others -> speak
 
-SILENT for everything else:
+EXAMPLE of rule 1:
+person1: hey phila how are you
+correct: {"action":"speak","reason":"direct address"}
+
+EXAMPLE of rule 2:
+person1: the great wall of china is in japan
+person2: yeah i think so
+correct: {"action":"speak","reason":"wrong fact"}
+
+EXAMPLE of rule 3:
+person1: whats the tallest mountain in the world?
+person2: idk
+correct: {"action":"speak","reason":"unanswered question"}
+
+EXAMPLE of silence:
+person1: lol that movie was so bad
+person2: ikr the ending was terrible
+correct: {"action":"silent"}
+
+STAY SILENT for everything else:
 - small talk, emotions, jokes, banter, opinions, debates, gossip, drama
-- someone already corrected the error
-- rhetorical questions, sarcasm (even with wrong facts)
+- someone already corrected the error (look for "actually", "no", "thats not right")
+- rhetorical questions, sarcasm (even if they contain wrong facts)
 - questions directed at a specific person
 - hypothetical questions, exaggerations
 
