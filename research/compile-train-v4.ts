@@ -5,14 +5,16 @@
 //   2. Replace every system prompt with current buildSystemPrompt() output
 //   3. For speak records with reason "wrong fact" or "speak-correction":
 //      add tools:["verify"] to the assistant response JSON
-//   4. Load all data/v4-finetune/<category>.jsonl files
+//   4. Load unchanged v4 category files from data/v4-finetune/ plus
+//      updated v4.1 category files from research/finetune-data/
 //   5. Check for holdout contamination (normalize + compare)
-//   6. Concatenate, shuffle (seed 42), write data/v4-finetune/train-v4.jsonl
+//   6. Concatenate, shuffle (seed 42), write
+//      research/finetune-data/phila-ft-v4.1-train.jsonl
 //
 // Usage:
 //   node --experimental-strip-types research/compile-train-v4.ts [--dry-run]
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 import { buildSystemPrompt } from "../src/gate.ts";
@@ -30,6 +32,39 @@ interface TrainingRecord {
 // Neutral profile — same as gen-finetune-data-v4.ts
 const NEUTRAL_PROFILE = { chatId: "train", speakBias: 0, updatedAt: 0 };
 const NEW_SYSTEM_PROMPT = buildSystemPrompt(NEUTRAL_PROFILE);
+const LEGACY_V4_DIR = "data/v4-finetune";
+const V41_DIR = "research/finetune-data";
+const OUTPUT_PATH = `${V41_DIR}/phila-ft-v4.1-train.jsonl`;
+const CATEGORY_INPUTS = [
+	{
+		categoryName: "recall-trigger",
+		path: `${V41_DIR}/v4.1-recall-trigger.jsonl`,
+	},
+	{
+		categoryName: "recall-negative",
+		path: `${V41_DIR}/v4.1-recall-negative.jsonl`,
+	},
+	{
+		categoryName: "verify-new",
+		path: `${LEGACY_V4_DIR}/verify-new.jsonl`,
+	},
+	{
+		categoryName: "facts-speak",
+		path: `${LEGACY_V4_DIR}/facts-speak.jsonl`,
+	},
+	{
+		categoryName: "facts-silent",
+		path: `${LEGACY_V4_DIR}/facts-silent.jsonl`,
+	},
+	{
+		categoryName: "direct-address-question",
+		path: `${LEGACY_V4_DIR}/direct-address-question.jsonl`,
+	},
+	{
+		categoryName: "already-corrected",
+		path: `${V41_DIR}/v4.1-already-corrected.jsonl`,
+	},
+];
 
 // Correction reason strings that should get tools:["verify"] added
 const CORRECTION_REASONS = new Set(["wrong fact", "speak-correction"]);
@@ -165,25 +200,19 @@ console.log(
 	`  System prompt includes tools section: ${hasToolsVocab ? "YES" : "NO ← PROBLEM"}`,
 );
 
-// Step 2: Load new v4 category files
-console.log("\nLoading v4 category files from data/v4-finetune/...");
-const V4_DIR = "data/v4-finetune";
-const EXCLUDED = new Set(["train-v4.jsonl"]);
-const categoryFiles = existsSync(V4_DIR)
-	? readdirSync(V4_DIR)
-			.filter((f) => f.endsWith(".jsonl") && !EXCLUDED.has(f))
-			.sort()
-	: [];
+// Step 2: Load new v4/v4.1 category files
+console.log(
+	"\nLoading v4/v4.1 category files from data/v4-finetune/ and research/finetune-data/...",
+);
 
 const newRecords: TrainingRecord[] = [];
 const categoryCounts: Record<string, number> = {};
 
-for (const file of categoryFiles) {
-	const records = loadJsonl(`${V4_DIR}/${file}`);
-	const categoryName = file.replace(".jsonl", "");
+for (const { categoryName, path } of CATEGORY_INPUTS) {
+	const records = loadJsonl(path);
 	categoryCounts[categoryName] = records.length;
 	newRecords.push(...records);
-	console.log(`  ${file}: ${records.length} records`);
+	console.log(`  ${categoryName}: ${records.length} records (${path})`);
 }
 
 console.log(`  Total new records: ${newRecords.length}`);
@@ -226,10 +255,10 @@ for (const [k, v] of Object.entries(stats)) {
 }
 
 if (!isDryRun) {
-	const outPath = `${V4_DIR}/train-v4.jsonl`;
 	const jsonl = `${shuffled.map((r) => JSON.stringify(r)).join("\n")}\n`;
-	writeFileSync(outPath, jsonl);
-	console.log(`\nWritten ${shuffled.length} records to ${outPath}`);
+	mkdirSync(V41_DIR, { recursive: true });
+	writeFileSync(OUTPUT_PATH, jsonl);
+	console.log(`\nWritten ${shuffled.length} records to ${OUTPUT_PATH}`);
 } else {
-	console.log("\n[DRY RUN] Would write train-v4.jsonl with above stats.");
+	console.log(`\n[DRY RUN] Would write ${OUTPUT_PATH} with above stats.`);
 }
