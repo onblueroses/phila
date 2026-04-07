@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Overnight campaign for phila-ft-v5.
+# Runs: benchmark -> finetune-eval -> continuous-optimize with holdout guard.
+# Run on VPS where Ollama serves phila-ft-v5.
+#
+# Usage: nohup bash overnight-campaign-v5.sh > /root/phila/v5-campaign.log 2>&1 &
+set -uo pipefail
+
+MODEL="phila-ft-v5"
+BASELINE="phila-ft-v4"
+LOGDIR="/root/phila/v5-campaign-results"
+CAMPAIGN_LOG="/root/phila/v5-campaign.log"
+export PHILA_OLLAMA_URL="http://localhost:11434"
+
+mkdir -p "$LOGDIR"
+cd /root/phila
+
+echo "=== phila v5 overnight campaign ==="
+echo "Started: $(date)"
+echo "Model: $MODEL | Baseline: $BASELINE"
+echo ""
+
+# Phase 1: Full benchmark (5 runs, all scenarios)
+echo "=== Phase 1: Full benchmark (5 runs) ==="
+node --experimental-strip-types test/benchmark.ts \
+    --model "$MODEL" --runs 5 \
+    --out "$LOGDIR/benchmark-v5.json" 2>&1
+echo "Benchmark saved to $LOGDIR/benchmark-v5.json"
+echo ""
+
+# Phase 2: Finetune eval with regression deep-dive
+echo "=== Phase 2: Finetune eval vs $BASELINE ==="
+node --experimental-strip-types test/finetune-eval.ts \
+    --model "$MODEL" --baseline "$BASELINE" --runs 5 --regression-runs 10 \
+    --out "$LOGDIR/finetune-eval-v5.json" 2>&1
+echo "Finetune eval saved to $LOGDIR/finetune-eval-v5.json"
+echo ""
+
+# Phase 3: Baseline benchmark for comparison
+echo "=== Phase 3: Baseline benchmark ($BASELINE, 5 runs) ==="
+node --experimental-strip-types test/benchmark.ts \
+    --model "$BASELINE" --runs 5 \
+    --out "$LOGDIR/benchmark-v4.json" 2>&1
+echo "Baseline benchmark saved to $LOGDIR/benchmark-v4.json"
+echo ""
+
+# Phase 4: Continuous optimize with hard holdout guard
+# - 500 generations, 3 runs each
+# - Cross-validation every 10 generations (detects reward hacking / overfitting)
+# - Checkpoint saved continuously
+echo "=== Phase 4: Continuous optimizer (500 generations) ==="
+echo "Holdout guard: cross-validation every 10 gens, paired t-test significance"
+node --experimental-strip-types test/continuous-optimize.ts \
+    --model "$MODEL" --runs 3 --generations 500 \
+    --cv-interval 10 \
+    --checkpoint "$LOGDIR/checkpoint-v5.json" 2>&1
+echo "Optimizer complete"
+echo ""
+
+# Phase 5: Post-optimization holdout verification
+# Run final benchmark to confirm no overfitting
+echo "=== Phase 5: Post-optimization holdout verification ==="
+node --experimental-strip-types test/benchmark.ts \
+    --model "$MODEL" --runs 5 \
+    --out "$LOGDIR/benchmark-v5-post.json" 2>&1
+echo "Post-optimization benchmark saved"
+echo ""
+
+echo "=== Campaign complete: $(date) ==="
+echo "Results in: $LOGDIR/"
+ls -la "$LOGDIR/"
