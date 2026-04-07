@@ -125,6 +125,122 @@ export async function evaluate(
 	};
 }
 
+// Split-model evaluation: gate model classifies, response model generates.
+// Only the gate prompt is optimized; response prompt is fixed.
+export async function evaluateSplit(
+	gatePrompt: string,
+	gateConfig: InferenceConfig,
+	responsePrompt: string,
+	responseConfig: InferenceConfig,
+	scenarios: Scenario[],
+	runs: number,
+	baseUrl: string,
+): Promise<EvalResult> {
+	let correctSilent = 0;
+	let correctSpeak = 0;
+	let falseSpeak = 0;
+	let falseSilent = 0;
+	let qualitySum = 0;
+	let qualityCount = 0;
+	let latencySum = 0;
+	let latencyCount = 0;
+	const details: string[] = [];
+	const perScenarioScores: number[] = [];
+
+	for (const scenario of scenarios) {
+		let scenarioScore = 0;
+		for (let r = 0; r < runs; r++) {
+			const start = performance.now();
+			try {
+				// Pass 1: gate model decides speak/silent
+				const gateRaw = await infer(
+					gatePrompt,
+					scenario.conversation,
+					gateConfig,
+					baseUrl,
+				);
+				const gateDecision = parseDecision(gateRaw);
+
+				if (scenario.expect === "silent") {
+					if (gateDecision.action === GateAction.SILENT) {
+						correctSilent++;
+						scenarioScore += 1;
+					} else {
+						falseSpeak++;
+						details.push(`FALSE SPEAK: ${scenario.name} (run ${r + 1})`);
+					}
+				} else {
+					if (gateDecision.action === GateAction.SPEAK) {
+						// Pass 2: response model generates answer
+						const reason = gateDecision.reason ?? "direct address";
+						const respPrompt = responsePrompt.replace(/\$\{reason\}/g, reason);
+						const respRaw = await infer(
+							respPrompt,
+							scenario.conversation,
+							responseConfig,
+							baseUrl,
+						);
+						correctSpeak++;
+						const respDecision = parseDecision(respRaw);
+						if (
+							respDecision.action === GateAction.SPEAK &&
+							respDecision.response
+						) {
+							const breakdown = scoreResponse(respDecision.response, scenario);
+							qualitySum += breakdown.composite;
+							qualityCount++;
+							scenarioScore += breakdown.composite;
+						} else {
+							scenarioScore += 0.5; // gate correct but response parse failed
+						}
+					} else {
+						falseSilent++;
+						details.push(`FALSE SILENT: ${scenario.name} (run ${r + 1})`);
+					}
+				}
+
+				const elapsed = performance.now() - start;
+				latencySum += elapsed;
+				latencyCount++;
+			} catch (e) {
+				falseSilent++;
+				details.push(
+					`ERROR: ${scenario.name} (run ${r + 1}): ${e instanceof Error ? e.message : e}`,
+				);
+			}
+		}
+		perScenarioScores.push(scenarioScore / runs);
+	}
+
+	const totalRuns = correctSilent + correctSpeak + falseSpeak + falseSilent;
+	const weightedCorrect = correctSilent + correctSpeak;
+	const weightedErrors = falseSpeak * 3 + falseSilent;
+	const gateScore = totalRuns
+		? weightedCorrect / (weightedCorrect + weightedErrors)
+		: 0;
+	const responseQuality = qualityCount ? qualitySum / qualityCount : 0;
+	const avgLatency = latencyCount ? latencySum / latencyCount : 10000;
+	const latencyScore = Math.max(0, Math.min(1, 1 - (avgLatency - 500) / 4500));
+	const w = compositeWeights(gateScore);
+	const compositeScore =
+		gateScore * w.gate + responseQuality * w.quality + latencyScore * w.latency;
+
+	return {
+		compositeScore,
+		gateScore,
+		responseQuality,
+		latencyScore,
+		avgLatencyMs: Math.round(avgLatency),
+		correctSilent,
+		correctSpeak,
+		falseSpeak,
+		falseSilent,
+		totalRuns,
+		perScenarioScores,
+		details,
+	};
+}
+
 // -- Confusion Matrix --
 
 export interface ConfusionMatrix {
