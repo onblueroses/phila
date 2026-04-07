@@ -177,7 +177,7 @@ export async function evaluateSplit(
 						const respRaw = await infer(
 							respPrompt,
 							scenario.conversation,
-							responseConfig,
+							{ ...responseConfig, keepAlive: 0 },
 							baseUrl,
 						);
 						correctSpeak++;

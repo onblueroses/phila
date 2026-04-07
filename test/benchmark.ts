@@ -309,7 +309,7 @@ async function runSplitBenchmark(
 					const respContent = await infer(
 						respSystem,
 						scenario.conversation,
-						config,
+						{ ...config, keepAlive: 0 },
 						config.ollamaUrl,
 					);
 					totalMs += Math.round(performance.now() - respStart);
