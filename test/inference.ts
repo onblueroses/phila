@@ -10,6 +10,7 @@ export interface InferenceConfig {
 	mirostatTau?: number;
 	mirostatEta?: number;
 	seed?: number | null;
+	keepAlive?: number;
 }
 
 export async function infer(
@@ -29,6 +30,7 @@ export async function infer(
 				{ role: "user", content: user },
 			],
 			stream: false,
+			...(config.keepAlive != null ? { keep_alive: config.keepAlive } : {}),
 			options: {
 				temperature: config.temperature,
 				num_predict: config.numPredict,
