@@ -52,6 +52,7 @@ const { values: args } = parseArgs({
 		"top-p": { type: "string", default: "0.52" },
 		seed: { type: "string" },
 		gate: { type: "string", default: "monolithic" },
+		"gate-model": { type: "string" },
 		scenarios: { type: "string" },
 		sweep: { type: "boolean", default: false },
 		"model-sweep": { type: "boolean", default: false },
@@ -162,6 +163,150 @@ async function runBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
 					result.passes++;
 				} else {
 					result.fails++;
+				}
+			} catch {
+				result.errors++;
+			}
+		}
+
+		results.push(result);
+		const rate = `${Math.round((result.passes / config.runs) * 100)}%`;
+		const avgMs = result.latencies.length
+			? Math.round(avg(result.latencies))
+			: "-";
+		process.stdout.write(
+			`  ${pad(scenario.name, 40)} ${result.passes}/${config.runs}  ${pad(rate, 6)} ${avgMs}ms\n`,
+		);
+	}
+
+	return results;
+}
+
+// Split-model benchmark: one model gates (speak/silent), another generates responses.
+// Gate model gets a stripped-down prompt focused purely on classification.
+// Response model gets a prompt focused on generating good answers.
+
+function buildGateOnlyPrompt(profile: GroupProfile): string {
+	let biasLine = "";
+	const b = profile.speakBias;
+	if (b <= -0.15) {
+		biasLine =
+			"\nthis group strongly prefers you stay silent. only speak when directly addressed.\n";
+	} else if (b <= -0.05) {
+		biasLine =
+			"\nthis group prefers you stay quiet. only speak for rules 1 and 2.\n";
+	}
+
+	return `you are a classifier for a group chat agent called phila.
+your ONLY job is to decide: should phila speak or stay silent?
+you do NOT generate responses. just classify.
+${biasLine}
+SPEAK when:
+1. someone says "phila" anywhere in a message (greeting, question, request) -> speak
+2. someone states a wrong fact (wrong date, wrong name, wrong number) and nobody corrects them -> speak
+   BUT if someone already corrected it (said "actually", "no its", "thats not right", etc.) -> SILENT
+3. a factual question goes unanswered by others -> speak
+
+SILENT for everything else:
+- small talk, emotions, jokes, banter, opinions, debates, gossip, drama
+- someone already corrected the error
+- rhetorical questions, sarcasm (even with wrong facts)
+- questions directed at a specific person
+- hypothetical questions, exaggerations
+
+respond with ONLY json:
+{"action":"silent"}
+or
+{"action":"speak","reason":"why"}`;
+}
+
+function buildResponseOnlyPrompt(
+	profile: GroupProfile,
+	reason: string,
+): string {
+	return `you are phila, a member of a group chat. your name is phila.
+another system already decided you should speak. your job is to write the response.
+reason you're speaking: ${reason}
+
+style: lowercase, 1-2 sentences, casual like a friend. no "great question" or "happy to help".
+if correcting a wrong fact, be direct but friendly.
+if answering a question, be concise and accurate.
+if someone addressed you, respond naturally.
+
+respond with ONLY json:
+{"action":"speak","reason":"${reason}","response":"your message"}`;
+}
+
+async function runSplitBenchmark(
+	config: RunConfig,
+	gateModel: string,
+): Promise<ScenarioResult[]> {
+	const profile: GroupProfile = {
+		chatId: "bench",
+		speakBias: 0.0,
+		updatedAt: Date.now(),
+	};
+	const gateSystem = buildGateOnlyPrompt(profile);
+	const gateConfig: RunConfig = { ...config, model: gateModel };
+	const results: ScenarioResult[] = [];
+
+	for (const scenario of SCENARIOS) {
+		const result: ScenarioResult = {
+			name: scenario.name,
+			expect: scenario.expect,
+			passes: 0,
+			fails: 0,
+			errors: 0,
+			latencies: [],
+		};
+
+		for (let i = 0; i < config.runs; i++) {
+			try {
+				const gateStart = performance.now();
+				// Pass 1: gate model decides speak/silent
+				const gateContent = await infer(
+					gateSystem,
+					scenario.conversation,
+					gateConfig,
+					config.ollamaUrl,
+				);
+				const gateDecision = parseDecision(gateContent);
+				let totalMs = Math.round(performance.now() - gateStart);
+
+				if (gateDecision.action === "silent") {
+					// Gate said silent - no need to call response model
+					result.latencies.push(totalMs);
+					if (scenario.expect === "silent") {
+						result.passes++;
+					} else {
+						result.fails++;
+					}
+				} else {
+					// Gate said speak - call response model for the actual response
+					const respStart = performance.now();
+					const respSystem = buildResponseOnlyPrompt(
+						profile,
+						gateDecision.reason ?? "direct address",
+					);
+					const respContent = await infer(
+						respSystem,
+						scenario.conversation,
+						config,
+						config.ollamaUrl,
+					);
+					totalMs += Math.round(performance.now() - respStart);
+					result.latencies.push(totalMs);
+
+					// For accuracy, we only care about the gate decision
+					const respDecision = parseDecision(respContent);
+					if (respDecision.action === "speak" && scenario.expect === "speak") {
+						result.passes++;
+					} else if (scenario.expect === "speak") {
+						// Gate was right (speak) but response model returned bad JSON
+						result.passes++;
+					} else {
+						result.fails++;
+					}
 				}
 			} catch {
 				result.errors++;
@@ -531,6 +676,7 @@ async function main() {
 		}
 	} else {
 		const gateMode = args.gate ?? "monolithic";
+		const gateModel = args["gate-model"];
 		const config: RunConfig = {
 			label: "single",
 			model,
@@ -542,14 +688,22 @@ async function main() {
 			topP,
 		};
 
-		console.log(`=== phila benchmark ===`);
-		console.log(
-			`model: ${config.model} | gate: ${gateMode} | t=${config.temperature} tp=${config.topP} np=${config.numPredict} | runs: ${config.runs}`,
-		);
+		if (gateModel) {
+			console.log(`=== phila benchmark (split) ===`);
+			console.log(
+				`gate: ${gateModel} | response: ${config.model} | t=${config.temperature} tp=${config.topP} np=${config.numPredict} | runs: ${config.runs}`,
+			);
+		} else {
+			console.log(`=== phila benchmark ===`);
+			console.log(
+				`model: ${config.model} | gate: ${gateMode} | t=${config.temperature} tp=${config.topP} np=${config.numPredict} | runs: ${config.runs}`,
+			);
+		}
 		console.log();
 
-		const results =
-			gateMode === "dual"
+		const results = gateModel
+			? await runSplitBenchmark(config, gateModel)
+			: gateMode === "dual"
 				? await runDualBenchmark(config)
 				: gateMode === "hierarchical"
 					? await runHierarchicalBenchmark(config)
