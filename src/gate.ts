@@ -211,6 +211,18 @@ export function buildConversation(messages: ChatMessage[]): string {
 	return messages.map((m) => `${label(m.sender)}: ${m.text}`).join("\n");
 }
 
+const DOUBLE_CHECK_PROMPT = `you said "speak". before sending, verify:
+1. did someone ALREADY correct the error? (look for "actually", "no", "thats not right", etc.)
+2. is "phila" actually addressing you, or is it a different word? (philadelphia, philanthropy, phila cream cheese)
+3. is the question rhetorical or sarcastic?
+
+if any of these are true, change to silent.
+
+respond with ONLY json:
+{"action":"silent"}
+or
+{"action":"speak","reason":"confirmed: [why]","response":"your message"}`;
+
 export async function evaluate(
 	messages: ChatMessage[],
 	profile: GroupProfile,
@@ -225,5 +237,16 @@ export async function evaluate(
 		config,
 		96,
 	);
-	return parseDecision(raw);
+	const firstPass = parseDecision(raw);
+
+	// Only double-check speak decisions (silent path stays fast)
+	if (firstPass.action !== GateAction.SPEAK) return firstPass;
+
+	const checkRaw = await chat(
+		DOUBLE_CHECK_PROMPT,
+		`conversation:\n${conversation}\n\nyour first answer: ${raw}`,
+		config,
+		96,
+	);
+	return parseDecision(checkRaw);
 }
