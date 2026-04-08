@@ -4,7 +4,22 @@ A group chat agent whose default state is silence.
 
 Every AI agent in group chats makes the same mistake: it talks too much. Phila is a group chat participant, not an assistant. It observes every message, decides whether to act, and stays silent 95% of the time. When it does speak, it verifies facts against external sources and recalls information from conversation memory. It adapts its behavior per-group based on social feedback - no configuration, no prompting, just learned norms.
 
-**~650 lines** of TypeScript. **Local inference** via Ollama - messages never leave your device. **Custom QLoRA fine-tune** on 3,799 gate-only examples. **93.3% accuracy** on an independent test suite the model never trained against.
+**~2,000 lines** of TypeScript. **Local inference** via Ollama - messages never leave your device. **Custom QLoRA fine-tune** (5 iterations) on 4,780 gate-only examples. **95.2% holdout accuracy** on scenarios the model never trained against.
+
+---
+
+## results at a glance
+
+| Version | Model | Holdout Acc | Independent Acc | What changed |
+|---------|-------|------------|----------------|--------------|
+| Baseline | llama3.2 (stock) | 83.7% | 67.0% | - |
+| v1 | phila-ft | 97.6% | - | Buried-thread 0% -> 100% |
+| v2 | phila-ft-v2 | 93.0% | 76.7% | v1 regressions fixed |
+| v3 | phila-ft-v3 | 93.6% | 93.3% | Generalization gap closed (-19pp -> -0.3pp) |
+| v5 | phila-ft-v5 | 94.6% | - | Already-corrected scenarios fixed |
+| **v5 + prompt** | **phila-ft-v5 + restructured** | **95.2%** | - | **False speaks 15 -> 4, flat rule structure** |
+
+From a stock 3B model at 67% on real-world-proxy scenarios to a fine-tuned + prompt-engineered system at 95.2% holdout. Five rounds of fine-tuning, each driven by failure analysis of the previous version. A 93-generation prompt optimizer. A 5-layer prompt benchmark. Cross-suite validation against 402 test scenarios across three independent suites.
 
 ---
 
@@ -50,7 +65,7 @@ Phila runs a continuous observe-decide-act-learn loop:
                ┌──────────────▼──────────────────────────┐
                │            DECIDE                        │
                │  speak gate: local LLM evaluates batch   │
-               │  93.3% accuracy (custom fine-tuned 3B)   │
+               │  95.2% accuracy (custom fine-tuned 3B)   │
                └──────┬─────────────────┬────────────────┘
                       │                 │
                SILENT (95%)        SPEAK (5%)
@@ -100,14 +115,14 @@ TypeScript, `@photon-ai/imessage-kit`, Ollama, `better-sqlite3`
 
 | Infrastructure | Value |
 |----------------|-------|
-| Test scenarios | 140 original + 174 independent (Opus-generated) |
-| Unit + integration tests | 174+ |
-| Architecture iterations | 8 (3 hierarchical, 4 dual-pass, 1 monolithic baseline) |
-| Optimizer generations | 660+ |
-| Fine-tune training examples | 3,799 gate-only (v3) |
+| Test scenarios | 146 original + 174 independent + 82 adversarial |
+| Unit + integration tests | 224 |
+| Architecture iterations | 8 (3 hierarchical, 4 dual-pass, 1 monolithic winner) |
+| Optimizer generations | 750+ |
+| Fine-tune versions | 5 (v1-v5), 4,780 gate-only examples (v5) |
 | Fine-tune GPU | Vast.ai RTX 4090, QLoRA r=16 a=32 |
-| Fine-tuned model | [onblueroses/phila-ft-v3-GGUF](https://huggingface.co/onblueroses/phila-ft-v3-GGUF) |
-| Optimal inference params | temperature 0.1, topP 0.52, numPredict 96 (gate), 64 (other callers) |
+| Fine-tuned model | [onblueroses/phila-ft-v5-GGUF](https://huggingface.co/onblueroses/phila-ft-v5-GGUF) |
+| Optimal inference params | temperature 0.1, topP 0.52, numPredict 64 |
 
 ## social learning
 
@@ -146,7 +161,7 @@ Trust comes from the architecture, not a privacy policy.
 
 The hardest failure was the buried-thread case: someone asks a factual question, five people change the subject, nobody answers. Phila should speak - but didn't.
 
-We validated the speak gate against 101 test scenarios across 9 categories, with a strict train/holdout split (58 train, 43 holdout). An automated optimizer mutated the prompt and inference parameters over 660+ generations, with statistical significance gating (p < 0.10) and a reward-hacking detector that rolls back anything improving train accuracy while degrading holdout by more than 3%.
+We validated the speak gate against 146 test scenarios across 9 categories, with a strict train/holdout split. An automated optimizer mutated the prompt and inference parameters over 750+ generations, with statistical significance gating (p < 0.10) and a reward-hacking detector that rolls back anything improving train accuracy while degrading holdout by more than 3%.
 
 Nothing beat the baseline. A dedicated probe across 4 models, 4 prompt variants, and 30 generated scenarios returned 0% pass rate on buried-thread across every combination. No rephrasing moved the needle.
 
@@ -172,16 +187,26 @@ But v2 had a problem: it only reached 80.9% on an independent test suite of 174 
 | Recall | 0.446 | 0.612 | **0.890** |
 | Precision | 0.983 | 0.984 | **0.994** |
 
-The recall jump (+27.8pp on independent) was the whole point - the model was defaulting to silence too aggressively, missing speak-worthy moments. v3 catches them without sacrificing precision.
+**v5 targeted the last known limitation**: "already corrected" scenarios where someone states a wrong fact but another person already corrected it. Added 70 targeted examples to v3's proven dataset. Then a 93-generation prompt optimizer found the optimal example count (7 worked examples), and research into system prompt patterns from major AI labs led to restructuring the rules as flat NEVER SPEAK / ALWAYS SPEAK blocks instead of nested conditionals.
+
+| Metric | v3 (production baseline) | **v5 + restructured prompt** |
+|--------|------------------------|------------------------------|
+| Holdout accuracy | 93.6% | **95.2%** |
+| Holdout 95% CI | - | **[90.1%, 99.0%]** |
+| Precision | 0.957 | **0.983** |
+| Recall | 0.865 | **0.912** |
+| F1 | 0.909 | **0.946** |
+| False speaks | - | **4** |
+| "Already corrected" pass rate | flaky | **100%** |
 
 ### cross-suite validation (15 runs per config)
 
-| configuration | original suite | independent suite | generalization gap |
+| Configuration | Original suite | Independent suite | Generalization gap |
 |---------------|---------------|-------------------|-------------------|
-| monolithic (base) | 86.3% | 67.0% | -19.3pp |
-| monolithic ft-v2 | 90.3% | 76.7% | -13.6pp |
-| dual-pass ft-v2 | 91.9% | 80.9% | -11.0pp |
-| **monolithic ft-v3** | **93.6%** | **93.3%** | **-0.3pp** |
+| Monolithic (base) | 86.3% | 67.0% | -19.3pp |
+| Monolithic ft-v2 | 90.3% | 76.7% | -13.6pp |
+| Dual-pass ft-v2 | 91.9% | 80.9% | -11.0pp |
+| **Monolithic ft-v3** | **93.6%** | **93.3%** | **-0.3pp** |
 
 The independent suite uses 174 scenarios generated by Claude Opus from category definitions alone - no examples from the original test set. v3 closed the generalization gap almost entirely by training on data that matches the independent distribution.
 
@@ -197,6 +222,10 @@ Simplifying the prompt made things worse. Smaller models need more structure, no
 
 **Your test suite is lying to you.** The 91.9% accuracy on our hand-crafted test scenarios dropped to 80.8% on an independent suite of 174 scenarios generated by a different model from category definitions alone. An 11pp gap. The hand-crafted scenarios were easier because they came from the same distribution as the gate prompt and fine-tuning data. Cross-suite validation should be standard for any agent eval - single-source test sets overstate real-world performance.
 
+**Small models need examples, not descriptions.** Abstract instructions ("correct wrong facts") fail. Concrete worked examples in the system prompt are what make 3B models work. We tested 5 layers (3 to 11 examples) - 7 is the sweet spot. Below 7, false speaks are high. Above 7, the model goes too silent.
+
+**Flat rules beat nested conditionals.** "Rule 2: correct wrong facts BUT if already corrected STAY SILENT" confused the model. Splitting into "NEVER SPEAK: already corrected" and "ALWAYS SPEAK: wrong fact uncorrected" fixed the longest-standing failure mode.
+
 Full research log and methodology: [FINDINGS.md](FINDINGS.md)
 
 </details>
@@ -210,9 +239,9 @@ Full research log and methodology: [FINDINGS.md](FINDINGS.md)
 ollama pull llama3.2          # base gate model
 ollama pull nomic-embed-text  # embedding model for memory recall
 
-# to use the fine-tuned model (93% gate accuracy vs 88% base):
-# download from https://huggingface.co/onblueroses/phila-ft-v3-GGUF
-# then: ollama create phila-ft-v3 -f Modelfile
+# to use the fine-tuned model (95% gate accuracy vs 84% base):
+# download from https://huggingface.co/onblueroses/phila-ft-v5-GGUF
+# then: ollama create phila-ft-v5 -f Modelfile
 
 # clone and install
 git clone https://github.com/onblueroses/phila.git && cd phila
@@ -245,9 +274,9 @@ npm start
 
 `research/` contains the full benchmark and optimization pipeline: adversarial scenario generation, single-elimination tournaments with paired t-tests, multi-model benchmarking, prompt injection resilience testing, context window degradation analysis, and an independent scenario generator. `research/finetune/` has the QLoRA fine-tuning pipeline (Unsloth + Vast.ai). `research/v3-finetune/` has the v3 dataset generation pipeline - corpus transformers, synthetic generators, and a merge/dedup/split tool. Full results and methodology in [FINDINGS.md](FINDINGS.md).
 
-## open questions
+## future directions
 
-- Should phila ever initiate? "Hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - but that's a different trust equation entirely.
-- Memory extraction captures structured facts well but misses implicit context. "I can't eat that" doesn't always get extracted as a dietary restriction. The extraction prompt needs iteration.
-
-More in [FINDINGS.md](FINDINGS.md).
+- **Proactive recall.** "Hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - initiating from stored context rather than waiting for a trigger. Different trust equation, different gate entirely.
+- **Implicit context extraction.** "I can't eat that" doesn't always get extracted as a dietary restriction. The extraction prompt captures explicit facts well but misses implications.
+- **Multi-language support.** The gate prompt and training data are English-only. Code-switching in multilingual group chats is a known failure mode (82-scenario adversarial suite confirms this).
+- **Larger context windows.** Gate accuracy degrades past 200 messages (tested up to 500). Longer group conversations would benefit from summarization or sliding-window approaches.
