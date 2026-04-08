@@ -4,7 +4,7 @@ Codebase map for automated agents, evaluators, and reviewers.
 
 ## What this is
 
-A silence-first iMessage group chat agent. The core design challenge: teach a 3B language model to default to not responding, and speak only for factual corrections, unanswered questions, and direct address. Runs fully local via Ollama — no cloud inference.
+A silence-first iMessage group chat agent. The core design challenge: teach a 3B language model to default to not responding, and speak only for factual corrections, unanswered questions, and direct address. Runs fully local via Ollama - no cloud inference.
 
 ## Architecture in 30 seconds
 
@@ -20,71 +20,75 @@ The gate is the entire product. Everything else is plumbing.
 
 | File | Role |
 |------|------|
-| `gate.ts` | Monolithic speak/silent decision engine (Pass 1). `buildSystemPrompt()` encodes the rules. `parseDecision()` extracts action + response. Parse failures default to SILENT (load-bearing). |
-| `gate-dual.ts` | Dual-pass gate: Pass 1 monolithic + regex gate + Pass 2 memory-recall with injected facts. `MEMORY_CHECK_SYSTEM` prompt, `MEMORY_QUERY_PATTERNS` regex, `evaluateDual()`. Feature-flagged via `PHILA_GATE=dual`. |
+| `gate.ts` | Monolithic speak/silent decision engine. `buildSystemPrompt()` encodes NEVER SPEAK / ALWAYS SPEAK rules with 7 worked examples. `parseDecision()` extracts action + response. Conditional double-check on speak decisions via `DOUBLE_CHECK_PROMPT`. Parse failures default to SILENT (load-bearing). |
+| `gate-dual.ts` | Dual-pass gate: Pass 1 monolithic + regex gate + Pass 2 memory-recall with injected facts. Feature-flagged via `PHILA_GATE=dual`. Benchmarked at 91.7% but adds no value over v5 monolithic (95.2%). |
 | `gate-hierarchical.ts` | Experimental hierarchical gate (kept as reference, not production). Binary filter + monolithic fallback. Benchmarked at 77.9% - decomposition hurts 3B accuracy. |
 | `memory-extract.ts` | Background fact extraction pipeline. `EXTRACT_SYSTEM` prompt, `parseExtraction()`. Extracts logistics, commitments, preferences, personal facts from conversations into SQLite. |
-| `types.ts` | Shared types: `GateAction`, `GateMode`, `Classification`, `HierarchicalDecision`, `FactType`, `ExtractedFact`, `GroupProfile`, `PhilaConfig` |
+| `types.ts` | Shared types: `GateAction`, `GateMode`, `Classification`, `HierarchicalDecision`, `FactType`, `ExtractedFact`, `GroupProfile`, `PhilaConfig`, `AllowedTool` |
 | `memory.ts` | SQLite persistence. Conversation history, group profiles, asymmetric feedback, `extracted_facts` table with `storeFact()`/`getRecentFacts()`/`searchFacts()`. |
 | `voice.ts` | Post-processing: lowercase, strip AI-speak, enforce length. Safety net if the model slips. |
 | `ollama.ts` | Ollama chat API wrapper. `chat()` for standard calls, `chatFast()` (numPredict=8) for classification. |
+| `similarity.ts` | Cosine similarity for semantic memory recall. |
+| `verify.ts` | Fact verification against DuckDuckGo and Wikipedia. 3s timeout. |
 | `config.ts` | Env-var configuration. `PHILA_GATE` controls gate mode (monolithic/hierarchical/dual). |
 | `index.ts` | Entry point. iMessage watcher, 3s batcher, gate mode branching, background fact extraction, pipeline orchestration. |
 
 ## Test files (`test/`)
 
 **Unit/integration tests** (run with `npm test`):
-- `gate.test.ts`, `memory.test.ts`, `voice.test.ts`, `pipeline.test.ts`, `scorer.test.ts` — 132 tests, node:test runner
+- `gate.test.ts`, `memory.test.ts`, `voice.test.ts`, `pipeline.test.ts`, `scorer.test.ts`, `similarity.test.ts`, `verify.test.ts` - 224 tests, node:test runner
 
 **Benchmark + eval infrastructure** (run on VPS with Ollama):
-- `scenarios.ts` — 101 labeled scenarios across 9 categories, 4 difficulty tiers. 58 train / 43 holdout split. Source of truth for all evaluations.
-- `scorer.ts` — Response quality scoring: topic accuracy (0.35), casualness (0.25), AI-speak absence (0.20), length fit (0.10), voice survival (0.10)
-- `eval-shared.ts` — Shared `evaluate()`, `pairedTTest()` (p < 0.10), reward-hacking detector
-- `benchmark.ts` — Single benchmark run against all 101 scenarios
-- `finetune-eval.ts` — Three-part eval: holdout accuracy, full composite scoring, regression deep-dive. Use this to compare fine-tuned vs baseline.
-- `inference.ts` — Ollama inference wrapper used by all benchmark scripts
-
-**Research log**: `FINDINGS.md` at repo root — cumulative benchmark results and decisions. Read this for full experiment history.
+- `scenarios.ts` - 146 labeled scenarios across 9 categories, 4 difficulty tiers. Train/holdout split. Source of truth for all evaluations.
+- `scorer.ts` - Response quality scoring: topic accuracy (0.35), casualness (0.25), AI-speak absence (0.20), length fit (0.10), voice survival (0.10)
+- `eval-shared.ts` - Shared `evaluate()`, `pairedTTest()` (p < 0.10), reward-hacking detector, bootstrap CI
+- `benchmark.ts` - Single benchmark run with confusion matrix, bootstrap CI, `--double-check` flag
+- `layer-benchmark.ts` - 5-layer prompt experiment (3-11 examples) to find optimal example count
+- `continuous-optimize.ts` - Multi-generation prompt optimizer with mutation/crossover
+- `cross-validation.ts` - Multi-suite validation across original + independent + adversarial scenarios
+- `finetune-eval.ts` - Three-part eval: holdout accuracy, full composite scoring, regression deep-dive
+- `inference.ts` - Ollama inference wrapper used by all benchmark scripts
 
 **Research pipeline** (`research/`):
-- `gen-finetune-data.ts` — Generates labeled JSONL training data by category
-- `buried-thread-probe.ts` — Targeted probe of the hardest failure category
-- `gen-adversarial.ts`, `gen-prompt-mutations.ts` — LLM-assisted scenario/prompt generation
+- `gen-finetune-data.ts`, `gen-finetune-data-v4.ts` - Generates labeled JSONL training data by category
+- `compile-train-v4.ts`, `compile-train-v5.ts` - Compile training data with holdout contamination checks
+- `buried-thread-probe.ts` - Targeted probe of the hardest failure category
+- `gen-adversarial.ts`, `gen-prompt-mutations.ts`, `gen-independent-scenarios.ts` - LLM-assisted generation
+- `tournament.ts` - Single-elimination tournament with paired t-tests
 
 **Fine-tuning pipeline** (`research/finetune/`):
-- `finetune.py` — Unsloth QLoRA training. Reads `train.jsonl`, fine-tunes `unsloth/Llama-3.2-3B-Instruct`, exports GGUF via `save_pretrained_gguf`. Saves LoRA to HuggingFace before GGUF export as recovery checkpoint.
-- `launch-remote.sh` — Runs on Vast.ai instance via SSH. Installs deps, pre-builds llama.cpp (must run in foreground — nohup breaks the interactive build), launches training as nohup.
-- `monitor.sh` — Local cron monitor. Waits for `done.json`, checks training status, downloads GGUF, destroys instance. Uses `find -newer done.json` to verify GGUF is from the current run.
-
-**Fine-tune data** (`test/research-reports/finetune-data/`):
-- `train-v2.jsonl` — 1,138 training examples (755 base + 150 speak-unanswered + 153 silent-sarcasm + 80 near-miss)
-- `Modelfile-v2-deploy` — Ollama Modelfile for gate use (temperature=0.1, topP=0.52, numPredict=64 — GPU-optimized)
-- `phila-ft-v2.Q4_K_M.gguf` — Fine-tuned model weights (gitignored, 1.93GB). Download from [HuggingFace](https://huggingface.co/onblueroses/phila-ft-v2-GGUF).
+- `finetune.py` - Unsloth QLoRA training. Reads `train.jsonl`, fine-tunes `unsloth/Llama-3.2-3B-Instruct`, exports GGUF.
+- `launch-remote.sh` - Vast.ai remote training runner
+- `monitor.sh` - Local cron monitor. Waits for completion, downloads GGUF, destroys instance.
 
 ## Key invariants
 
 - **Parse failure → SILENT.** Any unparseable LLM output is treated as silent. Worst failure mode is being too quiet.
-- **Holdout never trains.** `scenarios.ts` has `split: 'train' | 'holdout'`. The holdout set is never optimized against — only used to detect overfitting.
+- **Holdout never trains.** `scenarios.ts` has `split: 'train' | 'holdout'`. The holdout set is never optimized against.
 - **Reward-hacking guard.** Optimizer reverts if holdout drops >3% from its peak, even if train accuracy improves.
-- **Asymmetric feedback.** Negative feedback (-0.05) outweighs positive (+0.02) by 2.5x. People say "thanks" casually; they don't say "shut up" casually.
+- **Asymmetric feedback.** Negative feedback (-0.05) outweighs positive (+0.02) by 2.5x.
 - **Local only.** No API calls to external LLM providers. Ollama only.
+- **NEVER SPEAK first.** Gate prompt checks silence conditions before speak conditions - flat rule structure, no nested conditionals.
 
 ## Running things
 
 ```bash
-npm test                          # 132 unit tests
+npm test                          # 224 unit tests
 npm start                         # run the agent (macOS + Ollama required)
 
 # on VPS (where Ollama runs):
-node --experimental-strip-types test/benchmark.ts --runs 3
-node --experimental-strip-types test/finetune-eval.ts --model phila-ft-v2 --baseline llama3.2 --runs 5
+node --experimental-strip-types test/benchmark.ts --runs 5 --model phila-ft-v5
+node --experimental-strip-types test/layer-benchmark.ts --runs 3
+node --experimental-strip-types test/continuous-optimize.ts --runs 5
 ```
 
 ## Research history summary
 
-1. **660+ prompt/parameter mutations** via automated optimizer — no statistically significant improvement over baseline prompt
-2. **Buried-thread failure** confirmed as model capability limit (0% across 4 models × 4 prompts × 30 scenarios)
-3. **phila-ft v1** (755 examples): fixed buried-thread (0%→100%) but introduced 3 hard regressions
-4. **phila-ft v2** (1,138 examples, adds 383 targeted): all 4 regression scenarios back to 100%, holdout +5.1pp vs baseline
+1. **4 models evaluated** (llama3.2, qwen2.5:3b, qwen2.5:7b, phi3:mini, gemma2:2b) - llama3.2 selected for gate
+2. **750+ prompt/parameter mutations** via automated optimizer - gen 46 found optimal example set
+3. **5 fine-tune iterations**: v1 (755 ex, buried-thread fixed), v2 (1,138 ex, regressions fixed), v3 (3,799 ex, generalization gap closed), v5 (4,780 ex, already-corrected fixed)
+4. **8 architecture iterations**: 3 hierarchical, 4 dual-pass, 1 monolithic winner - decomposition hurts at 3B
+5. **Prompt engineering campaign**: 5-layer benchmark, NEVER SPEAK restructure, double-check experiment
+6. **Final: 95.2% holdout** [90.1%, 99.0% CI], 0.983 precision, 0.912 recall, F1 0.946
 
 Full details: `FINDINGS.md` (repo root)
