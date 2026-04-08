@@ -56,6 +56,7 @@ const { values: args } = parseArgs({
 		scenarios: { type: "string" },
 		sweep: { type: "boolean", default: false },
 		"model-sweep": { type: "boolean", default: false },
+		"double-check": { type: "boolean", default: false },
 		out: { type: "string" },
 	},
 });
@@ -137,6 +138,18 @@ async function runBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
 		updatedAt: Date.now(),
 	};
 	const system = buildSystemPrompt(profile);
+	const useDoubleCheck = args["double-check"];
+	const doubleCheckPrompt = `you said "speak". before sending, verify:
+1. did someone ALREADY correct the error? (look for "actually", "no", "thats not right", etc.)
+2. is "phila" actually addressing you, or is it a different word? (philadelphia, philanthropy, phila cream cheese)
+3. is the question rhetorical or sarcastic?
+
+if any of these are true, change to silent.
+
+respond with ONLY json:
+{"action":"silent"}
+or
+{"action":"speak","reason":"confirmed: [why]","response":"your message"}`;
 	const results: ScenarioResult[] = [];
 
 	for (const scenario of SCENARIOS) {
@@ -156,8 +169,19 @@ async function runBenchmark(config: RunConfig): Promise<ScenarioResult[]> {
 					scenario.conversation,
 					config,
 				);
-				const decision = parseDecision(content);
-				result.latencies.push(latencyMs);
+				let decision = parseDecision(content);
+				let totalLatency = latencyMs;
+
+				// Double-check: re-verify speak decisions
+				if (useDoubleCheck && decision.action === "speak") {
+					const checkUser = `conversation:\n${scenario.conversation}\n\nyour first answer: ${content}`;
+					const { content: checkContent, latencyMs: checkMs } =
+						await inferTimed(doubleCheckPrompt, checkUser, config);
+					decision = parseDecision(checkContent);
+					totalLatency += checkMs;
+				}
+
+				result.latencies.push(totalLatency);
 
 				if (decision.action === scenario.expect) {
 					result.passes++;
