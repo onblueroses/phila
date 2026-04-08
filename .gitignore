@@ -25,5 +25,8 @@ test/research-reports/rounds/
 # overnight campaign results (raw JSON, summarized in FINDINGS.md)
 overnight-results/
 
+# codex artifacts
+.codex
+
 # nested checkout artifact
 phila/
