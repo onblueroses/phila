@@ -201,12 +201,19 @@ export function extractHour(timestamp: number): number {
 	return new Date(timestamp).getHours();
 }
 
+const chatLabelMaps = new Map<string, Map<string, string>>();
+
 export function buildConversation(messages: ChatMessage[]): string {
-	const labels = new Map<string, string>();
+	const chatId = messages[0]?.chatId;
+	let labels = chatId ? chatLabelMaps.get(chatId) : undefined;
+	if (!labels) {
+		labels = new Map<string, string>();
+		if (chatId) chatLabelMaps.set(chatId, labels);
+	}
 	const label = (name: string) => {
 		if (name === "phila") return "you";
 		if (!labels.has(name)) labels.set(name, `person${labels.size + 1}`);
-		return labels.get(name)!;
+		return labels.get(name) ?? `person${labels.size}`;
 	};
 	return messages.map((m) => `${label(m.sender)}: ${m.text}`).join("\n");
 }

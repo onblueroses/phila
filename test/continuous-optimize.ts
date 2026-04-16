@@ -468,6 +468,8 @@ interface Checkpoint {
 	bestScore: number;
 	bestConfig: InferenceConfig;
 	bestPromptIndex: number | null;
+	bestPromptText?: string;
+	baselinePerScenario?: number[];
 	holdoutScores: number[];
 	hackingState: HackingState;
 	history: GenerationResult[];
@@ -595,8 +597,9 @@ async function main() {
 			`resuming from generation ${cp.generation}, best score: ${(cp.bestScore * 100).toFixed(1)}%`,
 		);
 		bestConfig = cp.bestConfig;
-		bestPrompt = basePrompt; // prompt mutations are applied fresh each generation
+		bestPrompt = cp.bestPromptText ?? basePrompt;
 		generation = cp.generation;
+		baselinePerScenario = cp.baselinePerScenario ?? null;
 	} else {
 		bestConfig = {
 			model: MODEL_FILTER ?? "llama3.2",
@@ -627,6 +630,8 @@ async function main() {
 			bestScore: baseline.compositeScore,
 			bestConfig,
 			bestPromptIndex: null,
+			bestPromptText: basePrompt,
+			baselinePerScenario: baseline.perScenarioScores,
 			holdoutScores: [holdoutBaseline.compositeScore],
 			hackingState: {
 				holdoutPeak: holdoutBaseline.compositeScore,
@@ -707,7 +712,10 @@ async function main() {
 			if (hackCheck.hacking) {
 				console.log(`  REWARD HACKING DETECTED: ${hackCheck.reason}`);
 				console.log(`  reverting to gen ${cp.hackingState.holdoutPeakGen}`);
-				// Reset gap history
+				// Restore incumbent state
+				bestConfig = cp.bestConfig;
+				bestPrompt = cp.bestPromptText ?? basePrompt;
+				baselinePerScenario = cp.baselinePerScenario ?? null;
 				cp.hackingState.gapHistory = [];
 			} else if (significant) {
 				console.log(
@@ -715,6 +723,8 @@ async function main() {
 				);
 				cp.bestScore = trainResult.compositeScore;
 				cp.bestConfig = trialConfig;
+				cp.bestPromptText = trialPrompt;
+				cp.baselinePerScenario = trainResult.perScenarioScores;
 				bestConfig = trialConfig;
 				bestPrompt = trialPrompt;
 				baselinePerScenario = trainResult.perScenarioScores;

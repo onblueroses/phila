@@ -37,6 +37,16 @@ async function attempt(
 	return ((await res.json()) as OllamaResponse).message.content;
 }
 
+function isRetryable(err: unknown): boolean {
+	if (!(err instanceof Error)) return true;
+	const match = err.message.match(/ollama (?:embed )?(\d+):/);
+	if (match) {
+		const status = Number(match[1]);
+		return status >= 500;
+	}
+	return true;
+}
+
 export async function chat(
 	system: string,
 	user: string,
@@ -45,7 +55,8 @@ export async function chat(
 ): Promise<string> {
 	try {
 		return await attempt(system, user, config, numPredict);
-	} catch {
+	} catch (err) {
+		if (!isRetryable(err)) throw err;
 		await new Promise((r) => setTimeout(r, 2000));
 		return attempt(system, user, config, numPredict);
 	}
@@ -87,7 +98,8 @@ export async function chatFast(
 ): Promise<string> {
 	try {
 		return await attemptFast(system, user, config);
-	} catch {
+	} catch (err) {
+		if (!isRetryable(err)) throw err;
 		await new Promise((r) => setTimeout(r, 2000));
 		return attemptFast(system, user, config);
 	}
@@ -119,7 +131,8 @@ export async function embed(
 ): Promise<Float32Array> {
 	try {
 		return await attemptEmbed(input, config);
-	} catch {
+	} catch (err) {
+		if (!isRetryable(err)) throw err;
 		await new Promise((r) => setTimeout(r, 2000));
 		return attemptEmbed(input, config);
 	}
@@ -165,7 +178,8 @@ export async function summarize(
 ): Promise<string> {
 	try {
 		return await attemptSummarize(existingNotes, messages, config);
-	} catch {
+	} catch (err) {
+		if (!isRetryable(err)) throw err;
 		await new Promise((r) => setTimeout(r, 2000));
 		return attemptSummarize(existingNotes, messages, config);
 	}

@@ -18,6 +18,7 @@ export interface EvalResult {
 	correctSpeak: number;
 	falseSpeak: number;
 	falseSilent: number;
+	errorCount: number;
 	totalRuns: number;
 	perScenarioScores: number[];
 	details: string[];
@@ -34,6 +35,8 @@ export async function evaluate(
 	let correctSpeak = 0;
 	let falseSpeak = 0;
 	let falseSilent = 0;
+	let errorCount: number;
+	errorCount = 0;
 	let qualitySum = 0;
 	let qualityCount = 0;
 	let latencySum = 0;
@@ -79,7 +82,7 @@ export async function evaluate(
 					}
 				}
 			} catch (e) {
-				falseSilent++;
+				errorCount++;
 				details.push(
 					`ERROR: ${scenario.name} (run ${r + 1}): ${e instanceof Error ? e.message : e}`,
 				);
@@ -88,11 +91,13 @@ export async function evaluate(
 		perScenarioScores.push(scenarioScore / runs);
 	}
 
-	const totalRuns = correctSilent + correctSpeak + falseSpeak + falseSilent;
+	const totalRuns =
+		correctSilent + correctSpeak + falseSpeak + falseSilent + errorCount;
 
 	// Gate score: weighted accuracy with 3:1 silence bias
+	// Errors count as weighted failures so flaky models are penalized
 	const weightedCorrect = correctSilent + correctSpeak;
-	const weightedErrors = falseSpeak * 3 + falseSilent;
+	const weightedErrors = falseSpeak * 3 + falseSilent + errorCount * 3;
 	const gateScore = totalRuns
 		? weightedCorrect / (weightedCorrect + weightedErrors)
 		: 0;
@@ -119,6 +124,7 @@ export async function evaluate(
 		correctSpeak,
 		falseSpeak,
 		falseSilent,
+		errorCount,
 		totalRuns,
 		perScenarioScores,
 		details,
@@ -140,6 +146,8 @@ export async function evaluateSplit(
 	let correctSpeak = 0;
 	let falseSpeak = 0;
 	let falseSilent = 0;
+	let errorCount: number;
+	errorCount = 0;
 	let qualitySum = 0;
 	let qualityCount = 0;
 	let latencySum = 0;
@@ -203,7 +211,7 @@ export async function evaluateSplit(
 				latencySum += elapsed;
 				latencyCount++;
 			} catch (e) {
-				falseSilent++;
+				errorCount++;
 				details.push(
 					`ERROR: ${scenario.name} (run ${r + 1}): ${e instanceof Error ? e.message : e}`,
 				);
@@ -212,9 +220,10 @@ export async function evaluateSplit(
 		perScenarioScores.push(scenarioScore / runs);
 	}
 
-	const totalRuns = correctSilent + correctSpeak + falseSpeak + falseSilent;
+	const totalRuns =
+		correctSilent + correctSpeak + falseSpeak + falseSilent + errorCount;
 	const weightedCorrect = correctSilent + correctSpeak;
-	const weightedErrors = falseSpeak * 3 + falseSilent;
+	const weightedErrors = falseSpeak * 3 + falseSilent + errorCount * 3;
 	const gateScore = totalRuns
 		? weightedCorrect / (weightedCorrect + weightedErrors)
 		: 0;
@@ -235,6 +244,7 @@ export async function evaluateSplit(
 		correctSpeak,
 		falseSpeak,
 		falseSilent,
+		errorCount,
 		totalRuns,
 		perScenarioScores,
 		details,
