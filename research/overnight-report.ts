@@ -28,6 +28,7 @@ interface BaselineResult {
 	compositeScore: number;
 	gateScore: number;
 	responseQuality: number;
+	holdoutScore?: number;
 }
 
 interface ScenarioDistribution {
@@ -140,7 +141,8 @@ function scoreFmt(n: number): string {
 const winner = tournament.winner;
 const baseline = tournament.baseline;
 const trainDelta = winner.trainScore - baseline.compositeScore;
-const holdoutDelta = winner.holdoutScore - baseline.compositeScore;
+const holdoutDelta =
+	winner.holdoutScore - (baseline.holdoutScore ?? baseline.compositeScore);
 const hacking = winner.hackingCheck.hacking;
 const significantImprovement = trainDelta > 0.01 && holdoutDelta > 0;
 

@@ -33,10 +33,15 @@ function toInternal(msg: Message): ChatMessage | null {
 	};
 }
 
+interface Batcher {
+	feed: (msg: ChatMessage) => void;
+	flush: () => Promise<void>;
+}
+
 function createBatcher(
 	windowMs: number,
 	onBatch: (chatId: string, messages: ChatMessage[]) => void | Promise<void>,
-): (msg: ChatMessage) => void {
+): Batcher {
 	const pending = new Map<
 		string,
 		{
@@ -44,21 +49,42 @@ function createBatcher(
 			timer: ReturnType<typeof setTimeout> | undefined;
 		}
 	>();
+	const inflight = new Map<string, Promise<void>>();
 
-	return (msg) => {
-		let entry = pending.get(msg.chatId);
-		if (entry) {
-			clearTimeout(entry.timer);
-			entry.messages.push(msg);
-		} else {
-			entry = { messages: [msg], timer: undefined };
-			pending.set(msg.chatId, entry);
-		}
+	function enqueue(chatId: string, messages: ChatMessage[]): void {
+		const prev = inflight.get(chatId) ?? Promise.resolve();
+		const next = prev.then(() => onBatch(chatId, messages)).catch(() => {});
+		inflight.set(chatId, next);
+		next.then(() => {
+			if (inflight.get(chatId) === next) inflight.delete(chatId);
+		});
+	}
 
-		entry.timer = setTimeout(() => {
-			pending.delete(msg.chatId);
-			onBatch(msg.chatId, entry.messages);
-		}, windowMs);
+	return {
+		feed(msg) {
+			let entry = pending.get(msg.chatId);
+			if (entry) {
+				clearTimeout(entry.timer);
+				entry.messages.push(msg);
+			} else {
+				entry = { messages: [msg], timer: undefined };
+				pending.set(msg.chatId, entry);
+			}
+
+			entry.timer = setTimeout(() => {
+				pending.delete(msg.chatId);
+				enqueue(msg.chatId, entry.messages);
+			}, windowMs);
+		},
+
+		async flush() {
+			for (const [chatId, entry] of pending) {
+				clearTimeout(entry.timer);
+				enqueue(chatId, entry.messages);
+			}
+			pending.clear();
+			await Promise.all(inflight.values());
+		},
 	};
 }
 
@@ -69,7 +95,7 @@ const sdk = new IMessageSDK({
 const log = (msg: string) =>
 	console.log(`[phila ${new Date().toISOString().slice(11, 19)}] ${msg}`);
 
-const feed = createBatcher(
+const batcher = createBatcher(
 	config.batchWindowMs,
 	async (chatId, newMessages) => {
 		try {
@@ -196,24 +222,28 @@ const feed = createBatcher(
 				}
 
 				const response = constrain(finalResponse);
-				log(
-					`speak (${finalDecision.reason}) in ${chatId.slice(0, 8)}${stageTrace}: ${response}`,
-				);
-				await sdk.send(chatId, response);
-				memory.storeMessage({
-					chatId,
-					sender: "phila",
-					text: response,
-					timestamp: Date.now(),
-				});
-				memory.logDecision({
-					chatId,
-					decision: "speak",
-					reason: finalDecision.reason,
-					toolsUsed: finalDecision.tools,
-					response,
-					timestamp: Date.now(),
-				});
+				if (!response) {
+					log(`silent (empty after voice filter) in ${chatId.slice(0, 8)}`);
+				} else {
+					log(
+						`speak (${finalDecision.reason}) in ${chatId.slice(0, 8)}${stageTrace}: ${response}`,
+					);
+					await sdk.send(chatId, response);
+					memory.storeMessage({
+						chatId,
+						sender: "phila",
+						text: response,
+						timestamp: Date.now(),
+					});
+					memory.logDecision({
+						chatId,
+						decision: "speak",
+						reason: finalDecision.reason,
+						toolsUsed: finalDecision.tools,
+						response,
+						timestamp: Date.now(),
+					});
+				}
 				if (feedback) {
 					memory.linkFeedback(
 						chatId,
@@ -248,7 +278,7 @@ await sdk.startWatching({
 		const internal = toInternal(msg);
 		if (!internal) return;
 		memory.storeMessage(internal);
-		feed(internal);
+		batcher.feed(internal);
 	},
 	onError: (err) => log(`watcher error: ${err.message}`),
 });
@@ -258,6 +288,7 @@ log("watching group chats");
 closeWithGrace({ delay: 3000 }, async () => {
 	log("shutting down...");
 	sdk.stopWatching();
+	await batcher.flush();
 	memory.close();
 	log("goodbye");
 });

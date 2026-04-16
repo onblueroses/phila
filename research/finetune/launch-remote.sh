@@ -82,7 +82,7 @@ if [ -n "$HF_TOKEN" ]; then
     export HF_HUB_ENABLE_HF_TRANSFER=1
     export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
     # huggingface-cli may not be in PATH immediately after pip install
-    python3 -c "from huggingface_hub import login; login(token='${HF_TOKEN}', add_to_git_credential=True)"
+    python3 -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'], add_to_git_credential=True)"
 else
     echo "WARNING: No HF_TOKEN set - model download may fail for gated repos"
 fi
@@ -124,12 +124,12 @@ if [ \$EXIT_CODE -ne 0 ]; then
     echo '{"status":"failed","exit_code":'\$EXIT_CODE'}' > /workspace/done.json
 fi
 
-# Upload GGUF to HuggingFace before destroying (token baked in at write time)
+# Upload GGUF to HuggingFace before destroying (token passed via env)
 if [ \$EXIT_CODE -eq 0 ]; then
-    HF_TOKEN_VAL="${HF_TOKEN}" python3 -c "
+    python3 -c "
 import glob, json, os, sys
 from huggingface_hub import HfApi
-token = os.environ.get('HF_TOKEN_VAL', '')
+token = os.environ.get('HF_TOKEN', '')
 if not token:
     print('  WARNING: no HF token, skipping upload')
     sys.exit(0)

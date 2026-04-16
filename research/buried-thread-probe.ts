@@ -26,21 +26,31 @@ const basePrompt = buildSystemPrompt({
 	updatedAt: 0,
 });
 
+// Build variants by targeting actual prompt content.
 const PROMPT_VARIANTS: Record<string, string> = {
 	baseline: basePrompt,
 	"explicit-scan": basePrompt.replace(
-		/(\nRULE 3[^]*?)(\n\nRespond)/,
-		"$1\nIMPORTANT: Scan the ENTIRE conversation for unanswered questions, even if later messages changed topic.$2",
+		"3. a factual question goes unanswered by others -> answer it",
+		"3. a factual question goes unanswered by others -> answer it\n   IMPORTANT: Scan the ENTIRE conversation for unanswered questions, even if later messages changed topic.",
 	),
 	"buried-example": basePrompt.replace(
-		/(\nRULE 3[^]*?)(\n\nRespond)/,
-		"$1\nExample: if someone asks a fact question in the middle of a conversation and later messages are off-topic, the question is still unanswered.$2",
+		"3. a factual question goes unanswered by others -> answer it",
+		"3. a factual question goes unanswered by others -> answer it\n   Example: if someone asks a fact question in the middle of a conversation and later messages are off-topic, the question is still unanswered.",
 	),
 	"speak-bias": basePrompt.replace(
-		/(\nRULE 3[^]*?)(\n\nRespond)/,
-		"$1\nWhen in doubt about whether a question was answered, prefer to speak.$2",
+		"style: lowercase",
+		"when in doubt about whether a question was answered, prefer to speak.\n\nstyle: lowercase",
 	),
 };
+
+// Assert variants are actually different from baseline
+for (const [name, prompt] of Object.entries(PROMPT_VARIANTS)) {
+	if (name !== "baseline" && prompt === basePrompt) {
+		console.error(
+			`WARNING: variant '${name}' is identical to baseline - replacement target not found in prompt`,
+		);
+	}
+}
 
 // -- Generate buried-thread scenarios via claude --print --
 function generateScenarios(
@@ -118,7 +128,9 @@ async function evalOne(
 				category: "speak-unanswered" as const,
 				difficulty: "hard" as const,
 			};
-			const score = scoreResponse(response, scenarioForScoring);
+			const responseText =
+				"response" in decision ? decision.response : response;
+			const score = scoreResponse(responseText, scenarioForScoring);
 			totalScore += score.composite;
 		} catch {
 			// count as fail

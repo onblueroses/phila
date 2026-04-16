@@ -771,6 +771,7 @@ async function main() {
 			correctSilent: tn,
 			falseSpeak: fp,
 			falseSilent: fn,
+			errorCount: 0,
 			totalRuns: tp + tn + fp + fn,
 			compositeScore: 0,
 			gateScore: 0,
