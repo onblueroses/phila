@@ -6,9 +6,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 import { buildSystemPrompt } from "../src/gate.ts";
-import type { EvalResult, HackingState } from "../test/eval-shared.ts";
+import type { EvalResult } from "../test/eval-shared.ts";
 import {
-	detectRewardHacking,
 	evaluate,
 	pairedTTest,
 	T_TEST_THRESHOLD,
@@ -63,6 +62,7 @@ interface OutputFile {
 		compositeScore: number;
 		gateScore: number;
 		responseQuality: number;
+		holdoutScore?: number;
 	};
 	tournament: TournamentEntry[];
 	winner: WinnerResult;
@@ -77,6 +77,7 @@ interface PartialOutput {
 		compositeScore: number;
 		gateScore: number;
 		responseQuality: number;
+		holdoutScore?: number;
 	};
 	tournament: TournamentEntry[];
 	winner?: Partial<WinnerResult>;
@@ -205,10 +206,23 @@ console.log(
 	`  baseline: composite=${baselineResult.compositeScore.toFixed(4)} gate=${baselineResult.gateScore.toFixed(4)}`,
 );
 
+console.log("Evaluating baseline on holdout...");
+const baselineHoldoutResult: EvalResult = await evaluate(
+	baselinePrompt,
+	config,
+	holdout,
+	runs,
+	baseUrl,
+);
+console.log(
+	`  baseline holdout: composite=${baselineHoldoutResult.compositeScore.toFixed(4)}`,
+);
+
 partial.baseline = {
 	compositeScore: baselineResult.compositeScore,
 	gateScore: baselineResult.gateScore,
 	responseQuality: baselineResult.responseQuality,
+	holdoutScore: baselineHoldoutResult.compositeScore,
 };
 
 // -- Tournament --
@@ -295,23 +309,9 @@ if (championName !== "baseline") {
 	if (entry) entry.holdoutScore = holdoutResult.compositeScore;
 }
 
-// -- Reward hacking check --
-
-// generation=1 since tournament runs once per campaign - not a rolling series
-const hackingState: HackingState = {
-	holdoutPeak: 0,
-	holdoutPeakGen: 0,
-	gapHistory: [],
-};
-const hackingCheck = detectRewardHacking(
-	championResult.compositeScore,
-	holdoutResult.compositeScore,
-	1,
-	hackingState,
-);
-console.log(
-	`  hacking: ${hackingCheck.hacking ? `YES - ${hackingCheck.reason}` : "none detected"}`,
-);
+// Reward hacking detection removed - single-round tournament cannot meaningfully detect it.
+const hackingCheck = { hacking: false, reason: "" };
+console.log(`  hacking: not applicable (single-round tournament)`);
 
 // -- Write outputs --
 
@@ -330,6 +330,7 @@ const output: OutputFile = {
 		compositeScore: baselineResult.compositeScore,
 		gateScore: baselineResult.gateScore,
 		responseQuality: baselineResult.responseQuality,
+		holdoutScore: baselineHoldoutResult.compositeScore,
 	},
 	tournament: tournamentLog,
 	winner,

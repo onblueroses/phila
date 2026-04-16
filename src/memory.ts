@@ -148,6 +148,7 @@ export class Memory {
 	private upsertProfile: Database.Statement;
 	private insertFeedback: Database.Statement;
 	private deleteOld: Database.Statement;
+	private deleteByChatBeforeCutoff: Database.Statement;
 	private searchFts: Database.Statement;
 	private selectNotes: Database.Statement;
 	private upsertNotes: Database.Statement;
@@ -189,6 +190,9 @@ export class Memory {
 		);
 		this.deleteOld = this.db.prepare(
 			"DELETE FROM messages WHERE timestamp < ?",
+		);
+		this.deleteByChatBeforeCutoff = this.db.prepare(
+			"DELETE FROM messages WHERE chat_id = ? AND timestamp < ?",
 		);
 		this.searchFts = this.db.prepare(
 			`SELECT m.chat_id, m.sender, m.text, m.timestamp
@@ -281,6 +285,10 @@ export class Memory {
 				});
 			}
 		}
+		// Reverse each chat's messages to chronological order for summarization
+		for (const msgs of grouped.values()) {
+			msgs.reverse();
+		}
 		return grouped;
 	}
 
@@ -291,9 +299,15 @@ export class Memory {
 		return result.changes;
 	}
 
+	deleteMessagesForChat(chatId: string, cutoff: number): number {
+		const result = this.deleteByChatBeforeCutoff.run(chatId, cutoff);
+		return result.changes;
+	}
+
 	async pruneWithSummary(now: number): Promise<number> {
 		const cutoff = now - this.pruneIntervalMs;
 		const doomed = this.getMessagesBeforeCutoff(cutoff, 200);
+		let totalDeleted = 0;
 
 		for (const [chatId, msgs] of doomed) {
 			try {
@@ -301,6 +315,7 @@ export class Memory {
 				const formatted = buildConversation(msgs);
 				const updated = await summarize(existing, formatted, this.config);
 				this.setGroupNotes(chatId, updated);
+				totalDeleted += this.deleteMessagesForChat(chatId, cutoff);
 			} catch (err) {
 				console.error(
 					`[phila] summarization failed for ${chatId.slice(0, 8)}:`,
@@ -309,7 +324,8 @@ export class Memory {
 			}
 		}
 
-		return this.pruneOldMessages(now);
+		this.lastPruneAt = now;
+		return totalDeleted;
 	}
 
 	private maybePrune(now: number): void {
