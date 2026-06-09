@@ -8,7 +8,7 @@ MODEL_NAME="${MODEL_NAME:?Need MODEL_NAME e.g. phila-ft-v4.1}"
 HF_REPO="${HF_REPO:-onblueroses/phila-ft}"
 GGUF_NAME="${GGUF_NAME:?Need GGUF_NAME e.g. phila-ft-v4.1-unsloth.Q4_K_M.gguf}"
 HF_TOKEN="${HF_TOKEN:-$(cat ~/.config/huggingface/token 2>/dev/null)}"
-VPS="root@your-vps"
+VPS="${VPS_HOST:?Need VPS_HOST e.g. root@your-vps}"
 MODELFILE_SRC="$(dirname "$0")/Modelfile-v5"
 CAMPAIGN_LOG="/root/phila/${MODEL_NAME}-campaign.log"
 
@@ -79,4 +79,4 @@ echo 'Campaign launched. Monitor: tail -f ${CAMPAIGN_LOG} (on VPS)'
 "
 
 echo "=== Deploy complete. Campaign running on VPS ==="
-echo "Monitor: ssh root@your-vps 'tail -f ${CAMPAIGN_LOG}'"
+echo "Monitor: ssh ${VPS} 'tail -f ${CAMPAIGN_LOG}'"
