@@ -274,6 +274,8 @@ npm start
 
 `research/` contains the full benchmark and optimization pipeline: adversarial scenario generation, single-elimination tournaments with paired t-tests, multi-model benchmarking, prompt injection resilience testing, context window degradation analysis, and an independent scenario generator. `research/finetune/` has the QLoRA fine-tuning pipeline (Unsloth + Vast.ai). `research/v3-finetune/` has the v3 dataset generation pipeline - corpus transformers, synthetic generators, and a merge/dedup/split tool. Full results and methodology in [FINDINGS.md](FINDINGS.md).
 
+The fine-tuning corpora themselves are not in this repository, because the v3 set is built partly from the AMI Meeting Corpus (CC BY 4.0) and from television transcripts that cannot be redistributed under this repository's MIT license. [data/README.md](data/README.md) documents the provenance of each source and how to regenerate the corpora, and `data/CHECKSUMS.sha256` pins the exact files behind the published results.
+
 ## future directions
 
 - **Proactive recall.** "Hey, you mentioned wanting to try that restaurant last week, they have a special tonight" - initiating from stored context rather than waiting for a trigger. Different trust equation, different gate entirely.

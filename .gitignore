@@ -30,3 +30,10 @@ overnight-results/
 
 # nested checkout artifact
 phila/
+
+# fine-tuning corpora: see data/README.md for provenance and regeneration
+data/v3-finetune/
+data/v4-finetune/
+data/v5-finetune/
+!data/v5-finetune/merge-batches.py
+research/finetune-data/phila-ft-*-train.jsonl
